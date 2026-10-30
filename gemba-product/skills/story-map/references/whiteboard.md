@@ -38,3 +38,21 @@ Positions on import:
 - The whole board is translated; only relative positions matter.
 - A free text's `y` is read as its vertical center and stored as its top. A row label with a one-line description is about 102 units tall at scale 1, plus about 22 per extra line (about 42 characters per line at width 344). `build_story_map.py` adds half the estimated height so labels land where intended.
 - A separate large title is pushed up so its top stays about 113 units above the text below it, which leaves a visible gap. The product name and the vision therefore share one text element, like the row labels.
+
+## Patching
+
+`updateConfluenceContent` with `contentId`, `body: {format: "svg", value: PATCH, context: {content: <exact SVG from the last read, with line numbers>}}`. A `title` parameter renames the board.
+
+Patch operations:
+
+- `<delete_svg from="N" to="M"/>`: both attributes are required.
+- `<replace_svg from="N" to="M">...</replace_svg>`: replace whole `<text>` or `<rect>` elements; a bare `<tspan>` is invalid.
+- `<insert_svg line="N">...</insert_svg>`: new elements get new ids.
+
+What a patch keeps, tested on a board the person had arranged by hand:
+
+- Stickies the person moved stay where they are when another sticky is replaced or inserted. Read the board right before the patch and use that read as `context`.
+- Replacing a free text (title or row label) moves it, even with the coordinates it was read with: its `y` is taken as a vertical center again (a label moved 10.58 units up). Change free texts in the interface, not through the API.
+- Creating the board again does not update it: it makes a second board and drops the layout.
+
+Not tested: a patch with a stale read, and deleting stickies.
