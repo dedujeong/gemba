@@ -5,5 +5,11 @@
     "name": "Daniel Efraín Domínguez Urbina",
     "url": "https://github.com/dedujeong"
   },
-  "plugins": []
+  "plugins": [
+    {
+      "name": "gemba-product",
+      "source": "./gemba-product",
+      "description": "Takes an idea to a brief with evidence and a Story Map with a closed MVP."
+    }
+  ]
 }
