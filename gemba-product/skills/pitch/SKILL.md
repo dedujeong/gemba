@@ -39,12 +39,22 @@ Every round includes a question about previous attempts: have they paid for or t
 
 Ask about the past and real behavior, never opinions. Word every question about what is true today or what happened. Do not ask what they think of the idea, and do not ask whether they, or anyone, would use it or pay for it: that is a hypothetical about the product that does not exist yet.
 
-## 4. Write the Product Brief
+## 4. Label every fact by its source
+
+What matters is where each fact comes from, so the person can see how solid the evidence is:
+
+- **Interview:** the user said it, ideally in a transcript.
+- **Secondhand:** the person recalls what users told them.
+- **Assumption:** nobody has said it yet, including anything you infer or the person guesses.
+
+Every fact in the brief carries one of these three labels, written next to the fact where it appears. A general statement in the Source panel does not replace it. Never present an assumption as a fact. Say plainly when everything is secondhand.
+
+## 5. Write the Product Brief
 
 When the round is answered, write the brief in the product's space as a live doc.
 
 - Create it with `createConfluenceContent` (contentType `page`, HTML body), titled `Product Brief`, in the space the person named. Then convert it with `executeWrite` → `convertConfluenceContentMode` (`targetMode: live_doc`). If there is no Confluence connection, write the exact title and body in the reply and say that nothing was published.
-- Follow `assets/brief-template.md` for the sections, their order and the meaning of each panel.
+- Follow `assets/brief-template.md` for the sections, their order and the meaning of each panel. Label each fact by its source as section 4 says.
 - Write only what the conversation supports. A section with no evidence is left out, with no placeholder; what is missing and matters goes to Open decisions as a question still open.
 - No version number, version label or status line in the title or the body. Confluence history is the version record.
 
