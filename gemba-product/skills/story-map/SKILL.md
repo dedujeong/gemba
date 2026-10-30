@@ -1,6 +1,6 @@
 ---
 name: story-map
-description: Turn the Product Brief into a user story map on a Confluence whiteboard, and review that map with the person. Use when the brief has a clear problem, primary job and enough evidence, or when someone asks for the story map, the MVP or the scope, or when a map already built is being reviewed, counted or changed. Reads the brief, drafts the map with the MVP cut, builds the whiteboard in the product's space and links it from the brief, then recounts and edits the board during the review.
+description: Turn the Product Brief into a user story map on a Confluence whiteboard, review that map with the person and close the MVP when they say so. Use when the brief has a clear problem, primary job and enough evidence, or when someone asks for the story map, the MVP or the scope, or when a map already built is being reviewed, counted, changed or closed. Reads the brief, drafts the map with the MVP cut, builds the whiteboard in the product's space and links it from the brief, then recounts and edits the board during the review.
 ---
 
 # Story map
@@ -85,3 +85,16 @@ The person may arrange the board by hand. Changing its content must keep that la
 - Do not recreate the board. Creating it again would drop the layout and leave a second board.
 
 Details are in `references/whiteboard.md`.
+
+## 6. Close the MVP
+
+Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
+
+When they close it:
+
+- Recount the MVP stories from the board right then (section 4), not from memory.
+- In the brief's Open decisions, add a checked item that records the closing with its date as a date node and the number of MVP stories, for example "MVP cerrado el <date node> con 12 historias." Edit the brief in place with granular edits and keep everything else.
+- Set the brief's page status to Verified, as `pitch` section 6 describes.
+- Tell the person that the discovery is complete: the Story Map, once closed, ends it.
+
+If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
