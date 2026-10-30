@@ -1,5 +1,6 @@
 import copy
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -58,6 +59,38 @@ class OpenQuestionColors(unittest.TestCase):
         self.assertEqual((mvp["count"], mvp["open"]), (2, 1))
 
 
+def arranged_by_hand(svg):
+    """Move every sticky some distance, as a person arranging the board would, without leaving its column and row."""
+    def move(m):
+        tag = m.group(0)
+        if 'data-type="sticky"' not in tag:
+            return tag
+        tag = re.sub(r' x="([-\d.]+)"', lambda a: f' x="{float(a.group(1)) + 55}"', tag)
+        return re.sub(r' y="([-\d.]+)"', lambda a: f' y="{float(a.group(1)) + 30}"', tag)
+    return re.sub(r"<rect\b[^>]*>", move, svg)
+
+
+class ForDevelopment(unittest.TestCase):
+    def test_gives_the_mvp_stories_grouped_by_activity_and_task(self):
+        mvp = read_story_map.for_development(read_story_map.parse(board()))
+        self.assertEqual(mvp["stories"], [
+            {"activity": "Record a service", "tasks": [
+                {"task": "Save the next service date", "stories": ["Save a date per customer"]}]},
+            {"activity": "Remind", "tasks": [
+                {"task": "Send the reminder", "stories": ["Send a WhatsApp reminder"]}]},
+        ])
+
+    def test_leaves_out_later_releases_and_lists_open_questions_apart(self):
+        mvp = read_story_map.for_development(read_story_map.parse(board()))
+        self.assertNotIn("Import dates from the notebook", str(mvp["stories"]))
+        self.assertEqual(mvp["open_questions"], ["Who sends it when the owner is away?"])
+
+    def test_a_board_arranged_by_hand_gives_the_same_stories(self):
+        plain = read_story_map.for_development(read_story_map.parse(board()))
+        moved = read_story_map.for_development(read_story_map.parse(as_read(arranged_by_hand(build_story_map.build(SPEC)))))
+        self.assertEqual(moved, plain)
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *extra):
         with tempfile.TemporaryDirectory() as tmp:
@@ -72,6 +105,12 @@ class CommandLine(unittest.TestCase):
         out = self.run_cli()
         self.assertIn("MVP: 2 stories, 1 open question", out)
         self.assertIn("Release 2: 1 story, 0 open questions", out)
+
+    def test_mvp_option_prints_only_the_mvp_by_activity_and_task(self):
+        out = self.run_cli("--mvp")
+        self.assertIn("### Record a service", out)
+        self.assertIn("  - Save a date per customer", out)
+        self.assertNotIn("Import dates from the notebook", out)
 
     def test_says_the_first_release_grew(self):
         self.assertIn("MVP grew by 1 (was 1, now 2)", self.run_cli("--previous", "1"))

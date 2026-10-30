@@ -1,6 +1,6 @@
 """Read a story map whiteboard SVG back into releases, activities, tasks, and stories.
 
-Usage: python3 read_story_map.py board.svg [--json] [--previous N]
+Usage: python3 read_story_map.py board.svg [--json] [--mvp] [--previous N]
 
 Accepts the SVG exactly as getConfluenceContent returns it, including the line-number
 prefixes. Works on boards edited by hand, as long as:
@@ -13,6 +13,10 @@ The first label after "Tasks" is taken as the MVP.
 A release's "count" is its stories; red stickies (open questions) are not stories and
 are counted apart in "open". --previous N is the number of stories the first release
 had when it was last reported; the script then says how much it grew, shrank or stayed.
+
+--mvp prints only the first release, its stories grouped by activity and task, for
+whoever builds it. Nothing is copied anywhere: the board in Confluence is the only
+source, and this reads it each time.
 """
 import json
 import re
@@ -106,6 +110,33 @@ def change(r, previous):
     return r["releases"][0]["count"] - previous if r["releases"] else 0
 
 
+def for_development(r):
+    """The first release as development reads it: stories by activity and task, open questions apart."""
+    stories, open_questions = [], []
+    for task in (r["releases"][0]["tasks"] if r["releases"] else []):
+        done = [st["text"] for st in task["stories"] if not st["open"]]
+        open_questions += [st["text"] for st in task["stories"] if st["open"]]
+        if not done:
+            continue
+        if not stories or stories[-1]["activity"] != task["activity"]:
+            stories.append({"activity": task["activity"], "tasks": []})
+        stories[-1]["tasks"].append({"task": task["task"], "stories": done})
+    return {"release": r["releases"][0]["name"] if r["releases"] else "", "stories": stories, "open_questions": open_questions}
+
+
+def mvp_markdown(mvp):
+    lines = [f'## {mvp["release"]}']
+    for a in mvp["stories"]:
+        lines.append(f'\n### {a["activity"]}')
+        for t in a["tasks"]:
+            lines.append(f'- **{t["task"]}**')
+            lines += [f"  - {text}" for text in t["stories"]]
+    if mvp["open_questions"]:
+        lines.append("\n### Open questions")
+        lines += [f"- {q}" for q in mvp["open_questions"]]
+    return "\n".join(lines)
+
+
 def plural(n, one, many):
     return f"{n} {one if n == 1 else many}"
 
@@ -143,7 +174,9 @@ def to_markdown(r):
 
 if __name__ == "__main__":
     data = parse(open(sys.argv[1], encoding="utf-8").read())
-    if "--json" in sys.argv:
+    if "--mvp" in sys.argv:
+        print(mvp_markdown(for_development(data)))
+    elif "--json" in sys.argv:
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:
         previous = int(sys.argv[sys.argv.index("--previous") + 1]) if "--previous" in sys.argv else None
