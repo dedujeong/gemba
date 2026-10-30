@@ -1,0 +1,15 @@
+{
+  "name": "gemba",
+  "description": "Claude plugins that take software from an idea or a client request to a released version.",
+  "owner": {
+    "name": "Daniel Efraín Domínguez Urbina",
+    "url": "https://github.com/dedujeong"
+  },
+  "plugins": [
+    {
+      "name": "gemba-product",
+      "source": "./gemba-product",
+      "description": "Takes an idea to a brief with evidence and a Story Map with a closed MVP."
+    }
+  ]
+}

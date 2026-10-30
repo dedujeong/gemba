@@ -1,0 +1,48 @@
+{
+  "title": "<Product name>",
+  "vision": "<Vision: one or two sentences on what the product will be and for whom, e.g. 'A platform where ... so that ...'>",
+  "labels": {
+    "persona": "<Who uses the product; name the primary user.>",
+    "activities": "<What happens, in order, from start to end of the job.>",
+    "tasks": "<The steps inside each activity.>"
+  },
+  "personas": ["<Primary user>", "<Actor 2>", "<Actor 3>"],
+  "activities": [
+    {"column": 0, "text": "<Activity 1>"},
+    {"column": 2, "text": "<Activity 2>"}
+  ],
+  "tasks": [
+    "<Task 1 of activity 1>",
+    "<Task 2 of activity 1>",
+    "<Task 1 of activity 2>",
+    "<Task 2 of activity 2>"
+  ],
+  "releases": [
+    {
+      "name": "MVP",
+      "description": "<What the current release achieves for the primary user. Development builds this.>",
+      "stories": [
+        [
+          {"text": "<Story under task 1>", "traces": "<Problem, Primary job or Quality bar condition it serves>"},
+          {"text": "<Another story under task 1>", "traces": "<...>"}
+        ],
+        [{"text": "<Story under task 2>", "traces": "<...>"}],
+        [
+          {"text": "<Story under task 3>", "traces": "<...>"},
+          {"text": "<Unresolved question that blocks a story>", "open": true}
+        ],
+        [{"text": "<Story under task 4>", "traces": "<...>"}]
+      ]
+    },
+    {
+      "name": "Release 2",
+      "description": "<What does not enter the current release.>",
+      "stories": [
+        ["<Later story under task 1>"],
+        [],
+        ["<Later story under task 3>"],
+        []
+      ]
+    }
+  ]
+}
