@@ -71,6 +71,18 @@ Every document of the discovery carries a Confluence page status that says what 
 
 Set Rough draft right after creating the document, and move the status each time the document changes stage. The status replaces any status line in the body.
 
+## 7. Update the brief later
+
+The person can add what they recall or noted from a conversation, so the brief grows without being rewritten. This is for memories and notes, not for synthesizing a client meeting transcript.
+
+- Each finding goes into the section where it belongs, with its source label from section 4. What the person recalls is Secondhand, unless it was said in an interview they can show.
+- Keep everything that was already there. Add to the brief; do not replace it, and do not re-create the page.
+- Read the page first with `getConfluenceContent` (`draft: true`, `detail: full`, `content_format: html`). A live doc returns a `d1:` snapshot token; use it in the update.
+- Edit with granular `edits` (`replaceNode`, `insertNodeAfter`, `deleteNode`) by `data-local-id`, touching only the nodes that change.
+- Local ids change after conversions and some edits. Re-read before each batch of edits; if the update returns `granular_edit_unresolved`, re-read and retry with the new ids.
+- Move the page status (section 6) only when the person says the stage changed, for example that they reviewed the brief. Adding findings does not change the stage, and you never assume a review. Never add a version number or a status line to the title or the body.
+- If there is no Confluence connection, write the whole updated body in the reply and say that nothing was published.
+
 ## Style
 
 - Conversation in the person's language; headings and labels in English.
