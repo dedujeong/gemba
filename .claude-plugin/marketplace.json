@@ -1,0 +1,9 @@
+{
+  "name": "gemba",
+  "description": "Claude plugins that take software from an idea or a client request to a released version.",
+  "owner": {
+    "name": "Daniel Efraín Domínguez Urbina",
+    "url": "https://github.com/dedujeong"
+  },
+  "plugins": []
+}
