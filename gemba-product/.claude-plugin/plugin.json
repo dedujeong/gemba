@@ -1,0 +1,12 @@
+{
+  "name": "gemba-product",
+  "version": "0.0.1",
+  "description": "Takes an idea to a brief with evidence and a Story Map with a closed MVP.",
+  "author": {
+    "name": "Daniel Efraín Domínguez Urbina",
+    "url": "https://github.com/dedujeong"
+  },
+  "homepage": "https://github.com/dedujeong/gemba",
+  "repository": "https://github.com/dedujeong/gemba",
+  "license": "Apache-2.0"
+}
