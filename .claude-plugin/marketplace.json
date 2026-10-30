@@ -1,6 +1,6 @@
 {
   "name": "gemba",
-  "description": "Claude plugins that take software from an idea or a client request to a released version.",
+  "description": "Claude plugins that take software from an idea or a client request to a released version, with every decision traced back to where it was made.",
   "owner": {
     "name": "Daniel Efraín Domínguez Urbina",
     "url": "https://github.com/dedujeong"
@@ -9,7 +9,12 @@
     {
       "name": "gemba-product",
       "source": "./gemba-product",
-      "description": "Takes an idea to a brief with evidence and a Story Map with a closed MVP."
+      "category": "productivity",
+      "tags": [
+        "product-discovery",
+        "story-map",
+        "confluence"
+      ]
     }
   ]
 }
