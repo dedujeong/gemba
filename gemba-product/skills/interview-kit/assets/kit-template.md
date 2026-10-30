@@ -50,6 +50,12 @@ A note panel at the top of a block is allowed when the block has a trap, for exa
 
 The last block is always `Close`: actions for the interviewer, not questions (summarize aloud what was learned, agree the date of the next step).
 
+## Questions by role
+
+One H3 per role at the meeting, named by the role (or by the person when the person gave a name). Under each one an ordered list of questions that only that role can answer from experience, shaped like the Session plan questions: one sentence, one question mark, about something that happened, ending with the gap it points to. A role with no gap to ask about is left out.
+
+When attendees hold different visions, each of them gets the same questions about the difference, one list per person, in the same order and with the same wording. Differences between their answers are information, not something to settle in the meeting.
+
 ## Observation checklist
 
 Task list of what to watch without asking, taken from the Secondhand facts and the current workflow that can be seen with one's own eyes.

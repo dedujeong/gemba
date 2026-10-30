@@ -14,4 +14,4 @@ Evidence of cost: Un cliente se pasó 3 meses del servicio de frenos y volvió c
 Willingness to pay: El dueño pagaría una mensualidad baja (Assumption).
 Open decisions: [ ] ¿Desde qué número de WhatsApp saldrían los avisos? [ ] ¿Quién captura los servicios cuando el dueño no está?
 
-Prepara la reunión con el cliente. En esta sesión no hay conexión a Confluence: escribe en tu respuesta el kit de entrevista completo (título, enlace al brief, estado de la página y preguntas) y di que no se publicó nada.
+Prepara la reunión con el cliente. Asisten el dueño, que decide, y el mecánico del mostrador, que opera; dura 60 minutos y es el 2026-11-03. En esta sesión no hay conexión a Confluence: escribe en tu respuesta el kit de entrevista completo (título, enlace al brief, estado de la página y preguntas) y di que no se publicó nada.

@@ -11,7 +11,9 @@ The kit is the person's script for a meeting with the client. It does not repeat
 
 Read the `Product Brief` from the product's space with `getConfluenceContent`. The space is the one the person named earlier or names now; never choose one on your own, and write nothing to Confluence until it is named.
 
-Ask once for what the brief cannot tell you and the person has not said: who attends, the date and how long the meeting lasts. Do not invent any of them. Leave out of the kit what stays unanswered.
+Ask once for what the brief cannot tell you and the person has not said: the role each person at the meeting plays (who decides, who operates, who pays), the date and how long the meeting lasts. Names are optional; roles are not. Do not invent any of them. Leave out of the kit what stays unanswered.
+
+Until the roles are known, write no kit, no session plan and no questions: ask and wait. If the person already said who attends and what each does, do not ask again.
 
 ## 2. Find the gaps
 
@@ -32,6 +34,8 @@ Follow `assets/kit-template.md` for the sections, their order and the shape of e
 - Every question points to one gap and says which one, in the form the template defines. A question that points to no gap is left out, however interesting.
 - Word every question under the rule in `../pitch/SKILL.md`, section 3, the paragraph that begins "Ask about the past and real behavior, never opinions". Read it before drafting and apply it as written; do not restate it in other words. The Rules section of the kit carries that rule too, translated.
 - Before writing the kit, go through the questions one by one against that rule, in every block and for every person asked. A question in the conditional or the subjunctive ("habría", "sería", "si tuvieran", "would", "if") is a hypothetical even when it sounds like a fact: rewrite it as the last time it happened, or drop it.
+- Give each question to the role that can answer it from experience, and do not ask the one who decides what only the one who operates knows. Role-specific questions go under Questions by role in the template.
+- When two or more attendees hold different visions, because the brief has Two visions or an open decision about which to follow, ask each of them the same questions about the difference, written separately under each person, so each answers on their own.
 - Write only what the brief and the conversation support. Do not carry content over from any other kit.
 
 ## 4. Create the live doc
