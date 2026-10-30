@@ -1,0 +1,11 @@
+# Personal Claude Code settings, one file per developer
+.claude/settings.local.json
+
+# Claude Code worktrees, used for Spikes
+.claude/worktrees/
+
+# Python bytecode from the scripts and their tests
+__pycache__/
+
+# Results written by claude plugin eval on each run
+**/evals/results/
