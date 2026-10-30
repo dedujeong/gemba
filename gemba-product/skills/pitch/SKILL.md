@@ -1,6 +1,6 @@
 ---
 name: pitch
-description: Start product discovery from an idea or a client request. Use when someone describes a product idea, a client asks for software, or says "tengo una idea" or "un cliente quiere". Hears the idea in the person's own words, settles which Confluence space the product lives in and asks one round of questions about what has already happened and, once they are answered, writes the Product Brief in Confluence.
+description: Start product discovery from an idea or a client request and keep its Product Brief going. Use when someone describes a product idea, a client asks for software, says "tengo una idea" or "un cliente quiere", or when a discovery already under way needs its Product Brief or page status changed. Hears the idea in the person's own words, settles which Confluence space the product lives in, asks one round of questions about what has already happened and writes the Product Brief in Confluence.
 ---
 
 # Pitch the product
@@ -53,10 +53,23 @@ Every fact in the brief carries one of these three labels, written next to the f
 
 When the round is answered, write the brief in the product's space as a live doc.
 
-- Create it with `createConfluenceContent` (contentType `page`, HTML body), titled `Product Brief`, in the space the person named. Then convert it with `executeWrite` → `convertConfluenceContentMode` (`targetMode: live_doc`). If there is no Confluence connection, write the exact title and body in the reply and say that nothing was published.
+- Create it with `createConfluenceContent` (contentType `page`, HTML body), titled `Product Brief`, in the space the person named. Then convert it with `executeWrite` → `convertConfluenceContentMode` (`targetMode: live_doc`). If there is no Confluence connection, write the exact title, body and page status in the reply and say that nothing was published.
 - Follow `assets/brief-template.md` for the sections, their order and the meaning of each panel. Label each fact by its source as section 4 says.
 - Write only what the conversation supports. A section with no evidence is left out, with no placeholder; what is missing and matters goes to Open decisions as a question still open.
 - No version number, version label or status line in the title or the body. Confluence history is the version record.
+
+## 6. Track the page status
+
+Every document of the discovery carries a Confluence page status that says what stage it is in. Set it with `executeWrite` → `setConfluenceContentStatus` (`contentId`, `name` and `color`; Confluence matches its built-in state by name).
+
+| Status | When |
+|---|---|
+| Rough draft | When the document is created, until the person has looked at it once |
+| In progress | After the first review, while discovery keeps changing it |
+| Ready for review | The document is complete and waits for the person |
+| Verified | Closed: the person closes the MVP |
+
+Set Rough draft right after creating the document, and move the status each time the document changes stage. The status replaces any status line in the body.
 
 ## Style
 
