@@ -22,6 +22,9 @@ class CurrentRelease(unittest.TestCase):
     def test_takes_the_first_release_that_is_not_gray(self):
         self.assertEqual(self.release["release"], "Release 2")
 
+    def test_reports_the_value_the_release_delivers_from_its_row_label(self):
+        self.assertEqual(self.release["description"], "What the shop owner gets next.")
+
     def test_groups_its_stories_by_activity_and_task(self):
         self.assertEqual(self.release["stories"], [
             {"activity": "Record a service", "tasks": [
@@ -48,6 +51,7 @@ class Markdown(unittest.TestCase):
     def test_prints_the_release_with_its_open_questions(self):
         out = read()
         self.assertTrue(out.startswith("## Release 2"))
+        self.assertIn("What the shop owner gets next.", out)
         self.assertIn("### Remind\n- **Send the reminder**\n  - Remind the day before", out)
         self.assertIn("### Open questions\n- Who sends it when the owner is away?", out)
 
