@@ -25,7 +25,8 @@ Colors used by `build_story_map.py` (meanings in `SKILL.md`). The sticky palette
 | Tasks | `#cfe1fd` (blue) |
 | Current release stories | `#baf3db` (green) |
 | Next release stories | `#fce4a6` (orange) |
-| Later releases | `#fff5db` (light orange) |
+| Later releases (third and after) | `#fff5db` (light orange) |
+| The Later row | `#fff5db` (light orange), always: it is not a release, so it takes no position and is never current or next |
 | Delivered releases | `#f0f1f2` (gray) |
 | Open decision | `#ffd5d2` (red) |
 
@@ -90,5 +91,11 @@ What a patch keeps, tested on a board the person had arranged by hand:
 - Stickies the person moved stay where they are when another sticky is replaced or inserted. Read the board right before the patch and use that read as `context`.
 - Replacing a free text (title or row label) with the `y` it was read with moves it, because its `y` is taken as a vertical center again (a label moved 10.58 units up). Send `top + height / 2` instead (see above). The board header is not covered by that arithmetic and stays a change for the interface.
 - Creating the board again does not update it: it makes a second board and drops the layout.
+
+The answer to a patch cannot be trusted to say what happened:
+
+- It carries the version the board had before the patch (a patch that made version 10 answered 9), and a read right after can still show the old number with the new content. Do not use the version number as evidence, and a jump in it is not someone else's edit.
+- It says `ok: true` even when it changed nothing, for example when the `context` does not contain an id the patch names.
+- Report the result by reading the board again after the patch: the fills and positions come from that read, never from the answer.
 
 Not tested: a patch with a stale read, and deleting stickies.

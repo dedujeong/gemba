@@ -12,7 +12,7 @@ sys.path.insert(0, SCRIPTS)
 
 import build_story_map  # noqa: E402
 import recolor_story_map  # noqa: E402
-from test_build_story_map import CURRENT, NEXT, OPEN, RELEASED, SPEC, stickies  # noqa: E402
+from test_build_story_map import CURRENT, LATER, NEXT, OPEN, RELEASED, SPEC, stickies  # noqa: E402
 from test_read_story_map import as_read  # noqa: E402
 
 # The scheme before GEMBA-28, keyed by the new fill each sticky has now.
@@ -26,6 +26,10 @@ OLD_SCHEME = {
 
 SPEC_3 = copy.deepcopy(SPEC)
 SPEC_3["releases"].append({"name": "Release 3", "stories": [["Third story"], []]})
+
+
+SPEC_LATER = copy.deepcopy(SPEC)
+SPEC_LATER["releases"].append({"name": "Later", "stories": [["Some day"], []]})
 
 
 def old_scheme(svg):
@@ -60,6 +64,12 @@ class Plan(unittest.TestCase):
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
         self.assertEqual(texts["Third story"], NEXT)
         self.assertEqual(texts["Who sends it when the owner is away?"], OPEN)
+
+    def test_the_later_row_stays_later_whichever_releases_are_delivered(self):
+        old = old_scheme(build_story_map.build(SPEC_LATER))
+        for released in ([], ["MVP"], ["MVP", "Release 2"]):
+            texts = stickies(apply(old, recolor_story_map.plan(as_read(old), released=released)))
+            self.assertEqual(texts["Some day"], LATER, released)
 
     def test_open_questions_stay_red_and_the_light_red_is_normalized(self):
         new = build_story_map.build(SPEC_3)

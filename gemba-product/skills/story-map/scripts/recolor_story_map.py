@@ -33,7 +33,7 @@ def plan(svg, released=()):
     if unknown:
         raise ValueError(f'No release labeled {", ".join(map(repr, unknown))} on the board; the labels are: {", ".join(names)}')
     row_fill = dict(BACKBONE_FILLS)
-    row_fill.update(zip(names, release_fills([{"released": n in released} for n in names])))
+    row_fill.update(zip(names, release_fills([{"name": n, "released": n in released} for n in names])))
     changes = {}
     for name, stickies in bands.items():
         for s in sorted(stickies, key=lambda s: (s["y"], s["x"])):
