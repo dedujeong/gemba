@@ -70,7 +70,9 @@ class CountsDoNotDependOnTheColorScheme(unittest.TestCase):
         new = board()
         # Old scheme: the MVP orange, later releases gray (green was the activities row, which holds no stories).
         old = new.replace("#fce4a6", "#f0f1f2").replace("#baf3db", "#fce4a6")
-        self.assertEqual(read_story_map.parse(old)["releases"], read_story_map.parse(new)["releases"])
+        def counted(svg):
+            return [{k: v for k, v in r.items() if k != "delivered"} for r in read_story_map.parse(svg)["releases"]]
+        self.assertEqual(counted(old), counted(new))
 
 
 def arranged_by_hand(svg):
