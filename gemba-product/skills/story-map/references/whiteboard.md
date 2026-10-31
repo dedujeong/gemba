@@ -77,6 +77,14 @@ Tested on `9404418` (a replace of the MVP label and an insert of a new one in on
 
 A row label is a free text, and Confluence reads the `y` of a free text as its vertical center. To leave its top at `top`, send `y = top + height / 2`: a label with a one-line description is 102 tall (add 51), with two lines 124 (add 62), at about 42 characters per line at width 344. `scripts/label_story_map.py` does this arithmetic and puts the top level with the first row of stickies of the release.
 
+Moving stickies, tested on `9404418`:
+
+- `<update_elements_svg ids="id"><attr x="X" y="Y"/></update_elements_svg>` moves a sticky and its `<text belongs-to>` follows it (the text keeps its offset of half a card). Both attributes go in one `<attr>`; a partial context (the numbered line of the sticky) is enough. Values come back rounded to hundredths, and the moved sticky goes to the end of the z order.
+- The same op on a free text (a row label) with `y` is accepted and ignored: the label does not move. A label is moved with a `replace_svg`, which needs the full context.
+- One patch can mix `replace_svg` and `update_elements_svg` (for example the labels and the stickies of the rows below a row that grew); the full context goes with it. The line ranges of the replaces are those of the read, because the replaces apply first.
+- With a partial context a `replace_svg` fails even if its lines are inside it ("outside body.context.content"): it needs the whole read.
+- Confluence did not check the context against the stored board: a context with retyped lines was accepted and the result was correct. Do not rely on it; send the read as it came back.
+
 What a patch keeps, tested on a board the person had arranged by hand:
 
 - Stickies the person moved stay where they are when another sticky is replaced or inserted. Read the board right before the patch and use that read as `context`.
