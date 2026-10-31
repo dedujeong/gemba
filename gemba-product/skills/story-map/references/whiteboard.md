@@ -8,7 +8,7 @@ What the Atlassian connector accepts and returns for whiteboards, learned by pro
 
 ## Elements
 
-- **Sticky:** `<rect data-type="sticky" id width="240.05" height="144.03" x y fill>` plus a `<text belongs-to="ID">` with one `<tspan>` holding the text. Confluence normalizes fills to its palette (for example `#ffefae` becomes `#fce4a6`).
+- **Sticky:** `<rect data-type="sticky" id width="240.05" height="144.03" x y fill>` plus a `<text belongs-to="ID">` with one `<tspan>` holding the text. Confluence normalizes fills to its palette (for example `#ffefae` becomes `#fce4a6`; see Colors).
 - **Free text:** `<text data-type="text" x y width font-scale>` with tspans. Row labels use a blank tspan, a bold 27px title tspan, and a 15.47px description tspan; a reader finds the rows by that bold 27px title.
 - **Mentions:** a `<tspan data-mention-id>` sent through the API is stored as plain text, with or without `data-access-level`. Only mentions made in the UI work, so the generated board names no people.
 - **Font sizes:** tspans keep only `15.47px` and `27px`; any other size becomes `15.47px`. Use `font-scale` on the `<text>` to enlarge.
@@ -16,18 +16,35 @@ What the Atlassian connector accepts and returns for whiteboards, learned by pro
 
 ## Colors
 
-Colors used by `build_story_map.py` (meanings in `SKILL.md`). Confluence may snap a fill to the nearest color in its palette, so these are the values it stores:
+Colors used by `build_story_map.py` (meanings in `SKILL.md`). The sticky palette of Confluence is closed, 30 values; a fill outside it is snapped to the nearest one and the stored color changes, so always send an exact value:
 
 | Row | Fill |
 |---|---|
-| User persona | `#eed7fc` |
-| Activities | `#baf3db` |
-| Tasks | `#cfe1fd` |
-| Current release stories | `#fce4a6` (orange) |
-| Later releases | `#f0f1f2` (gray) |
+| User persona | `#f5e989` (yellow) |
+| Activities | `#eed7fc` (purple) |
+| Tasks | `#cfe1fd` (blue) |
+| Current release stories | `#baf3db` (green) |
+| Next release stories | `#fce4a6` (orange) |
+| Later releases | `#fff5db` (light orange) |
+| Delivered releases | `#f0f1f2` (gray) |
 | Open decision | `#ffd5d2` (red) |
 
-Probed snapping: `#fedec8` and `#fff3eb` become the light red `#ffeceb`; `#ffe2bd` and `#f8e6a0` become orange `#fce4a6`; `#fec195` becomes red `#ffb8b2`; `#dcdfe4` becomes `#f0f1f2`. Yellow is a different family (`#fef7c8`, `#f5e989`).
+The palette, light / medium / strong:
+
+| Hue | Light | Medium | Strong |
+|---|---|---|---|
+| Blue | `#e9f2fe` | `#cfe1fd` | `#adcbfb` |
+| Teal | `#e7f9ff` | `#c6edfb` | `#b1e4f7` |
+| Green | `#dcfff1` | `#baf3db` | `#97edc9` |
+| Lime | `#efffd6` | `#d3f1a7` | `#bde97c` |
+| Yellow | `#fef7c8` | `#f5e989` | `#efdd4e` |
+| Orange | `#fff5db` | `#fce4a6` | `#fbd779` |
+| Red | `#ffeceb` | `#ffd5d2` | `#ffb8b2` |
+| Magenta | `#ffecf8` | `#fdd0ec` | `#fcb6e1` |
+| Purple | `#f8eefe` | `#eed7fc` | `#e3bdfa` |
+| Gray | `#ffffff` | `#f0f1f2` | `#b7b9be` |
+
+Probed snapping: `#fedec8` and `#fff3eb` become the light red `#ffeceb`; `#ffe2bd` and `#f8e6a0` become orange `#fce4a6`; `#fec195` becomes red `#ffb8b2`; `#dcdfe4` becomes `#f0f1f2`. `read_story_map.py` takes both reds (`#ffd5d2`, `#ffeceb`) as an open question.
 
 ## Creating
 
