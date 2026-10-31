@@ -15,7 +15,7 @@ Abre la versión de Taller. El CLAUDE.md del proyecto tiene este bloque:
 - Language: es-MX
 ```
 
-En esta sesión no hay conexión a Confluence ni a Jira. El Product Brief dice que el dueño del taller avisa a mano a cada cliente cuándo le toca su siguiente servicio y a veces se le olvida. Este es el SVG del Story Map tal como lo devuelve la lectura de Confluence, con el número de línea al inicio de cada línea:
+Los components del proyecto en Jira son `web`, `notifications` y `platform`. En esta sesión no hay conexión a Confluence ni a Jira. El Product Brief dice que el dueño del taller avisa a mano a cada cliente cuándo le toca su siguiente servicio y a veces se le olvida. Este es el SVG del Story Map tal como lo devuelve la lectura de Confluence, con el número de línea al inicio de cada línea:
 
 <board>
 1<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="50000" height="50000" viewBox="-25120.56 -25484.45 50000 50000" font-family="Atlassian Sans, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Ubuntu, Helvetica Neue, sans-serif">
