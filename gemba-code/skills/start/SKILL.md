@@ -52,7 +52,7 @@ Use the template of the work type in `assets/`: `epic.md`, `story.md`, `task.md`
 
 ## 5. Show it, then create it
 
-Show the declaration in one compact block: work type, summary, priority, component, fix version, due date, blockers and the description. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again.
+Show the declaration in one compact block: work type, summary, priority, component, fix version, due date, blockers and the description. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.
 
 Then:
 
