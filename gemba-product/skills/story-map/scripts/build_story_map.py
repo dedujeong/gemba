@@ -54,8 +54,8 @@ PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
 CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
 FS = "15.47px"
 
-# Desired tops relative to the persona row, measured on a reference board.
-LABEL_TOP = {"persona": -67, "activities": -56, "tasks": -45, "release": -62}
+# Desired tops relative to the persona row, measured on a reference board. A release label is level with the first row of its stickies.
+LABEL_TOP = {"persona": -67, "activities": -56, "tasks": -45, "release": 0}
 HEADER_TOP, HEADER_SCALE, HEADER_CHARS = -299, 1.29, 170
 LABEL_BASE_H, LABEL_LINE_H, LABEL_CHARS = 80, 22, 42
 
@@ -86,6 +86,19 @@ def col_x(i):
     return round(X0 + i * PITCH, 2)
 
 
+def label_svg(lid, top, title, description, width=344.12, scale=1, chars=LABEL_CHARS, x=X_LABEL):
+    """A row label: a bold 27px title and a description. Confluence reads the y of a free text as its
+    vertical center, so y is the desired top plus half the estimated height."""
+    y = top + scale * label_height(description, chars) / 2
+    spans = f'<tspan font-size="{FS}"> </tspan><tspan font-weight="bold" font-size="27px" dy="1">{escape(title)}</tspan>'
+    if description:
+        spans += f'<tspan font-size="{FS}" dy="1">{escape(description)}</tspan>'
+    return (
+        f'<text x="{x}" y="{round(y, 2)}" width="{width}" text-anchor="start" font-size="{FS}" '
+        f'font-scale="{scale:g}" fill="#172b4d" id="{lid}" data-type="text">{spans}</text>'
+    )
+
+
 class Board:
     def __init__(self):
         self.out = []
@@ -101,14 +114,7 @@ class Board:
         )
 
     def row_label(self, lid, top, title, description, width=344.12, scale=1, chars=LABEL_CHARS):
-        y = top + scale * label_height(description, chars) / 2
-        spans = f'<tspan font-size="{FS}"> </tspan><tspan font-weight="bold" font-size="27px" dy="1">{escape(title)}</tspan>'
-        if description:
-            spans += f'<tspan font-size="{FS}" dy="1">{escape(description)}</tspan>'
-        self.out.append(
-            f'<text x="{X_LABEL}" y="{round(y, 2)}" width="{width}" text-anchor="start" font-size="{FS}" '
-            f'font-scale="{scale}" fill="#172b4d" id="{lid}" data-type="text">{spans}</text>'
-        )
+        self.out.append(label_svg(lid, top, title, description, width, scale, chars))
 
 
 def split_story(story):

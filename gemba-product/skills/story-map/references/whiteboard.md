@@ -65,13 +65,22 @@ Patch operations:
 - `<delete_svg from="N" to="M"/>`: both attributes are required.
 - `<replace_svg from="N" to="M">...</replace_svg>`: replace whole `<text>` or `<rect>` elements; a bare `<tspan>` is invalid.
 - `<insert_svg line="N">...</insert_svg>`: new elements get new ids.
-
 - `<update_elements_svg ids="id1,id2"><attr fill="#baf3db"/></update_elements_svg>`: changes an attribute of existing elements without touching their text. It needs `context.content`, but a partial one is enough: the numbered line of one of the elements (tested on `9404418`). A sticky is recolored with its `fill`, which must be an exact palette value (see Colors). Confluence rewrites the element it touches with rounded numbers (`width` 240.05 became 240, `x` 339.07 became 339.1, `y` 109.43 became 109.45): hundredths, not a visible move.
+
+`replace_svg` and `insert_svg` need the full SVG of the last read, with its line numbers, as `context.content`; with partial context they fail with "outside body.context.content". Operations apply in this order: delete, replace, insert, update. An element that is replaced or moved goes to the end of the z order.
+
+Tested on `9404418` (a replace of the MVP label and an insert of a new one in one patch):
+
+- A replaced `<text>` keeps its id and goes to the end of the board, so every line number after it shifts: read the board again before the next patch.
+- `<insert_svg line="N">` inserts before line N. With N the line of `</svg>`, the new element goes last and the SVG stays valid. The inserted element gets a new id.
+- Every other piece kept its coordinates. Send the SVG you read as `context.content`, as it came back: do not retype it.
+
+A row label is a free text, and Confluence reads the `y` of a free text as its vertical center. To leave its top at `top`, send `y = top + height / 2`: a label with a one-line description is 102 tall (add 51), with two lines 124 (add 62), at about 42 characters per line at width 344. `scripts/label_story_map.py` does this arithmetic and puts the top level with the first row of stickies of the release.
 
 What a patch keeps, tested on a board the person had arranged by hand:
 
 - Stickies the person moved stay where they are when another sticky is replaced or inserted. Read the board right before the patch and use that read as `context`.
-- Replacing a free text (title or row label) moves it, even with the coordinates it was read with: its `y` is taken as a vertical center again (a label moved 10.58 units up). Change free texts in the interface, not through the API.
+- Replacing a free text (title or row label) with the `y` it was read with moves it, because its `y` is taken as a vertical center again (a label moved 10.58 units up). Send `top + height / 2` instead (see above). The board header is not covered by that arithmetic and stays a change for the interface.
 - Creating the board again does not update it: it makes a second board and drops the layout.
 
 Not tested: a patch with a stale read, and deleting stickies.
