@@ -88,6 +88,16 @@ The person may arrange the board by hand. Changing its content must keep that la
 
 Details are in `references/whiteboard.md`.
 
+### Recolor a board made with the old colors
+
+When the person asks to update a board to the current colors, change only the fill of each sticky, so no text or position moves:
+
+1. Ask which releases are already delivered. The old gray cannot tell them from later releases, so never guess.
+2. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG and run `python3 scripts/read_story_map.py board.svg` to note the count per release.
+3. Run `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"` (repeat the option for each one). It prints, per color, the ids of the stickies that change.
+4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
+5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
+
 ## 6. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.

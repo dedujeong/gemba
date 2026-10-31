@@ -33,13 +33,14 @@ def attrs(tag):
     return dict(re.findall(r'([\w:-]+)="([^"]*)"', tag))
 
 
-def parse(svg):
+def read_bands(svg):
+    """The row labels, top to bottom, and the stickies of each row, keyed by label name."""
     svg = re.sub(r"(?m)^\d+(?=\s*<|$)", "", svg)
     stickies = {}
     for m in re.finditer(r"<rect\b[^>]*>", svg):
         a = attrs(m.group(0))
         if a.get("data-type") == "sticky":
-            stickies[a["id"]] = {"x": float(a["x"]), "y": float(a["y"]), "fill": a.get("fill", ""), "text": ""}
+            stickies[a["id"]] = {"id": a["id"], "x": float(a["x"]), "y": float(a["y"]), "fill": a.get("fill", ""), "text": ""}
     labels = []
     for m in re.finditer(r"(<text\b[^>]*>)(.*?)</text>", svg, re.S):
         a, body = attrs(m.group(1)), m.group(2)
@@ -64,7 +65,11 @@ def parse(svg):
         above = [l for l in labels if l["y"] <= center]
         if above:
             bands[above[-1]["name"]].append(s)
+    return labels, bands
 
+
+def parse(svg):
+    labels, bands = read_bands(svg)
     tasks = sorted(bands.get("Tasks", []), key=lambda s: s["x"])
     activities = sorted(bands.get("Activities", []), key=lambda s: s["x"])
 

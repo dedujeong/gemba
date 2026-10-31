@@ -66,6 +66,8 @@ Patch operations:
 - `<replace_svg from="N" to="M">...</replace_svg>`: replace whole `<text>` or `<rect>` elements; a bare `<tspan>` is invalid.
 - `<insert_svg line="N">...</insert_svg>`: new elements get new ids.
 
+- `<update_elements_svg ids="id1,id2"><attr fill="#baf3db"/></update_elements_svg>`: changes an attribute of existing elements without touching their text. It needs `context.content`, but a partial one is enough: the numbered line of one of the elements (tested on `9404418`). A sticky is recolored with its `fill`, which must be an exact palette value (see Colors). Confluence rewrites the element it touches with rounded numbers (`width` 240.05 became 240, `x` 339.07 became 339.1, `y` 109.43 became 109.45): hundredths, not a visible move.
+
 What a patch keeps, tested on a board the person had arranged by hand:
 
 - Stickies the person moved stay where they are when another sticky is replaced or inserted. Read the board right before the patch and use that read as `context`.
