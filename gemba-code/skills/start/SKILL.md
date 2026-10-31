@@ -66,7 +66,7 @@ Without a connection to Jira, write in the reply the exact create call and links
 
 ## 6. Edit only in Backlog
 
-When someone asks to change an issue, read its status first. In Backlog, edit it with `editJiraIssue` (`contentFormat: "html"`), following the same template. In Implement, Review or Done, do not edit it: say that an issue is edited only while it is in Backlog, and propose a new issue for the change instead.
+When someone asks to change an issue, read its status first. In Backlog, edit it with `editJiraIssue` (`contentFormat: "html"`), following the same template. In Implement, Review or Done, do not edit it: say that an issue is edited only while it is in Backlog, and stop there. Do not move it back to Backlog and do not propose another path.
 
 ## 7. Report
 
