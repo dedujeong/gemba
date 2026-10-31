@@ -83,10 +83,20 @@ When the MVP grew, say by how much and recommend which stories move to the next 
 The person may arrange the board by hand. Changing its content must keep that layout:
 
 - Change only stickies, with `updateConfluenceContent` and patch operations (`replace_svg`, `insert_svg`), and read the board right before each patch so the patch carries the positions the person left.
-- Do not edit the title or the row labels through the API: Confluence moves free texts when they are replaced. Ask the person to change them in the interface.
+- The row labels (User persona, Activities, Tasks, each release and Later) are changed through the API too, with `scripts/label_story_map.py`, and the person is asked for no step in the interface. The board header (product name and vision) is the one free text Claude does not replace: Confluence moves it, so the person changes it in the interface.
 - Do not recreate the board. Creating it again would drop the layout and leave a second board.
 
 Details are in `references/whiteboard.md`.
+
+### Change or add a row label
+
+When the scope of a release changes, its label changes with it. The script changes the text under the title, not the title itself; renaming a row is a change for the interface. Change the stickies first, then read the board again, because the label goes level with the top of the first row of stickies of its release as the board is now:
+
+1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
+2. To change the text of a label: `python3 scripts/label_story_map.py board.svg --label "<row name>" --description "<new text>"`. Without `--description` it only realigns the label. For a row without stickies, add `--top <y>`.
+3. To add the label of a new release or of the Later row: `python3 scripts/label_story_map.py board.svg --add "<name>" --description "<text>" --top <y of its first row>`.
+4. Send the patch it prints with `updateConfluenceContent`, with the SVG you read in step 1 as `context.content`, whole and with its line numbers.
+5. Read the board again: the label sits at the top of its row and nothing else moved. Recount with `read_story_map.py` if stickies changed.
 
 ### Recolor a board made with the old colors
 
