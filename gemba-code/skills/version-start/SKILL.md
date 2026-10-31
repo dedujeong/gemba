@@ -36,7 +36,7 @@ Each Story Map card of the release is an activity with its stories in this relea
 - its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none;
 - one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which the maintainer sets, so ask for it.
 
-After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component (the one where the version is bumped; ask if none fits), High priority and a 1h estimate.
+After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. Never ask for it and never name a new one: it only labels the Task, and the maintainer can change it when they confirm.
 
 Then ask the maintainer to confirm the release. They can change any estimate, priority, component, blocker or due date before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
 
@@ -60,7 +60,7 @@ Right after the fix version, declare every confirmed card through `start`, in th
 
 ## 8. Declare the release Task
 
-When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5, and blocked by every other issue of the version (each Epic and each Story just created). It is the last issue to close, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
+When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), and blocked by every other issue of the version (each Epic and each Story just created). It is the last issue to close, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
 
 - the version bump, integrated into `develop`;
 - `develop` merged into `main`;
