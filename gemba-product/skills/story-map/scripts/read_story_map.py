@@ -8,23 +8,32 @@ prefixes. Works on boards edited by hand, as long as:
 - each row has a label: a text whose bold 27px line is "User persona", "Activities",
   "Tasks", or a release name ("MVP", "Release 2", ...), placed at or above its row;
 - each story sits under its task, in the same column (x within half a card).
-The first label after "Tasks" is taken as the MVP.
+
+A release is delivered when its stories are gray, the color of a release that shipped.
+The release being worked on, the "current" one (the MVP until it ships), is the first
+one that is not delivered; a delivered release is not part of its scope. A board in the
+old colors has gray in every later release, so it reads wrong until it is recolored
+(recolor_story_map.py).
 
 A release's "count" is its stories; red stickies (open questions) are not stories and
-are counted apart in "open". --previous N is the number of stories the first release
+are counted apart in "open". --previous N is the number of stories the current release
 had when it was last reported; the script then says how much it grew, shrank or stayed.
 
---mvp prints only the first release, its stories grouped by activity and task, for
+--mvp prints only the current release, its stories grouped by activity and task, for
 whoever builds it. Nothing is copied anywhere: the board in Confluence is the only
 source, and this reads it each time.
 """
 import json
+import os
 import re
 import sys
 from html import unescape
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
+
+from build_story_map import CARD_H, CARD_W, RELEASED
+
 BACKBONE = {"User persona": "personas", "Activities": "activities", "Tasks": "tasks"}
-CARD_W, CARD_H = 240.05, 144.03
 # Reds of the sticky palette: the open-question fill and the light red Confluence snaps near-reds to.
 OPEN_FILLS = ("#ffd5d2", "#ffeceb")
 
@@ -95,11 +104,13 @@ def parse(svg):
         for s in sorted(bands[l["name"]], key=lambda s: (s["x"], s["y"])):
             c = column(s)
             if c is None:
-                result["unplaced"].append({"release": l["name"], "text": s["text"]})
+                result["unplaced"].append({"release": l["name"], "id": s["id"], "text": s["text"]})
             else:
-                columns[c].append({"text": s["text"], "open": s["fill"].lower() in OPEN_FILLS})
+                columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS})
+        fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
         result["releases"].append({
             "name": l["name"],
+            "delivered": bool(fills) and all(f == RELEASED for f in fills),
             "count": sum(1 for c in columns for st in c if not st["open"]),
             "open": sum(1 for c in columns for st in c if st["open"]),
             "tasks": [
@@ -110,15 +121,22 @@ def parse(svg):
     return result
 
 
+def current(r):
+    """The release being worked on: the first one that is not delivered. Later is a parking row, never the current release."""
+    return next((release for release in r["releases"] if not release["delivered"] and release["name"] != "Later"), None)
+
+
 def change(r, previous):
-    """Stories the first release gained (positive) or lost (negative) since `previous`."""
-    return r["releases"][0]["count"] - previous if r["releases"] else 0
+    """Stories the current release gained (positive) or lost (negative) since `previous`."""
+    release = current(r)
+    return release["count"] - previous if release else 0
 
 
 def for_development(r):
-    """The first release as development reads it: stories by activity and task, open questions apart."""
+    """The current release as development reads it: stories by activity and task, open questions apart."""
+    release = current(r)
     stories, open_questions = [], []
-    for task in (r["releases"][0]["tasks"] if r["releases"] else []):
+    for task in (release["tasks"] if release else []):
         done = [st["text"] for st in task["stories"] if not st["open"]]
         open_questions += [st["text"] for st in task["stories"] if st["open"]]
         if not done:
@@ -126,7 +144,7 @@ def for_development(r):
         if not stories or stories[-1]["activity"] != task["activity"]:
             stories.append({"activity": task["activity"], "tasks": []})
         stories[-1]["tasks"].append({"task": task["task"], "stories": done})
-    return {"release": r["releases"][0]["name"] if r["releases"] else "", "stories": stories, "open_questions": open_questions}
+    return {"release": release["name"] if release else "", "stories": stories, "open_questions": open_questions}
 
 
 def mvp_markdown(mvp):
@@ -148,11 +166,12 @@ def plural(n, one, many):
 
 def summary(r, previous=None):
     lines = [f'{rel["name"]}: {plural(rel["count"], "story", "stories")}, {plural(rel["open"], "open question", "open questions")}'
-             for rel in r["releases"]]
-    if previous is not None and r["releases"]:
-        first, delta = r["releases"][0], change(r, previous)
+             + (" (delivered)" if rel["delivered"] else "") for rel in r["releases"]]
+    release = current(r)
+    if previous is not None and release:
+        delta = change(r, previous)
         verb = f"grew by {delta}" if delta > 0 else f"shrank by {-delta}" if delta < 0 else "stayed the same"
-        lines.append(f'{first["name"]} {verb} (was {previous}, now {first["count"]})')
+        lines.append(f'{release["name"]} {verb} (was {previous}, now {release["count"]})')
     return "\n".join(lines)
 
 

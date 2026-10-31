@@ -71,10 +71,10 @@ The map is conversation material. Reviewing it brings up rules, roles and permis
 Before citing any number, recount from the board at that moment, never from memory or from what was said earlier. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG to a file and run:
 
 ```
-python3 scripts/read_story_map.py board.svg --previous <stories the first release had when last reported>
+python3 scripts/read_story_map.py board.svg --previous <stories the current release had when last reported>
 ```
 
-It prints the stories and open questions per release, the stories of each task, and whether the first release grew, shrank or stayed the same. An open question (red sticky) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
+It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. A gray release is read as delivered and is not part of the current release's scope; the current release is the first one that is not delivered (the MVP until it ships). An open question (red sticky) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
 
 When the MVP grew, say by how much and recommend which stories move to the next release, naming them. Start with the ones that trace to no Quality bar condition and that a manual step covers. The person decides.
 

@@ -107,6 +107,74 @@ class ForDevelopment(unittest.TestCase):
         self.assertEqual(moved, plain)
 
 
+class DeliveredReleases(unittest.TestCase):
+    """A gray release shipped: it is read as delivered and the scope is the first release that is not."""
+
+    def shipped(self):
+        spec = delivered_first(SPEC)
+        spec["releases"][1]["stories"] = [[{"text": "Import dates from the notebook", "traces": "Problem"}], [{"text": "Print the labels", "traces": "Problem"}]]
+        spec["releases"].append({"name": "Release 3", "description": "Later.", "stories": [["Print the reminders"], []]})
+        return spec
+
+    def test_a_gray_release_is_delivered_and_the_next_one_is_not(self):
+        releases = read_story_map.parse(board(self.shipped()))["releases"]
+        self.assertEqual([(r["name"], r["delivered"]) for r in releases],
+                         [("MVP", True), ("Release 2", False), ("Release 3", False)])
+
+    def test_a_board_with_nothing_delivered_marks_none(self):
+        self.assertFalse(any(r["delivered"] for r in read_story_map.parse(board())["releases"]))
+
+    def test_the_scope_is_the_first_release_not_delivered(self):
+        mvp = read_story_map.for_development(read_story_map.parse(board(self.shipped())))
+        self.assertEqual(mvp["release"], "Release 2")
+        self.assertIn("Import dates from the notebook", str(mvp["stories"]))
+        self.assertNotIn("Delivered story", str(mvp["stories"]))
+
+    def test_growth_is_measured_on_the_current_release(self):
+        board_now = read_story_map.parse(board(self.shipped()))
+        self.assertEqual(read_story_map.change(board_now, 3), -1)
+
+    def test_the_summary_says_which_releases_were_delivered_and_compares_the_current_one(self):
+        out = read_story_map.summary(read_story_map.parse(board(self.shipped())), 2)
+        self.assertIn("MVP: 1 story, 0 open questions (delivered)", out)
+        self.assertIn("Release 2 stayed the same (was 2, now 2)", out)
+
+    def test_a_release_with_only_open_questions_is_not_delivered(self):
+        spec = self.shipped()
+        spec["releases"][1]["stories"] = [[{"text": "Still unknown", "open": True}], []]
+        self.assertFalse(read_story_map.parse(board(spec))["releases"][1]["delivered"])
+
+    def test_a_release_with_one_gray_story_among_others_is_not_delivered(self):
+        svg = board(self.shipped()).replace("#baf3db", "#f0f1f2", 1)  # one story of the current release turns gray
+        self.assertFalse(read_story_map.parse(svg)["releases"][1]["delivered"])
+
+    def test_later_is_never_the_current_release(self):
+        spec = self.shipped()
+        for r in spec["releases"][:3]:
+            r["released"] = True
+            r["stories"] = [["Done " + r["name"]], []]
+        spec["releases"].append({"name": "Later", "description": "Nothing assigned.", "stories": [[{"text": "Some day", "traces": "Problem"}], []]})
+        data = read_story_map.parse(board(spec))
+        self.assertEqual(read_story_map.for_development(data)["release"], "")
+        self.assertNotIn("grew", read_story_map.summary(data, 1))
+
+    def test_every_story_carries_the_id_of_its_sticky_so_it_can_be_moved(self):
+        data = read_story_map.parse(board())
+        ids = [st["id"] for r in data["releases"] for t in r["tasks"] for st in t["stories"]]
+        self.assertEqual(len(ids), 4)
+        self.assertTrue(all(ids) and len(set(ids)) == 4)
+
+    def test_when_everything_is_delivered_there_is_no_current_release(self):
+        spec = self.shipped()
+        for r in spec["releases"]:
+            r["released"] = True
+            r["stories"] = [["Done " + r["name"]], []]
+        data = read_story_map.parse(board(spec))
+        self.assertEqual(read_story_map.for_development(data)["release"], "")
+        self.assertEqual(read_story_map.change(data, 4), 0)
+        self.assertNotIn("grew", read_story_map.summary(data, 4))
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *extra):
         with tempfile.TemporaryDirectory() as tmp:
@@ -133,6 +201,17 @@ class CommandLine(unittest.TestCase):
 
     def test_says_the_first_release_shrank(self):
         self.assertIn("MVP shrank by 3 (was 5, now 2)", self.run_cli("--previous", "5"))
+
+    def test_mvp_option_prints_the_first_release_not_delivered(self):
+        spec = delivered_first(SPEC)
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "board.svg")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(board(spec))
+            out = subprocess.run([sys.executable, "-I", os.path.join(SCRIPTS, "read_story_map.py"), path, "--mvp"],
+                                 capture_output=True, text=True, check=True).stdout
+        self.assertIn("## Release 2", out)
+        self.assertNotIn("Delivered story", out)
 
     def test_says_the_first_release_stayed(self):
         self.assertIn("MVP stayed the same (was 2, now 2)", self.run_cli("--previous", "2"))
