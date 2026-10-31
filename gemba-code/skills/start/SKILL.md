@@ -49,7 +49,14 @@ Use the template of the work type in `assets/`: `epic.md`, `story.md`, `task.md`
 - No bold. Never mention Gemba Code or where the issue came from.
 - Only the sections of the template; omit a section when there is nothing to put in it.
 - Business rules and out-of-scope items come only from the Product Brief and the Story Map, in their words. When something needed is missing, ask.
-- The issue is the request, not the specification: generic referents, no invented sample data, and only what the person observes, never how it is achieved.
+- Every Story has acceptance criteria in the form "Dado <contexto>, cuando <acción>, entonces <resultado>": at least the observable result the story promises. A Story that touches money or permissions also covers the rule that protects it, and each of its criteria states a result an automated test can check as true or false. Write only criteria that the request, the brief or the card state: when the rule that protects money or permissions is not stated, ask for it instead of inferring a criterion.
+- The issue is the request, not the specification: generic referents, no invented sample data, and only what the person observes, never how it is achieved. Before showing the declaration, reread every line and remove what the Product Brief does not state.
+
+| Instead of | Write |
+| --- | --- |
+| Dado un pedido de 3 productos a $35, cuando se confirma, entonces el total es $105 | Dado un pedido con varios productos, cuando se confirma, entonces el total es la suma del precio de cada producto por su cantidad |
+| Dado el cliente «Juan» | Dado un cliente |
+| Entonces se calcula en el servidor y se muestra en un modal | Entonces se ve el total |
 
 ## 5. Show it, then create it
 
