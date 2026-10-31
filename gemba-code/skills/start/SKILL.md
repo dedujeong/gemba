@@ -15,7 +15,7 @@ Read the Product Brief in the Confluence space for its actors and business rules
 
 ## 2. Choose the work type
 
-Declare one issue per request.
+Declare one issue per request. The exception is a Story Map card with two or more stories: the Epic and one Story per story are declared together, as one request. A card with one story is a Story with no Epic.
 
 | Work type | Use it when |
 | --- | --- |
@@ -58,7 +58,8 @@ Show the declaration in one compact block: work type, summary, priority, compone
 Then:
 
 1. Create the issue with `createJiraIssue`: `contentFormat: "html"`, the description, `priority`, and in `additional_fields` `fixVersions` (`[{"name": "<version>"}]`), `components` (`[{"name": "<component>"}]`, never for an Epic), `timetracking` (`{"originalEstimate": "<n>h"}`, never for an Epic) and `duedate` for an Epic. New issues land in Backlog.
-2. Create each blocking link with `executeWrite` → `createJiraIssueLink`: `linkType: "Blocks"`, `inwardIssue` the blocker, `outwardIssue` the blocked issue.
+2. For an Epic, create it first, with the Story Map as a block card in its Source, and then each of its Stories with `parent` set to the Epic's key. Show the Epic with all its Stories in the block before creating. Never add a Story to an Epic that is already declared.
+3. Create each blocking link with `executeWrite` → `createJiraIssueLink`: `linkType: "Blocks"`, `inwardIssue` the blocker, `outwardIssue` the blocked issue.
 
 Declaring a Spike creates only the issue; its findings page is created when the Spike starts.
 
