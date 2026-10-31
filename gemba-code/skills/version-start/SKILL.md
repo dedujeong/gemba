@@ -33,9 +33,9 @@ Each Story Map card of the release is an activity with its stories in this relea
 
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
-- its stories, by task.
+- its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none.
 
-Then ask the maintainer to confirm the release. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
+Then ask the maintainer to confirm the release. They can change any estimate before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
 
 If they ask for a change (a story in or out, moved to another release or activity, reworded), it is made on the Story Map, never only in what will be declared: Confluence is the only source. Make it with Gemba Product's `story-map` skill if it is installed, or ask the person to make it on the board. Then read the release again (step 3) and show it again from step 4. Do not show how the release would look after the change: only a new reading of the board counts. Each change goes through the board and a new reading before declaring.
 

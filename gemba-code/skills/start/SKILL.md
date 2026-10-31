@@ -33,6 +33,7 @@ Declare one issue per request.
 | Priority | Highest, High, Medium or Low, by how much other work waits on it |
 | Component | The part of the repository the change touches, in lowercase; it is also the commit scope. Read the existing ones with `executeRead` → `listJiraProjectComponents` and reuse one when it fits; naming a new one in the create call creates it. An Epic has no component |
 | Fix version | The one named by the person or by version-start. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that version-start has to create it. Never create a version here |
+| Original estimate | Story, Task and Bug: the expected hours of one person working with Claude. Spike: its timebox in hours. Epic: none. Follow `references/estimation.md` |
 | Due date | Epic only, set by the maintainer. Ask for it if they did not give it |
 | Blocks / is blocked by | Ask what must exist first. Search the version's open issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find |
 
@@ -52,11 +53,11 @@ Use the template of the work type in `assets/`: `epic.md`, `story.md`, `task.md`
 
 ## 5. Show it, then create it
 
-Show the declaration in one compact block: work type, summary, priority, component, fix version, due date, blockers and the description. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.
+Show the declaration in one compact block: work type, summary, priority, component, fix version, original estimate, due date, blockers and the description. The maintainer can change any of them, the estimate included, before it is created. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.
 
 Then:
 
-1. Create the issue with `createJiraIssue`: `contentFormat: "html"`, the description, `priority`, and in `additional_fields` `fixVersions` (`[{"name": "<version>"}]`), `components` (`[{"name": "<component>"}]`, never for an Epic) and `duedate` for an Epic. New issues land in Backlog.
+1. Create the issue with `createJiraIssue`: `contentFormat: "html"`, the description, `priority`, and in `additional_fields` `fixVersions` (`[{"name": "<version>"}]`), `components` (`[{"name": "<component>"}]`, never for an Epic), `timetracking` (`{"originalEstimate": "<n>h"}`, never for an Epic) and `duedate` for an Epic. New issues land in Backlog.
 2. Create each blocking link with `executeWrite` → `createJiraIssueLink`: `linkType: "Blocks"`, `inwardIssue` the blocker, `outwardIssue` the blocked issue.
 
 Declaring a Spike creates only the issue; its findings page is created when the Spike starts.
