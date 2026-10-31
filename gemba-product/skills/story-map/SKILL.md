@@ -1,6 +1,6 @@
 ---
 name: story-map
-description: Turn the Product Brief into a user story map on a Confluence whiteboard, review that map with the person and close the MVP when they say so. Use when the brief has a clear problem, primary job and enough evidence, or when someone asks for the story map, the MVP or the scope, or when a map already built is being reviewed, counted, changed or closed. Reads the brief, drafts the map with the MVP cut, builds the whiteboard in the product's space and links it from the brief, then recounts and edits the board during the review.
+description: Turn the Product Brief into a user story map on a Confluence whiteboard, review that map with the person and close the MVP when they say so. Use when the brief has a clear problem, primary job and enough evidence, or when someone asks for the story map, the MVP or the scope, or when a map already built is being reviewed, counted, changed or closed, or when a release has shipped and is reviewed to prepare the next one. Reads the brief, drafts the map with the MVP cut, builds the whiteboard in the product's space and links it from the brief, then recounts and edits the board during the review.
 ---
 
 # Story map
@@ -31,18 +31,20 @@ Rules for the MVP cut:
 
 ## Colors
 
-Colors always carry the same meaning, on every board:
+Colors follow the Jira work items and always carry the same meaning, on every board:
 
 | Color | Meaning |
 |---|---|
-| Purple | User persona |
-| Green | Activities |
+| Yellow | User persona |
+| Purple | Activities |
 | Blue | Tasks |
-| Orange | Stories in the current release (the MVP until it ships) |
-| Gray | Stories in later releases |
+| Green | Stories in the current release (the MVP until it ships) |
+| Orange | Stories in the next release |
+| Light orange | Stories in later releases |
+| Gray | Stories in releases already delivered |
 | Red | Unresolved question that blocks a story |
 
-When the MVP ships, the next release becomes the current one and turns orange.
+When the MVP ships, mark it `"released": true` in the spec: it turns gray, the next release becomes the current one and turns green, and the rest move up one place.
 
 ## 3. Build the whiteboard
 
@@ -52,7 +54,7 @@ Fill `assets/story-map-template.json` with the product's content. Each MVP story
 python3 scripts/build_story_map.py spec.json story-map.svg
 ```
 
-The script rejects an MVP story without `traces`, and prints the count per release and the origin of each MVP story.
+The script rejects a story of the current release without `traces`, and prints the count per release and the origin of each MVP story.
 
 Create the board with `createConfluenceContent` (`contentType: whiteboard`, `body.format: svg`, the generated SVG) in the product's space, titled `Story Map`. Then add the sentence "El alcance está en el Story Map." (in the person's language) with the board link to the second paragraph of the brief's Source panel, before its closing sentence. Edit the brief in place with granular edits and keep everything that was already there.
 
@@ -69,10 +71,10 @@ The map is conversation material. Reviewing it brings up rules, roles and permis
 Before citing any number, recount from the board at that moment, never from memory or from what was said earlier. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG to a file and run:
 
 ```
-python3 scripts/read_story_map.py board.svg --previous <stories the first release had when last reported>
+python3 scripts/read_story_map.py board.svg --previous <stories the current release had when last reported>
 ```
 
-It prints the stories and open questions per release, the stories of each task, and whether the first release grew, shrank or stayed the same. An open question (red sticky) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
+It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. A gray release is read as delivered and is not part of the current release's scope; the current release is the first one that is not delivered (the MVP until it ships). An open question (red sticky) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
 
 When the MVP grew, say by how much and recommend which stories move to the next release, naming them. Start with the ones that trace to no Quality bar condition and that a manual step covers. The person decides.
 
@@ -81,10 +83,30 @@ When the MVP grew, say by how much and recommend which stories move to the next 
 The person may arrange the board by hand. Changing its content must keep that layout:
 
 - Change only stickies, with `updateConfluenceContent` and patch operations (`replace_svg`, `insert_svg`), and read the board right before each patch so the patch carries the positions the person left.
-- Do not edit the title or the row labels through the API: Confluence moves free texts when they are replaced. Ask the person to change them in the interface.
+- The row labels (User persona, Activities, Tasks, each release and Later) are changed through the API too, with `scripts/label_story_map.py`, and the person is asked for no step in the interface. The board header (product name and vision) is the one free text Claude does not replace: Confluence moves it, so the person changes it in the interface.
 - Do not recreate the board. Creating it again would drop the layout and leave a second board.
 
 Details are in `references/whiteboard.md`.
+
+### Change or add a row label
+
+When the scope of a release changes, its label changes with it. The script changes the text under the title, not the title itself; renaming a row is a change for the interface. Change the stickies first, then read the board again, because the label goes level with the top of the first row of stickies of its release as the board is now:
+
+1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
+2. To change the text of a label: `python3 scripts/label_story_map.py board.svg --label "<row name>" --description "<new text>"`. Without `--description` it only realigns the label. For a row without stickies, add `--top <y>`.
+3. To add the label of a new release or of the Later row: `python3 scripts/label_story_map.py board.svg --add "<name>" --description "<text>" --top <y of its first row>`.
+4. Send the patch it prints with `updateConfluenceContent`, with the SVG you read in step 1 as `context.content`, whole and with its line numbers.
+5. Read the board again: the label sits at the top of its row and nothing else moved. Recount with `read_story_map.py` if stickies changed.
+
+### Recolor a board made with the old colors
+
+When the person asks to update a board to the current colors, change only the fill of each sticky, so no text or position moves:
+
+1. Ask which releases are already delivered. The old gray cannot tell them from later releases, so never guess.
+2. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG and run `python3 scripts/read_story_map.py board.svg` to note the count per release.
+3. Run `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"` (repeat the option for each one). It prints, per color, the ids of the stickies that change.
+4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
+5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
 
 ## 6. Close the MVP
 
@@ -98,3 +120,18 @@ When they close it:
 - Tell the person that the discovery is complete: the Story Map, once closed, ends it.
 
 If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
+
+## 7. Review a closed release and prepare the next one
+
+When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
+
+1. **What was delivered.** Search the Stories of the release's fix version with `searchJiraIssuesUsingJql` and ask for status, original estimate and time spent. Show which Stories are Done and which are not, and the time spent against the original estimate, per Story and in total. Add the times with a tool (Bash), never from memory, and say when a Story has no estimate.
+2. **What the board says.** Read the board (section 4). A gray release is delivered: it is read as delivered and does not count in the scope of the next one. The current release is the first one that is not delivered; Later is never the current release.
+3. **What was not delivered.** For each such Story, read its description and propose the sticky it matches (same task, same release). If no sticky is clear, say so; never guess. Ask the person where each one goes: the next release or Later. Nothing moves before they answer.
+4. **Apply what the person decides,** reading the board again before each patch and sending each patch with `updateConfluenceContent` and that read as `context.content`, whole:
+   - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its sticky `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it.
+   - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest move up (section 5, Recolor).
+   - If the scope of a release changed, update its label (section 5, Change or add a row label).
+5. **Recount** from the board with `read_story_map.py` before citing any number (section 4), and tell the person which release is now the current one and how many stories it has.
+
+The person decides what moves and when a release counts as delivered. Claude proposes and checks that the board agrees.
