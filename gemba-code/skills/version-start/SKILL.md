@@ -34,7 +34,7 @@ Each Story Map card of the release is an activity with its stories in this relea
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
 - its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none;
-- for each issue, the Epic included, the priority and the blockers (or that there are none), and the component (a Story only; an Epic has none), as `start` would ask for them, proposed by you; for an Epic, its due date, which the maintainer sets, so ask for it.
+- one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which the maintainer sets, so ask for it.
 
 After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component (the one where the version is bumped; ask if none fits), High priority and a 1h estimate.
 
