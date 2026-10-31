@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence and point out its open questions before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions and have the maintainer confirm each card as a Story or an Epic before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -23,13 +23,21 @@ Save the SVG to a temporary file outside the repository (`mktemp`), run `python3
 
 If every release is gray, say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
-## 4. Show the release
-
-Show the release name and its stories by activity and task, as the script returns them.
+## 4. Point out open questions
 
 Before anything else, point out each open question of the release, in its own words. An open question is not a story and is never declared: while one is open, nothing of the version is declared. Ask the person to resolve it, in discovery or by telling you the decision, and wait.
 
-Nothing is declared in this step.
+## 5. Confirm the release
+
+Each Story Map card of the release is an activity with its stories in this release. Show every card once, in board order:
+
+- the activity;
+- how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
+- its stories, by task.
+
+Then ask the maintainer to confirm the release. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
+
+If they ask for a change (a story in or out, moved to another release or activity, reworded), it is made on the Story Map, never only in what will be declared: Confluence is the only source. Make it with Gemba Product's `story-map` skill if it is installed, or ask the person to make it on the board. Then read the release again (step 3) and show it again from step 4. Do not show how the release would look after the change: only a new reading of the board counts. Each change goes through the board and a new reading before declaring.
 
 ## Without a connection
 
