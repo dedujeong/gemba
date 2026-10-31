@@ -36,6 +36,8 @@ Each Story Map card of the release is an activity with its stories in this relea
 - its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none;
 - for each issue, the Epic included, the priority and the blockers (or that there are none), and the component (a Story only; an Epic has none), as `start` would ask for them, proposed by you; for an Epic, its due date, which the maintainer sets, so ask for it.
 
+After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component (the one where the version is bumped; ask if none fits), High priority and a 1h estimate.
+
 Then ask the maintainer to confirm the release. They can change any estimate, priority, component, blocker or due date before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
 
 If they ask for a change (a story in or out, moved to another release or activity, reworded), it is made on the Story Map, never only in what will be declared: Confluence is the only source. Make it with Gemba Product's `story-map` skill if it is installed, or ask the person to make it on the board. Then read the release again (step 3) and show it again from step 4. Until that new reading, show no release at all, neither as it would look after the change nor as it is before it: only a reading of the board after the change counts. Each change goes through the board and a new reading before declaring.
@@ -55,6 +57,18 @@ Without a connection to Jira, write the call you would make and say that nothing
 ## 7. Declare the cards
 
 Right after the fix version, declare every confirmed card through `start`, in that fix version, in board order: a card with one story as a Story with no Epic, a card with two or more as an Epic with one Story per story as its children. Hand `start` the card, its fields as the maintainer confirmed them and the Story Map link for an Epic's Source. The maintainer already confirmed the whole version in step 5: `start` creates each issue without asking again, and you do not ask either: do not offer a last chance to change something before creating. If the maintainer already confirmed the release in their request, do not show it again; go on to steps 6 and 7. Then report the keys, one line per card.
+
+## 8. Declare the release Task
+
+When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5, and blocked by every other issue of the version (each Epic and each Story just created). It is the last issue to close, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
+
+- the version bump, integrated into `develop`;
+- `develop` merged into `main`;
+- the tag of the version;
+- the release on GitHub, with its notes;
+- the fix version released in Jira.
+
+Like the cards, it is created without asking again. Report its key with the others.
 
 ## Without a connection
 
