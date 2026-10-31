@@ -151,6 +151,32 @@ class FixedColors(unittest.TestCase):
         self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, RELEASED, CURRENT, NEXT, LATER})
 
 
+class LabelAlignment(unittest.TestCase):
+    def test_each_release_label_is_level_with_the_first_row_of_its_stickies(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"].append({"name": "Later", "description": "Not assigned to a release yet.", "stories": [[], ["Some day"]]})
+        svg = build_story_map.build(spec)
+        root = ET.fromstring(svg)
+        ys = {}
+        for el in root.iter("{%s}rect" % NS["s"]):
+            ys[el.get("id")] = float(el.get("y"))
+        sticky_y = {}
+        for el in root.iter("{%s}text" % NS["s"]):
+            if el.get("belongs-to") in ys:
+                sticky_y[("".join(el.itertext())).strip()] = ys[el.get("belongs-to")]
+        tops = {}
+        for el in root.iter("{%s}text" % NS["s"]):
+            if (el.get("id") or "").startswith("label-release-"):
+                i = int(el.get("id").rsplit("-", 1)[1])
+                height = build_story_map.label_height(spec["releases"][i]["description"])
+                tops[i] = round(float(el.get("y")) - height / 2, 2)
+        first_rows = {}
+        for i, release in enumerate(spec["releases"]):
+            texts = [build_story_map.split_story(st)[0] for column in release["stories"] for st in column]
+            first_rows[i] = min(sticky_y[t] for t in texts)
+        self.assertEqual(tops, first_rows)
+
+
 class Traceability(unittest.TestCase):
     def test_mvp_story_without_traces_is_rejected(self):
         spec = copy.deepcopy(SPEC)
