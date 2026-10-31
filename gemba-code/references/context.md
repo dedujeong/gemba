@@ -7,7 +7,7 @@ These rules apply to every session in a project that uses Gemba Code. The projec
 - Work starts only from a Jira work item in the current fix version. If there is none, propose declaring it before touching code. Prevents: changes with no trace back to what was agreed.
 - An item blocked by another open item is not started. Jira does not enforce it, so check the item's links when taking it. Prevents: building on work that does not exist yet.
 - The acceptance criteria (Story) or Done when (Task, Bug, Spike) are the contract. If they turn out wrong or incomplete, say so and update the item before the code changes, not after. Prevents: reviewing against a contract nobody agreed.
-- An item is edited only while it is in Backlog. Prevents: a contract that changes while it is being built or reviewed.
+- An item is edited only while it is in Backlog. In Implement, Review or Done, refuse any change to it: do not edit it, do not move it back to Backlog and do not propose another path, such as a new item. Prevents: a contract that changes while it is being built or reviewed.
 - Work types: an Epic groups the work of one Story Map card inside one version and has no branch; a Story is something a user can do that they could not before; a Task is technical work no user sees; a Bug is something already Done that does not do what it should (if its item is not Done, add the case to that item's criteria instead); a Spike answers a question in a fixed timebox. Prevents: work filed where nobody will look for it.
 
 ## Spike findings
