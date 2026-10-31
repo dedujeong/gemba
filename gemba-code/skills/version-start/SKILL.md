@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions and have the maintainer confirm each card as a Story or an Epic before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, and create the fix version `<Product> vX.Y.Z` with its dates before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -38,6 +38,18 @@ Each Story Map card of the release is an activity with its stories in this relea
 Then ask the maintainer to confirm the release. They can change any estimate before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
 
 If they ask for a change (a story in or out, moved to another release or activity, reworded), it is made on the Story Map, never only in what will be declared: Confluence is the only source. Make it with Gemba Product's `story-map` skill if it is installed, or ask the person to make it on the board. Then read the release again (step 3) and show it again from step 4. Until that new reading, show no release at all, neither as it would look after the change nor as it is before it: only a reading of the board after the change counts. Each change goes through the board and a new reading before declaring.
+
+## 6. Create the fix version
+
+Once the maintainer confirms the release, create its fix version before declaring anything, so every issue hangs from it.
+
+- Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirms. Ask for the number; never compute it yourself. If it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
+- Start date and release date: the dates the maintainer gives for when the version starts and when it is delivered. Ask for any of them they did not give.
+- Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
+
+First list the project's versions with `executeRead` → `getJiraProjectVersions`. If one with the same name already exists, do not create another: say so and use it. Otherwise create it with `executeDestructive` → `manageJiraProjectVersion` (`action: "create"`, `projectIdOrKey`, `name`, `startDate`, `releaseDate`, `description`), then read the versions again and report the one that is there.
+
+Without a connection to Jira, write the call you would make and say that nothing was created.
 
 ## Without a connection
 

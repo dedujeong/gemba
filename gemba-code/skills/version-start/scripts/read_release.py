@@ -8,6 +8,7 @@ including the line-number prefixes. The board follows the Gemba Product layout:
   "Tasks" or a release name ("MVP", "Release 2", ...), at or above its row;
 - each story sits under its task, in the same column.
 
+Each release reports the description on its row label, the value it delivers.
 A release is delivered when its stories are gray, and it does not count. The current
 release is the first one that is not delivered; the row named Later never is. Red
 stickies are open questions, not stories, and are reported apart.
@@ -49,7 +50,10 @@ def read_bands(svg):
         elif a.get("data-type") == "text":
             title = re.search(r'<tspan[^>]*font-weight="bold"[^>]*font-size="27px"[^>]*>([^<]*)</tspan>', body)
             if title:
-                labels.append({"name": unescape(title.group(1)).strip(), "y": float(a["y"])})
+                name = unescape(title.group(1)).strip()
+                # The lines after the bold name describe the row: for a release, the value it delivers.
+                rest = text.split(name, 1)[1].strip() if name in text else ""
+                labels.append({"name": name, "description": rest, "y": float(a["y"])})
     labels.sort(key=lambda l: l["y"])
     # The board header (product name and vision) sits above "User persona".
     first = next((i for i, l in enumerate(labels) if l["name"] == "User persona"), 0)
@@ -102,12 +106,14 @@ def current_release(svg):
             if not stories or stories[-1]["activity"] != activity:
                 stories.append({"activity": activity, "tasks": []})
             stories[-1]["tasks"].append({"task": task["text"], "stories": done})
-        return {"release": l["name"], "stories": stories, "open_questions": open_questions}
-    return {"release": "", "stories": [], "open_questions": []}
+        return {"release": l["name"], "description": l["description"], "stories": stories, "open_questions": open_questions}
+    return {"release": "", "description": "", "stories": [], "open_questions": []}
 
 
 def to_markdown(release):
     lines = [f'## {release["release"]}']
+    if release["description"]:
+        lines.append(f'\n{release["description"]}')
     for a in release["stories"]:
         lines.append(f'\n### {a["activity"]}')
         for t in a["tasks"]:
