@@ -40,7 +40,7 @@ Colors follow the Jira work items and always carry the same meaning, on every bo
 | Blue | Tasks |
 | Green | Stories in the current release (the MVP until it ships) |
 | Orange | Stories in the next release |
-| Light orange | Stories in later releases |
+| Light orange | Stories in later releases, and always the Later row |
 | Gray | Stories in releases already delivered |
 | Red | Unresolved question that blocks a story |
 

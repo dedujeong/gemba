@@ -66,10 +66,13 @@ def label_height(description, chars=LABEL_CHARS):
 
 
 def release_fills(releases):
-    """The story fill of each release: gray if delivered, else current, next and later by position."""
+    """The story fill of each release: gray if delivered, else current, next and later by position.
+    The row named Later is not a release: it is always later, and it does not take a position."""
     fills, position = [], 0
     for release in releases:
-        if release.get("released"):
+        if release.get("name") == "Later":
+            fills.append(LATER)
+        elif release.get("released"):
             fills.append(RELEASED)
         else:
             fills.append((CURRENT, NEXT)[position] if position < 2 else LATER)

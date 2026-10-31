@@ -130,6 +130,16 @@ class FixedColors(unittest.TestCase):
             [CURRENT, NEXT, LATER, LATER],
         )
 
+    def test_the_later_row_is_always_later_never_next_or_current(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"].append({"name": "Later", "stories": [[{"text": "Some day", "traces": "Problem"}], []]})
+        texts = stickies(build_story_map.build(spec))
+        self.assertEqual(texts["Some day"], LATER)
+        self.assertEqual(texts["Import dates from the notebook"], NEXT)
+        spec["releases"][0]["released"] = spec["releases"][1]["released"] = True
+        texts = stickies(build_story_map.build(spec))
+        self.assertEqual(texts["Some day"], LATER)
+
     def test_a_delivered_release_is_gray_and_the_rest_shift_up(self):
         texts = stickies(build_story_map.build(delivered_first(SPEC)))
         self.assertEqual(texts["Delivered story"], RELEASED)
