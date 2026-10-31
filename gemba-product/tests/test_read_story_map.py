@@ -12,7 +12,7 @@ sys.path.insert(0, SCRIPTS)
 
 import build_story_map  # noqa: E402
 import read_story_map  # noqa: E402
-from test_build_story_map import SPEC  # noqa: E402
+from test_build_story_map import SPEC, delivered_first  # noqa: E402
 
 
 def as_read(svg):
@@ -57,6 +57,20 @@ class OpenQuestionColors(unittest.TestCase):
         light = board().replace("#ffd5d2", "#ffeceb")
         mvp = read_story_map.parse(light)["releases"][0]
         self.assertEqual((mvp["count"], mvp["open"]), (2, 1))
+
+
+class CountsDoNotDependOnTheColorScheme(unittest.TestCase):
+    def test_gray_and_red_stickies_count_as_before_the_new_colors(self):
+        spec = delivered_first(SPEC)
+        spec["releases"][1]["stories"][1] = [{"text": "Still open", "open": True}]
+        counts = [(r["name"], r["count"], r["open"]) for r in read_story_map.parse(board(spec))["releases"]]
+        self.assertEqual(counts, [("MVP", 1, 0), ("Release 2", 1, 1)])
+
+    def test_the_old_and_the_new_scheme_give_the_same_counts(self):
+        new = board()
+        # Old scheme: the MVP orange, later releases gray (green was the activities row, which holds no stories).
+        old = new.replace("#fce4a6", "#f0f1f2").replace("#baf3db", "#fce4a6")
+        self.assertEqual(read_story_map.parse(old)["releases"], read_story_map.parse(new)["releases"])
 
 
 def arranged_by_hand(svg):

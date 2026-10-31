@@ -31,18 +31,20 @@ Rules for the MVP cut:
 
 ## Colors
 
-Colors always carry the same meaning, on every board:
+Colors follow the Jira work items and always carry the same meaning, on every board:
 
 | Color | Meaning |
 |---|---|
-| Purple | User persona |
-| Green | Activities |
+| Yellow | User persona |
+| Purple | Activities |
 | Blue | Tasks |
-| Orange | Stories in the current release (the MVP until it ships) |
-| Gray | Stories in later releases |
+| Green | Stories in the current release (the MVP until it ships) |
+| Orange | Stories in the next release |
+| Light orange | Stories in later releases |
+| Gray | Stories in releases already delivered |
 | Red | Unresolved question that blocks a story |
 
-When the MVP ships, the next release becomes the current one and turns orange.
+When the MVP ships, mark it `"released": true` in the spec: it turns gray, the next release becomes the current one and turns green, and the rest move up one place.
 
 ## 3. Build the whiteboard
 
@@ -52,7 +54,7 @@ Fill `assets/story-map-template.json` with the product's content. Each MVP story
 python3 scripts/build_story_map.py spec.json story-map.svg
 ```
 
-The script rejects an MVP story without `traces`, and prints the count per release and the origin of each MVP story.
+The script rejects a story of the current release without `traces`, and prints the count per release and the origin of each MVP story.
 
 Create the board with `createConfluenceContent` (`contentType: whiteboard`, `body.format: svg`, the generated SVG) in the product's space, titled `Story Map`. Then add the sentence "El alcance está en el Story Map." (in the person's language) with the board link to the second paragraph of the brief's Source panel, before its closing sentence. Edit the brief in place with granular edits and keep everything that was already there.
 
@@ -85,6 +87,16 @@ The person may arrange the board by hand. Changing its content must keep that la
 - Do not recreate the board. Creating it again would drop the layout and leave a second board.
 
 Details are in `references/whiteboard.md`.
+
+### Recolor a board made with the old colors
+
+When the person asks to update a board to the current colors, change only the fill of each sticky, so no text or position moves:
+
+1. Ask which releases are already delivered. The old gray cannot tell them from later releases, so never guess.
+2. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG and run `python3 scripts/read_story_map.py board.svg` to note the count per release.
+3. Run `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"` (repeat the option for each one). It prints, per color, the ids of the stickies that change.
+4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
+5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
 
 ## 6. Close the MVP
 

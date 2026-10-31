@@ -13,8 +13,17 @@ sys.path.insert(0, SCRIPTS)
 
 import build_story_map  # noqa: E402
 
-PERSONA, ACTIVITY, TASK = "#eed7fc", "#baf3db", "#cfe1fd"
-CURRENT, LATER, OPEN = "#fce4a6", "#f0f1f2", "#ffd5d2"
+PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
+CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
+
+# The closed sticky palette of Confluence: a fill outside it is snapped to the nearest one.
+PALETTE = {
+    "#e9f2fe", "#cfe1fd", "#adcbfb", "#e7f9ff", "#c6edfb", "#b1e4f7",
+    "#dcfff1", "#baf3db", "#97edc9", "#efffd6", "#d3f1a7", "#bde97c",
+    "#fef7c8", "#f5e989", "#efdd4e", "#fff5db", "#fce4a6", "#fbd779",
+    "#ffeceb", "#ffd5d2", "#ffb8b2", "#ffecf8", "#fdd0ec", "#fcb6e1",
+    "#f8eefe", "#eed7fc", "#e3bdfa", "#ffffff", "#f0f1f2", "#b7b9be",
+}
 
 SPEC = {
     "title": "Reminders",
@@ -46,6 +55,15 @@ SPEC = {
         },
     ],
 }
+
+def delivered_first(spec):
+    """The same map once the MVP shipped: Release 2 becomes the current release and must trace to the brief."""
+    spec = copy.deepcopy(spec)
+    spec["releases"][0]["released"] = True
+    spec["releases"][0]["stories"] = [["Delivered story"], []]
+    spec["releases"][1]["stories"] = [[{"text": "Import dates from the notebook", "traces": "Problem"}], []]
+    return spec
+
 
 NS = {"s": "http://www.w3.org/2000/svg"}
 
@@ -98,11 +116,39 @@ class FixedColors(unittest.TestCase):
         self.assertEqual(texts["Record a service"], ACTIVITY)
         self.assertEqual(texts["Save the next service date"], TASK)
         self.assertEqual(texts["Save a date per customer"], CURRENT)
-        self.assertEqual(texts["Import dates from the notebook"], LATER)
+        self.assertEqual(texts["Import dates from the notebook"], NEXT)
+
+    def test_releases_are_current_next_then_later_by_position(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"] += [
+            {"name": "Release 3", "stories": [["Third story"], []]},
+            {"name": "Release 4", "stories": [["Fourth story"], []]},
+        ]
+        texts = stickies(build_story_map.build(spec))
+        self.assertEqual(
+            [texts[t] for t in ["Save a date per customer", "Import dates from the notebook", "Third story", "Fourth story"]],
+            [CURRENT, NEXT, LATER, LATER],
+        )
+
+    def test_a_delivered_release_is_gray_and_the_rest_shift_up(self):
+        texts = stickies(build_story_map.build(delivered_first(SPEC)))
+        self.assertEqual(texts["Delivered story"], RELEASED)
+        self.assertEqual(texts["Import dates from the notebook"], CURRENT)
 
     def test_open_question_is_red_in_any_release(self):
         texts = stickies(build_story_map.build(SPEC))
         self.assertEqual(texts["Who sends it when the owner is away?"], OPEN)
+        spec = delivered_first(SPEC)
+        spec["releases"][0]["stories"][1] = [{"text": "Delivered open question", "open": True}]
+        self.assertEqual(stickies(build_story_map.build(spec))["Delivered open question"], OPEN)
+
+    def test_every_fill_written_belongs_to_the_confluence_palette(self):
+        spec = delivered_first(SPEC)
+        spec["releases"] += [{"name": "Release 3", "stories": [["Third story"], []]},
+                             {"name": "Release 4", "stories": [["Fourth story"], []]}]
+        fills = set(stickies(build_story_map.build(spec)).values())
+        self.assertEqual(fills - PALETTE, set())
+        self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, RELEASED, CURRENT, NEXT, LATER})
 
 
 class Traceability(unittest.TestCase):
@@ -122,11 +168,40 @@ class Traceability(unittest.TestCase):
     def test_open_question_and_later_stories_need_no_traces(self):
         build_story_map.build(SPEC)
 
+    def test_traces_are_required_on_the_current_release_not_on_a_delivered_one(self):
+        spec = delivered_first(SPEC)
+        build_story_map.build(spec)
+        spec["releases"][1]["stories"][0] = ["Import dates from the notebook"]
+        with self.assertRaises(ValueError) as ctx:
+            build_story_map.build(spec)
+        self.assertIn("Import dates from the notebook", str(ctx.exception))
+        self.assertEqual(build_story_map.trace_table(delivered_first(SPEC)),
+                         [("Import dates from the notebook", "Problem")])
+
     def test_trace_table_lists_each_mvp_story_with_its_origin(self):
         self.assertEqual(
             build_story_map.trace_table(SPEC),
             [("Save a date per customer", "Primary job"), ("Send a WhatsApp reminder", "Problem")],
         )
+
+
+class ReleaseNames(unittest.TestCase):
+    """The reader finds a row by its label, so two rows must never share one or take a backbone label."""
+
+    def test_two_releases_with_the_same_name_are_rejected(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][1]["name"] = "MVP"
+        with self.assertRaises(ValueError) as ctx:
+            build_story_map.build(spec)
+        self.assertIn("MVP", str(ctx.exception))
+
+    def test_a_release_named_like_a_backbone_row_is_rejected(self):
+        for name in ["User persona", "Activities", "Tasks"]:
+            spec = copy.deepcopy(SPEC)
+            spec["releases"][1]["name"] = name
+            with self.assertRaises(ValueError) as ctx:
+                build_story_map.build(spec)
+            self.assertIn(name, str(ctx.exception))
 
 
 class Template(unittest.TestCase):

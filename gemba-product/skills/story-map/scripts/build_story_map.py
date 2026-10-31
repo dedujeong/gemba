@@ -17,11 +17,14 @@ Spec (see ../assets/story-map-template.json):
   ]
 }
 "releases[i].stories" has one list per task column, top to bottom.
-Colors always mean the same thing: persona purple, activities green, tasks blue,
-current release (the first one, usually the MVP) orange, later releases gray.
-"open": true makes a red sticky for an unresolved question.
+Colors follow the Jira work items and always mean the same thing: persona yellow,
+activities purple, tasks blue. Releases are colored by position among the ones not
+delivered: the first (usually the MVP) is the current release, green; the second is
+the next one, orange; the rest are later, light orange. "released": true marks a
+delivered release and turns its row gray. "open": true makes a red sticky for an
+unresolved question.
 
-Every story of the current release must say where it comes from in the brief:
+Every story of the current release (the first one not delivered) must say where it comes from in the brief:
 "traces" names the problem, the primary job or the Quality bar condition it
 serves. A story without it is rejected, so no MVP story is left without an
 origin. Open questions and later-release stories do not need it.
@@ -45,10 +48,10 @@ X_LABEL, X0, PITCH = -120.56, 318.51, 303.33
 Y_PERSONA, BACKBONE_STEP = -185.02, 250.68
 ROW_STEP, RELEASE_GAP = 184.03, 245.6
 
-PERSONA, ACTIVITY, TASK = "#eed7fc", "#baf3db", "#cfe1fd"
-# Palette values as Confluence stores them (probed 2026-10-29): #fce4a6 is
-# orange; #fedec8 is not in the sticky palette and snaps to a light red.
-CURRENT, LATER, OPEN = "#fce4a6", "#f0f1f2", "#ffd5d2"
+# Fills are values of the closed sticky palette of Confluence: any other hex is
+# snapped to the nearest one and the stored color differs from the requested one.
+PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
+CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
 FS = "15.47px"
 
 # Desired tops relative to the persona row, measured on a reference board.
@@ -60,6 +63,23 @@ LABEL_BASE_H, LABEL_LINE_H, LABEL_CHARS = 80, 22, 42
 def label_height(description, chars=LABEL_CHARS):
     lines = math.ceil(len(description) / chars) if description else 0
     return LABEL_BASE_H + LABEL_LINE_H * lines
+
+
+def release_fills(releases):
+    """The story fill of each release: gray if delivered, else current, next and later by position."""
+    fills, position = [], 0
+    for release in releases:
+        if release.get("released"):
+            fills.append(RELEASED)
+        else:
+            fills.append((CURRENT, NEXT)[position] if position < 2 else LATER)
+            position += 1
+    return fills
+
+
+def current_release(spec):
+    """The first release not delivered, or None when every release shipped."""
+    return next((r for r in spec["releases"] if not r.get("released")), None)
 
 
 def col_x(i):
@@ -100,8 +120,8 @@ def split_story(story):
 
 def check_traces(spec):
     """Every story of the current release must trace to the brief."""
-    release = spec["releases"][0]
-    for column in release["stories"]:
+    release = current_release(spec)
+    for column in release["stories"] if release else []:
         for story in column:
             text, is_open, traces = split_story(story)
             if not is_open and not traces:
@@ -110,8 +130,8 @@ def check_traces(spec):
 
 def trace_table(spec):
     """(story, traces) for each story of the current release, in board order."""
-    rows = []
-    for column in spec["releases"][0]["stories"]:
+    rows, release = [], current_release(spec)
+    for column in release["stories"] if release else []:
         for story in column:
             text, is_open, traces = split_story(story)
             if not is_open:
@@ -119,7 +139,17 @@ def trace_table(spec):
     return rows
 
 
+def check_release_names(spec):
+    """The reader finds each row by its label: a repeated or reserved name would merge or hide a row."""
+    seen = {"User persona", "Activities", "Tasks"}
+    for release in spec["releases"]:
+        if release["name"] in seen:
+            raise ValueError(f'{release["name"]}: a release name must be unique and not "User persona", "Activities" or "Tasks"')
+        seen.add(release["name"])
+
+
 def build(spec):
+    check_release_names(spec)
     check_traces(spec)
     b = Board()
     labels = spec.get("labels", {})
@@ -141,6 +171,7 @@ def build(spec):
         b.sticky(col_x(i), y_task, TASK, t)
 
     y = y_task + RELEASE_GAP
+    fills = release_fills(spec["releases"])
     for r_index, release in enumerate(spec["releases"]):
         stories = release["stories"]
         if len(stories) > len(tasks):
@@ -150,7 +181,7 @@ def build(spec):
         for col, column in enumerate(stories):
             for row, story in enumerate(column):
                 text, is_open, _ = split_story(story)
-                fill = OPEN if is_open else (CURRENT if r_index == 0 else LATER)
+                fill = OPEN if is_open else fills[r_index]
                 b.sticky(col_x(col), round(y + row * ROW_STEP, 2), fill, text)
         y = round(y + (depth - 1) * ROW_STEP + RELEASE_GAP, 2)
 
@@ -168,6 +199,7 @@ if __name__ == "__main__":
     open(sys.argv[2], "w", encoding="utf-8").write(svg)
     counts = [sum(len(c) for c in r["stories"]) for r in spec["releases"]]
     print(f"{len(svg)} bytes; stories per release: " + ", ".join(f'{r["name"]}={n}' for r, n in zip(spec["releases"], counts)))
-    print(f'Traces of the {spec["releases"][0]["name"]} stories:')
+    current = current_release(spec)
+    print(f'Traces of the {current["name"] if current else "current release"} stories:')
     for text, traces in trace_table(spec):
         print(f"- {text} -> {traces}")
