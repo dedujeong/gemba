@@ -4,7 +4,7 @@ description: After creating the fix version, version-start declares every confir
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write]
 max_turns: 10
 ---
-Abre la versión de Taller. Ya vi las tarjetas del release y las confirmo tal como están, con los estimados, la prioridad, los components y los bloqueos que propongas, y la due date del Epic es 2026-11-13. En Jira, el proyecto TALLER solo tiene la versión `Taller v0.1.0`, ya liberada. Esta versión es la 0.2.0, empieza el 2026-11-02 y se entrega el 2026-11-20. Crea la fix version y declara las tarjetas. El CLAUDE.md del proyecto tiene este bloque:
+Abre la versión de Taller. Ya vi las tarjetas del release y las confirmo tal como están, con los estimados, la prioridad, los components y los bloqueos que propongas, y la due date del Epic es 2026-11-13. En Jira, el proyecto TALLER solo tiene la versión `Taller v0.1.0`, ya liberada, y solo tiene los components `vehicles`, `services` y `reminders`. Esta versión es la 0.2.0, empieza el 2026-11-02 y se entrega el 2026-11-20. Crea la fix version y declara las tarjetas. El CLAUDE.md del proyecto tiene este bloque:
 
 ```
 ## Gemba
