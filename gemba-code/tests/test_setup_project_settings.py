@@ -18,5 +18,15 @@ class SetupMergeMessage(unittest.TestCase):
         self.assertNotIn("You write nothing else to the repository", skill())
 
 
+class SetupAttribution(unittest.TestCase):
+    def test_setup_turns_off_the_attribution_in_the_project_settings(self):
+        text = skill()
+        self.assertIn(".claude/settings.json", text)
+        self.assertIn('"attribution": {"commit": "", "pr": ""}', text)
+
+    def test_setup_keeps_the_other_settings(self):
+        self.assertIn("Keep every other key", skill())
+
+
 if __name__ == "__main__":
     unittest.main()
