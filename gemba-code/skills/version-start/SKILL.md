@@ -29,12 +29,16 @@ Before anything else, point out each open question of the release, in its own wo
 
 ## 5. Confirm the release
 
+Before showing anything, ask the maintainer once, in a single message, for what their request did not give: the start date and the delivery date of the version, and the hours of work per day. Wait for the answer. The hours per day are asked for every version and are never written to the `CLAUDE.md` or anywhere else; the dates are the ones step 6 uses. If the request already confirms the release and gives the Epics' due dates, do not ask: go on to steps 6 and 7.
+
 Each Story Map card of the release is an activity with its stories in this release. Show every card once, in board order:
 
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
 - its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none;
-- one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which the maintainer sets, so ask for it.
+- one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which you propose and the maintainer can change.
+
+Propose the Epics' due dates in board order, each one different from the others and none after the delivery date. Space them by the hours: an Epic's date is the day on which the hours of work since the start date, counted at the hours per day, reach the estimates of the Epics so far, rounded up to a whole day. An Epic fits when the sum of its Stories' estimates is not more than the hours available from the day after the previous Epic's due date (from the start date, for the first) through its own due date. When an Epic does not fit, say so before asking for the confirmation: name the Epic, its hours and the hours available. Never cut stories, lower estimates or move the dates on your own: the maintainer decides.
 
 After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. Never ask for it and never name a new one: it only labels the Task, and the maintainer can change it when they confirm.
 
@@ -47,7 +51,7 @@ If they ask for a change (a story in or out, moved to another release or activit
 Once the maintainer confirms the release, create its fix version before declaring anything, so every issue hangs from it.
 
 - Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirms. Ask for the number; never compute it yourself. If it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
-- Start date and release date: the dates the maintainer gives for when the version starts and when it is delivered. Ask for any of them they did not give.
+- Start date and release date: the ones the maintainer gave in step 5. Ask only for one that is still missing.
 - Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
 
 First list the project's versions with `executeRead` → `getJiraProjectVersions`. If one with the same name already exists, do not create another: say so and use it. Otherwise create it with `executeDestructive` → `manageJiraProjectVersion` (`action: "create"`, `projectIdOrKey`, `name`, `startDate`, `releaseDate`, `description`), then read the versions again and report the one that is there.
