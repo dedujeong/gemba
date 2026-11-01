@@ -60,5 +60,29 @@ class EnsureIgnored(unittest.TestCase):
         self.assertEqual(text, SECTION)
 
 
+class SessionCloseSkill(unittest.TestCase):
+    def skill(self):
+        with open(os.path.join(ROOT, "skills", "session-close", "SKILL.md"), encoding="utf-8") as f:
+            return f.read()
+
+    def test_the_skill_is_named_session_close(self):
+        self.assertIn("name: session-close", self.skill())
+
+    def test_the_handoff_goes_in_gemba_sessions_of_the_main_working_tree(self):
+        text = self.skill()
+        self.assertIn(".gemba/sessions/", text)
+        self.assertIn("git-common-dir", text)
+
+    def test_the_handoff_has_the_headings_the_next_session_reads(self):
+        text = self.skill()
+        for heading in ("Version", "Work in progress", "Done this session", "Pending", "Decisions", "Next step"):
+            self.assertIn("## " + heading, text)
+
+    def test_the_handoffs_are_ignored_before_the_handoff_is_written(self):
+        text = self.skill()
+        self.assertIn("scripts/ensure_ignored.py", text)
+        self.assertLess(text.index("Keep the handoffs out of git"), text.index("Write the handoff"))
+
+
 if __name__ == "__main__":
     unittest.main()
