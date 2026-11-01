@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Merge and move to Done
 
-Read the issue with `getJiraIssue` (view `evidence`). Then, in this order:
+Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. Otherwise, in this order:
 
 1. Merge the branch into `develop`: `git switch develop`, then `git merge --no-ff <branch>` with Git's default message. Never squash and never rebase.
 2. Push `develop`: `git push origin develop`.
