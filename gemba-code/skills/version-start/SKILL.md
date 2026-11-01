@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, and create the fix version `<Product> vX.Y.Z` with its dates before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version `<Product> vX.Y.Z` with its dates before anything is declared, and once declared put the key of each Story on its sticky of the Story Map. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -29,12 +29,16 @@ Before anything else, point out each open question of the release, in its own wo
 
 ## 5. Confirm the release
 
+Before showing anything, ask the maintainer once, in a single message, for what their request did not give: the start date and the delivery date of the version, and the hours of work per day. Wait for the answer. The hours per day are asked for every version and are never written to the `CLAUDE.md` or anywhere else; the dates are the ones step 6 uses. If the request already confirms the release and gives the Epics' due dates, do not ask: go on to steps 6 and 7.
+
 Each Story Map card of the release is an activity with its stories in this release. Show every card once, in board order:
 
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
 - its stories, by task, each with the original estimate in hours that `start` proposes for it (`start`'s `references/estimation.md`); an Epic has none;
-- one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which the maintainer sets, so ask for it.
+- one table with a row for every issue, the Epic's row too, and always the columns Priority, Component, Estimate and Blockers, as `start` would ask for them, proposed by you. Fill every cell: write `none` where a field is empty (an Epic has no component or estimate), and never leave a column out of a row, the Blockers of an Epic included. For an Epic, add its due date, which you propose and the maintainer can change.
+
+Propose the Epics' due dates in board order, each one different from the others and none after the delivery date. Space them by the hours: an Epic's date is the day on which the hours of work since the start date, counted at the hours per day, reach the estimates of the Epics so far, rounded up to a whole day. An Epic fits when the sum of its Stories' estimates is not more than the hours available from the day after the previous Epic's due date (from the start date, for the first) through its own due date. When an Epic does not fit, say so before asking for the confirmation: name the Epic, its hours and the hours available. Never cut stories, lower estimates or move the dates on your own: the maintainer decides.
 
 After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. Never ask for it and never name a new one: it only labels the Task, and the maintainer can change it when they confirm.
 
@@ -47,7 +51,7 @@ If they ask for a change (a story in or out, moved to another release or activit
 Once the maintainer confirms the release, create its fix version before declaring anything, so every issue hangs from it.
 
 - Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirms. Ask for the number; never compute it yourself. If it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
-- Start date and release date: the dates the maintainer gives for when the version starts and when it is delivered. Ask for any of them they did not give.
+- Start date and release date: the ones the maintainer gave in step 5. Ask only for one that is still missing.
 - Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
 
 First list the project's versions with `executeRead` → `getJiraProjectVersions`. If one with the same name already exists, do not create another: say so and use it. Otherwise create it with `executeDestructive` → `manageJiraProjectVersion` (`action: "create"`, `projectIdOrKey`, `name`, `startDate`, `releaseDate`, `description`), then read the versions again and report the one that is there.
@@ -60,7 +64,7 @@ Right after the fix version, declare every confirmed card through `start`, in th
 
 ## 8. Declare the release Task
 
-When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), and blocked by every other issue of the version (each Epic and each Story just created). It is the last issue to close, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
+When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), with no blocking links. It is the last issue to close, because it waits for every other issue of the version to be Done or Cancelled, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
 
 - the version bump, integrated into `develop`;
 - `develop` merged into `main`;
@@ -70,9 +74,21 @@ When all the cards are declared, declare the version's release through `start`, 
 
 Like the cards, it is created without asking again. Report its key with the others.
 
+## 9. Put the keys on the Story Map
+
+When the cards and the release Task are declared, write the key of each Story on its sticky of the Story Map, so the board and Jira point to each other. Only the stickies of the stories get a key: never the Epic's, the activity's or a task's, nor an open question, and the release Task has no sticky. A Story is matched to its sticky by the story text read in step 3.
+
+1. Read the board again with `getConfluenceContent` (`content_format: svg`) and save it whole, with its line numbers, to a temporary file outside the repository (`mktemp`). The patch is built on those line numbers, so it is sent right after this reading and never after an older one.
+2. Write another temporary file with the keys, `{"<story text>": "<KEY>"}`, one entry per Story just declared: the Story of a card with one story and each child of an Epic.
+3. Run `python3 scripts/write_keys.py <board file> <keys file>`. It prints one `replace_svg` per sticky, which keeps the story text and adds the key as a last line of the sticky. If it stops naming a text that is not in the current release, that story changed on the board after step 3: say so and write nothing.
+4. Send the patch with `updateConfluenceContent`: `body.value` the patch as printed and `body.context.content` the SVG of step 1, whole.
+5. Read the board again and run `python3 scripts/write_keys.py <new board file> <keys file> --check`. The response of the write is stale and says `ok` even when nothing changed, so it is never the source: report from the check which stickies carry their key. A story whose `ok` is false is reported as not written, never as done.
+
+Delete the temporary files. Report one line per Story, with its key and whether its sticky carries it, and say what is missing if anything is.
+
 ## Without a connection
 
-If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way.
+If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way, and for step 9 write the patch you would send and the reading and check you would make, and say that nothing was written on the board and that no key is reported as written.
 
 ## Style
 

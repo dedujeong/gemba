@@ -57,7 +57,7 @@ In both: never squash, and never rebase a branch onto `develop` or `main`; to br
 ## Versions and releases
 
 - Each Story Map release is a Jira fix version named `<Product> vX.Y.Z`. Each release raises the minor number (`v0.1.0`, `v0.2.0`); a bug fix on a released version raises the third (`v0.1.1`). The major number stays at 0 until the first paying customer. The version in the code is bumped only at the release, never per commit. Prevents: version numbers that say nothing about what shipped.
-- The release is a Task in the fix version, `Release <Product> vX.Y.Z`, blocked by every other item of the version and the last to close. Its branch carries a single commit that bumps the version.
+- The release is a Task in the fix version, `Release <Product> vX.Y.Z`, with no blocking links: it waits for every other item of the version to be Done or Cancelled and is the last to close. Blockers are declared only between direct dependencies (if A blocks B and B blocks C, there is no link from A to C). Its branch carries a single commit that bumps the version.
 - Once that Task is merged into `develop`: merge `develop` into `main` with `--no-ff`, push `main` and tag the merge `vX.Y.Z` (in a repository with several Claude plugins, `claude plugin tag <plugin> --push`, which tags `<plugin>--vX.Y.Z`). Create the GitHub release on that tag, titled `<Product> vX.Y.Z`. Then release the fix version in Jira and move the Task to Done.
 - A version does not close while any item of its fix version is outside Done or Cancelled. Prevents: releasing a version with work still open, or skipping a step of the close.
 

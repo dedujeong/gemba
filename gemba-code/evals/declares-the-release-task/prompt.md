@@ -1,6 +1,6 @@
 ---
 name: declares-the-release-task
-description: Once the release cards are declared, version-start declares the version release Task in the fix version, blocked by every other issue and with the release steps in its Done when.
+description: Once the release cards are declared, version-start declares the version release Task in the fix version, with no blocking links and with the release steps in its Done when.
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write]
 max_turns: 10
 ---

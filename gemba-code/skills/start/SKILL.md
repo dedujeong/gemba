@@ -35,7 +35,7 @@ Declare one issue per request. The exception is a Story Map card with two or mor
 | Fix version | The one named by the person or by version-start. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that version-start has to create it. Never create a version here |
 | Original estimate | Story, Task and Bug: the expected hours of one person working with Claude. Spike: its timebox in hours. Epic: none. Follow `references/estimation.md` |
 | Due date | Epic only, set by the maintainer. Ask for it if they did not give it |
-| Blocks / is blocked by | Ask what must exist first. Search the version's open issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find |
+| Blocks / is blocked by | Ask what must exist first. Search the version's open issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find, only the direct ones: if A blocks B and B blocks C, C is blocked by B and never by A, because Jira already shows the chain. When the person names both, create the link only to the direct one and say that the other is covered through it; never create the link of the second. The release Task has none: it waits for the other issues of the version to be Done or Cancelled |
 
 Ask for anything above you cannot read or infer from what the person said, in one message.
 

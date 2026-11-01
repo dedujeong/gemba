@@ -39,7 +39,7 @@ def read_bands(svg):
     for m in re.finditer(r"<rect\b[^>]*>", svg):
         a = attrs(m.group(0))
         if a.get("data-type") == "sticky":
-            stickies[a["id"]] = {"x": float(a["x"]), "y": float(a["y"]), "fill": a.get("fill", "").lower(), "text": ""}
+            stickies[a["id"]] = {"id": a["id"], "x": float(a["x"]), "y": float(a["y"]), "fill": a.get("fill", "").lower(), "text": ""}
     labels = []
     for m in re.finditer(r"(<text\b[^>]*>)(.*?)</text>", svg, re.S):
         a, body = attrs(m.group(1)), m.group(2)
@@ -70,6 +70,17 @@ def read_bands(svg):
     return labels, bands
 
 
+def current_row(labels, bands):
+    """The label of the first release not delivered, or None when every release is gray."""
+    for l in labels:
+        if l["name"] in BACKBONE or l["name"] == "Later":
+            continue
+        fills = [s["fill"] for s in bands[l["name"]] if s["fill"] not in OPEN_FILLS]
+        if not (fills and all(f == RELEASED for f in fills)):
+            return l
+    return None
+
+
 def current_release(svg):
     """The first release not delivered, with its stories by activity and task and its open questions apart."""
     labels, bands = read_bands(svg)
@@ -84,13 +95,9 @@ def current_release(svg):
         owner = [a for a in activities if a["x"] <= task["x"] + CARD_W / 2]
         return owner[-1]["text"] if owner else ""
 
-    for l in labels:
-        if l["name"] in BACKBONE or l["name"] == "Later":
-            continue
+    l = current_row(labels, bands)
+    if l:
         row = bands[l["name"]]
-        fills = [s["fill"] for s in row if s["fill"] not in OPEN_FILLS]
-        if fills and all(f == RELEASED for f in fills):
-            continue
         columns = [[] for _ in tasks]
         for s in sorted(row, key=lambda s: (s["x"], s["y"])):
             c = column(s)
