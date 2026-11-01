@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Take the issue
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Then, by its work type:
+Read the issue with `getJiraIssue` (view `evidence`, which includes its links). If an issue that blocks it is not Done or Cancelled, do not take it: name the blocking issue and its state, and stop. No branch is created and the issue stays where it is. Jira does not enforce this, so the check is yours. Then, by its work type:
 
 - Story, Task, Bug or Spike: create its branch and move it to Implement, as in section 3.
 - Epic: an Epic has no branch. Move it to Implement and take its first child, as in section 4.
