@@ -1,6 +1,6 @@
 ---
 name: version-close
-description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones; otherwise publish the release: merge develop into main, tag it and create the GitHub release. Use when someone says "cierra la versión", "publica la versión", "termina el release", "libera la versión" or that the work of a version is finished.
+description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones; otherwise publish the release (merge develop into main, tag it, create the GitHub release) and release the fix version in Jira. Use when someone says "cierra la versión", "publica la versión", "termina el release", "libera la versión" or that the work of a version is finished.
 ---
 
 # Close a version
@@ -33,6 +33,16 @@ Do these in order, and stop at the first one that fails:
 3. `gh release create <plugin>--vX.Y.Z --title "<Product> vX.Y.Z" --notes-file <file>` on that tag. The title is the product name and version, never the tag. Write the notes in a temporary file outside the repository, following `.github/release-notes.md`: for the person who uses the plugin, what they can do and never how it was built, only the sections that have content, and a **Full Changelog** link comparing the previous release of the same plugin (`<plugin>--vA.B.C...<plugin>--vX.Y.Z`) with this one, never the latest tag of the repository. On the plugin's first release, link its commits up to the tag. Draw the notes from the version's issues, read from Jira.
 
 Without access to the repository or the remote, write the commands and notes you would use and say that nothing was run.
+
+## 4. Release the version in Jira
+
+Only once the GitHub release exists. In this order:
+
+1. Release the fix version: `executeDestructive` → `manageJiraProjectVersion` (`action: "update"`, `projectIdOrKey`, `versionId`, `released: true`, `releaseDate` the day of the release). Never create another version.
+2. Move the release Task `Release <Product> vX.Y.Z` to Done (`transitionJiraIssue`, `to Done`), after logging its worklog if the work cycle asks for it. Move no other issue.
+3. Read Jira again: `getJiraProjectVersions` for the fix version and a fresh `searchJiraIssuesUsingJql` for the Task. Report from that reading only, never from the responses of the update or the transition: the version released with its date, the Task in Done, plus the links of the tag and the GitHub release.
+
+Without a connection to Jira, write the calls and the readings you would make, say where each reported fact would come from, and say that nothing was changed.
 
 ## Style
 
