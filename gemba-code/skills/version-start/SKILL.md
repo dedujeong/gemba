@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, and create the fix version `<Product> vX.Y.Z` with its dates before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version `<Product> vX.Y.Z` with its dates before anything is declared, and once declared put the key of each Story on its sticky of the Story Map. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -74,9 +74,21 @@ When all the cards are declared, declare the version's release through `start`, 
 
 Like the cards, it is created without asking again. Report its key with the others.
 
+## 9. Put the keys on the Story Map
+
+When the cards and the release Task are declared, write the key of each Story on its sticky of the Story Map, so the board and Jira point to each other. Only the stickies of the stories get a key: never the Epic's, the activity's or a task's, nor an open question, and the release Task has no sticky. A Story is matched to its sticky by the story text read in step 3.
+
+1. Read the board again with `getConfluenceContent` (`content_format: svg`) and save it whole, with its line numbers, to a temporary file outside the repository (`mktemp`). The patch is built on those line numbers, so it is sent right after this reading and never after an older one.
+2. Write another temporary file with the keys, `{"<story text>": "<KEY>"}`, one entry per Story just declared: the Story of a card with one story and each child of an Epic.
+3. Run `python3 scripts/write_keys.py <board file> <keys file>`. It prints one `replace_svg` per sticky, which keeps the story text and adds the key as a last line of the sticky. If it stops naming a text that is not in the current release, that story changed on the board after step 3: say so and write nothing.
+4. Send the patch with `updateConfluenceContent`: `body.value` the patch as printed and `body.context.content` the SVG of step 1, whole.
+5. Read the board again and run `python3 scripts/write_keys.py <new board file> <keys file> --check`. The response of the write is stale and says `ok` even when nothing changed, so it is never the source: report from the check which stickies carry their key. A story whose `ok` is false is reported as not written, never as done.
+
+Delete the temporary files. Report one line per Story, with its key and whether its sticky carries it, and say what is missing if anything is.
+
 ## Without a connection
 
-If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way.
+If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way, and for step 9 write the patch you would send and the reading and check you would make, and say that nothing was written on the board and that no key is reported as written.
 
 ## Style
 
