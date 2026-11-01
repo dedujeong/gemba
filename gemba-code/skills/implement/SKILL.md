@@ -59,6 +59,7 @@ When the walk is done and before any code or test changes, enter plan mode (`Ent
 
 - The commits you intend to make, in order: first the mechanical changes (renames, moves, formatting), each in its own commit, then at least one commit per criterion.
 - For each criterion, the test that will show it and why it fails now.
+- A criterion too big for one commit is split here, by behavior, into commits you would revert separately, each one a red, green, refactor cycle. If it cannot be split, say so in the plan and let the person decide: the issue is not edited outside Backlog.
 - Anything the walk found that the criteria do not cover. If a criterion looks wrong or incomplete, say so: the issue is not edited outside Backlog, so the person decides.
 
 Change nothing until the maintainer approves the plan (`ExitPlanMode`). Then build it, as in section 8.
@@ -70,9 +71,16 @@ Once the plan is approved, build the criteria in the planned order, each one in 
 1. Red: write the test of the criterion and run it. It must fail for the expected reason, the one the plan gave. A test that passes before the code, or fails for another reason, is wrong: fix the test first.
 2. Green: write the least code that makes it pass.
 3. Refactor with the tests still green.
-4. Commit the test and the code together, in one line. Red is never committed.
+4. Commit the test and the code together. Red is never committed. The message is one line, with no body or footer:
 
-A commit is one change you would revert whole, and it leaves the branch working. A mechanical change (a rename, a move, formatting) goes in its own commit before the behavior change. If a criterion is too big for one commit, split it by behavior, one commit per cycle. If it cannot be split, say so and let the person decide: the issue is not edited outside Backlog.
+   `<type>(<scope>): <description>`
+
+   - `<type>` is one of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
+   - `<scope>` is the Jira component of the issue, in lowercase.
+   - `<description>` starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
+   - The issue key does not go in the message; only the branch carries it.
+
+A commit is one change you would revert whole, and it leaves the branch working. A mechanical change (a rename, a move, formatting) goes in its own commit before the behavior change. Build the commits as the plan split them.
 
 Never skip, weaken or delete a test to get green. If the test is wrong, say why and fix it in its own commit.
 
