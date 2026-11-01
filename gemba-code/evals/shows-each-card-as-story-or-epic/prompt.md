@@ -4,7 +4,7 @@ description: Showing the release, each card appears with its activity and whethe
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write]
 max_turns: 10
 ---
-Abre la versión de Taller. El CLAUDE.md del proyecto tiene este bloque:
+Abre la versión de Taller. Empieza el 2026-11-02, se entrega el 2026-11-20 y trabajo 6 horas al día. El CLAUDE.md del proyecto tiene este bloque:
 
 ```
 ## Gemba
