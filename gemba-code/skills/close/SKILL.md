@@ -13,10 +13,14 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Merge and move to Done
 
-Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. Otherwise, in this order:
+Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. If it is an Epic, close it as in section 3. Otherwise, in this order:
 
 1. Merge the branch into `develop`: `git switch develop`, then `git merge --no-ff <branch>` with Git's default message. Never squash and never rebase.
 2. Push `develop`: `git push origin develop`.
 3. Delete the branch: `git branch -d <branch>`.
 4. Log the real time worked in Review with `addOrEditJiraIssueWorklog` (`executeWrite`): `started` is the time the issue entered Review, read from its changelog (`getJiraIssue` with `expand: changelog`), and `timeSpent` the time from then until now. Never copy the estimate. Tell the person the time you logged, so they can correct it.
 5. Move the issue to Done with `transitionJiraIssue`, using the transition that goes to Done.
+
+## 3. Close an Epic
+
+An Epic has no branch: there is nothing to merge, push or delete. Only move it to Done with `transitionJiraIssue`, using the transition that goes to Done.
