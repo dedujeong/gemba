@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Move the issue to Review
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then run the project's tests.
+Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 6; otherwise run the project's tests.
 
 - If every test passes, move the issue to Review with `transitionJiraIssue`, using the transition that goes to Review.
 - If a test fails, the issue stays in Implement: say which test fails and stop.
@@ -36,3 +36,10 @@ If a criterion is not met, the review ends here. A criterion that is not met is 
 ## 5. Report and stop
 
 If every criterion is met, report the result of the review: the verdict of each criterion and the commit comparison. Integrate nothing: do not merge, do not push and do not move the issue to Done. The issue stays in Review until the maintainer says to close it.
+
+## 6. Review an Epic
+
+An Epic has no branch, no tests and no diff: it is done through its children. List them (`parent = <KEY>`, `searchJiraIssuesUsingJql`).
+
+- If every child is Done or Cancelled, move the Epic to Review with `transitionJiraIssue` and report that its children are finished.
+- If any child is not, the Epic stays in Implement: name each child that is not finished and its state, and stop.
