@@ -4,7 +4,7 @@ description: Asked to publish a version whose release Task is merged into develo
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write]
 max_turns: 10
 ---
-Publica la versión Taller v0.2.0. Todos sus issues ya están en Done o Cancelled, y la Task de release TALLER-25 ya está integrada en `develop` con su commit `chore(manifest): bump taller to v0.2.0`. El repositorio tiene varios plugins de Claude; el de este producto es `taller`. El repositorio tiene `.github/release-notes.md` con la plantilla de las notas (una frase de apertura, secciones Added, Changed, Fixed y Removed, y una línea **Full Changelog**). El CLAUDE.md del proyecto tiene este bloque:
+Publica la versión Taller v0.2.0. Todos sus issues ya están en Done o Cancelled, y la Task de release TALLER-25 ya está integrada en `develop` con su commit `chore(manifest): bump taller to v0.2.0`. El repositorio es https://github.com/taller-dev/taller y tiene varios plugins de Claude; el de este producto es `taller`. El repositorio tiene `.github/release-notes.md` con la plantilla de las notas (una frase de apertura, secciones Added, Changed, Fixed y Removed, y una línea **Full Changelog**). El CLAUDE.md del proyecto tiene este bloque:
 
 ```
 ## Gemba
