@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Merge and move to Done
 
-Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. If it is an Epic, close it as in section 3. Otherwise, in this order:
+Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. If it is an Epic, close it as in section 3; if it is a Spike, as in section 4. Otherwise, in this order:
 
 1. Merge the branch into `develop`: `git switch develop`, then `git merge --no-ff <branch>` with Git's default message. Never squash and never rebase.
 2. Push `develop`: `git push origin develop`.
@@ -24,3 +24,13 @@ Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is
 ## 3. Close an Epic
 
 An Epic has no branch: there is nothing to merge, push or delete. Only move it to Done with `transitionJiraIssue`, using the transition that goes to Done.
+
+## 4. Close a Spike
+
+A Spike is never merged: its work is not code for `develop`, its answer is the findings page. Do not run `git merge` and do not push. In this order:
+
+1. Remove its worktree: `git worktree remove .claude/worktrees/<KEY>-<slug>`.
+2. Delete its branch, forced because it was never merged: `git branch -D spike/<KEY>-<slug>`.
+3. Set its findings page to Verified with `updateConfluenceContent`.
+4. Log the real time worked in Review, as in section 2.
+5. Move the Spike to Done with `transitionJiraIssue`, using the transition that goes to Done.

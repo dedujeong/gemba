@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Take an issue from Backlog, move it to Implement with its branch created from develop, and start its work by exploring the code before changing anything. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key.
+description: Take an issue from Backlog, move it to Implement with its branch created from develop, and start its work by exploring the code before changing anything. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Also publishes the findings of a Spike when its test ends. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key, or that the test of a Spike ended.
 ---
 
 # Implement an issue
@@ -92,3 +92,13 @@ When every criterion is built and every test is green, log the real time worked 
 - `timeSpent`: the time from then until now. Never copy the original estimate.
 
 Tell the person the time you logged, so they can correct it. Moving the issue to Review is not part of this skill.
+
+## 10. Finish a Spike
+
+A Spike has no criteria to build and does not follow TDD: its test answers the question. When the test ends, and not before, publish its answer in a findings page in the product's Confluence space, never in the issue or the repo:
+
+1. Search for the `Work` > `Spikes` folders of the space; create a folder only if it does not exist.
+2. Create the page there with `createConfluenceContent`, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then the sections Recommendation, Options, Impact on scope and Sources. Answer the Spike's question in it, with what the test showed. Its status is Rough draft.
+3. Link the issue to the page once, in the issue's remote links.
+
+Then log the real time worked, as in section 9. Moving the Spike to Review is not part of this skill.
