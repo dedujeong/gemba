@@ -25,6 +25,14 @@ Once the issue is in Review, review what was built against what was agreed. Read
 - Per criterion: say whether it is met, with the evidence, the test or the code that shows it. Do it for every criterion of the issue, never only for the ones that fail.
 - Commit by commit: compare the real commits, in order, against the list of commits planned in `implement`. Name each planned commit and say whether the real one matches it, is missing or is extra. If you do not have the planned list because the plan was made in another session, ask the maintainer for it: never invent one, and say that this comparison could not be done.
 
-## 4. Report and stop
+## 4. Return an unmet criterion to Implement
 
-Report the result of the review: the verdict of each criterion and the commit comparison. Integrate nothing: do not merge, do not push and do not move the issue to Done. The issue stays in Review until the maintainer says to close it.
+If a criterion is not met, the review ends here. A criterion that is not met is corrected in Implement, never inside Review:
+
+1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
+2. Name the criterion that is missing and say what is missing from it.
+3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): `started` is the time the issue entered Review, read from its changelog (`getJiraIssue` with `expand: changelog`), and `timeSpent` the time from then until now. Never copy the estimate. Tell the person the time you logged, so they can correct it.
+
+## 5. Report and stop
+
+If every criterion is met, report the result of the review: the verdict of each criterion and the commit comparison. Integrate nothing: do not merge, do not push and do not move the issue to Done. The issue stays in Review until the maintainer says to close it.
