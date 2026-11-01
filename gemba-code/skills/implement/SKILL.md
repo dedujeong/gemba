@@ -1,11 +1,11 @@
 ---
 name: implement
-description: Take an issue from Backlog and move it to Implement, with its branch created from develop. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key.
+description: Take an issue from Backlog, move it to Implement with its branch created from develop, and start its work by exploring the code before changing anything. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key.
 ---
 
 # Implement an issue
 
-You take one issue from Backlog and start its work: its branch exists and the issue is in Implement before the first change.
+You take one issue from Backlog and start its work: its branch exists and the issue is in Implement before the first change, and the work begins by exploring.
 
 ## 1. Find the project
 
@@ -20,7 +20,7 @@ Read the issue with `getJiraIssue` (view `evidence`, which includes its links). 
 
 When it is not taken, no branch is created and the issue stays where it is. Then, by its work type:
 
-- Story, Task or Bug: create its branch and move it to Implement, as in section 3.
+- Story, Task or Bug: create its branch and move it to Implement, as in section 3, then walk the work, as in section 6.
 - Spike: create its branch in a separate worktree and move it to Implement, as in section 4.
 - Epic: an Epic has no branch. Move it to Implement and take its first child, as in section 5.
 
@@ -40,3 +40,15 @@ A Spike is never worked on a branch of the main working tree, which stays on `de
 1. Move the Epic to Implement. It has no branch.
 2. List its children in rank order (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
 3. Take that child by its work type, as in section 2. Take one child only; the next one is taken when the person asks for it.
+
+## 6. Walk the work
+
+Before changing anything, go and see where the work happens, without modifying a file, a test or the repository:
+
+- Read the issue: its criteria (Story) or Done when (Task, Bug), and its links.
+- Read the code it touches and the tests that already cover that code.
+- Look at the recent history: `git log` of those files.
+- Run the existing tests and note which pass.
+- For a Bug, reproduce it by hand and note what you saw.
+
+What you find feeds the plan; it is not a separate deliverable.
