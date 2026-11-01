@@ -1,7 +1,7 @@
 {
   "name": "gemba-code",
   "displayName": "Gemba Code",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Takes a closed Story Map to released versions: declares the Jira issues and drives each one to done.",
   "author": {
     "name": "Daniel Efraín Domínguez Urbina",
