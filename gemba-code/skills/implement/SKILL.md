@@ -1,6 +1,6 @@
 ---
 name: implement
-description: Take an issue from Backlog, move it to Implement with its branch created from develop, and start its work by exploring the code before changing anything. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Also publishes the findings of a Spike when its test ends. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key, or that the test of a Spike ended.
+description: Take an issue from Backlog, move it to Implement with its branch created from develop, and start its work by exploring the code before changing anything. Taking an Epic moves it to Implement and takes its first child that is in Backlog and not blocked. Use when someone says "toma", "implementa", "empecemos con" or "vamos con" followed by an issue key. Also use when the test of a Spike ends, to publish its findings.
 ---
 
 # Implement an issue
