@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Move the issue to Review
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 6; otherwise run the project's tests.
+Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 6; if it is a Spike, as in section 7; otherwise run the project's tests.
 
 - If every test passes, move the issue to Review with `transitionJiraIssue`, using the transition that goes to Review.
 - If a test fails, the issue stays in Implement: say which test fails and stop.
@@ -43,3 +43,13 @@ An Epic has no branch, no tests and no diff: it is done through its children. Li
 
 - If every child is Done or Cancelled, move the Epic to Review with `transitionJiraIssue` and report that its children are finished.
 - If any child is not, the Epic stays in Implement: name each child that is not finished and its state, and stop.
+
+## 7. Review a Spike
+
+A Spike has no tests and no criteria to diff: it is reviewed on whether what it tested can be reproduced. Move it to Review with `transitionJiraIssue`, then:
+
+1. Run its test again in its worktree (`.claude/worktrees/<KEY>-<slug>`), with the steps its findings page documents.
+2. Compare the result with the answer of the findings page and say whether it is reproducible: the same answer comes out, or it does not.
+3. Read the findings page against the Spike's Done when and say whether each point is covered.
+
+If it is not reproducible, return it to Implement and log the Review time, as in section 4. Otherwise report the result and stop, as in section 5: merging is never part of a Spike.
