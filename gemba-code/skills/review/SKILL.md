@@ -13,7 +13,7 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `La
 
 ## 2. Move the issue to Review
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Run the project's tests.
+Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then run the project's tests.
 
 - If every test passes, move the issue to Review with `transitionJiraIssue`, using the transition that goes to Review.
 - If a test fails, the issue stays in Implement: say which test fails and stop.
