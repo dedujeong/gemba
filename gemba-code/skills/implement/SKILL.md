@@ -70,7 +70,14 @@ Once the plan is approved, build the criteria in the planned order, each one in 
 1. Red: write the test of the criterion and run it. It must fail for the expected reason, the one the plan gave. A test that passes before the code, or fails for another reason, is wrong: fix the test first.
 2. Green: write the least code that makes it pass.
 3. Refactor with the tests still green.
-4. Commit the test and the code together, in one line. Red is never committed.
+4. Commit the test and the code together. Red is never committed. The message is one line, with no body or footer:
+
+   `<type>(<scope>): <description>`
+
+   - `<type>` is one of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
+   - `<scope>` is the Jira component of the issue, in lowercase.
+   - `<description>` starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
+   - The issue key does not go in the message; only the branch carries it.
 
 A commit is one change you would revert whole, and it leaves the branch working. A mechanical change (a rename, a move, formatting) goes in its own commit before the behavior change. If a criterion is too big for one commit, split it by behavior, one commit per cycle. If it cannot be split, say so and let the person decide: the issue is not edited outside Backlog.
 
