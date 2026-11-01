@@ -20,8 +20,9 @@ Read the issue with `getJiraIssue` (view `evidence`, which includes its links). 
 
 When it is not taken, no branch is created and the issue stays where it is. Then, by its work type:
 
-- Story, Task, Bug or Spike: create its branch and move it to Implement, as in section 3.
-- Epic: an Epic has no branch. Move it to Implement and take its first child, as in section 4.
+- Story, Task or Bug: create its branch and move it to Implement, as in section 3.
+- Spike: create its branch in a separate worktree and move it to Implement, as in section 4.
+- Epic: an Epic has no branch. Move it to Implement and take its first child, as in section 5.
 
 ## 3. Create the branch and move the issue
 
@@ -30,8 +31,12 @@ When it is not taken, no branch is created and the issue stays where it is. Then
 
 The branch comes first, so the issue never reads Implement without a branch. Carry nothing else onto it: leave any uncommitted change of the working tree uncommitted.
 
-## 4. Take an Epic
+## 4. Take a Spike
+
+A Spike is never worked on a branch of the main working tree, which stays on `develop`. Create a worktree in `.claude/worktrees/`, which `.gitignore` already ignores, with the Spike's branch from `develop`: `git worktree add -b spike/<KEY>-<slug> .claude/worktrees/<KEY>-<slug> develop`. Then move the Spike to Implement and work in that worktree.
+
+## 5. Take an Epic
 
 1. Move the Epic to Implement. It has no branch.
 2. List its children in rank order (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
-3. Take that child as in section 3. Take one child only; the next one is taken when the person asks for it.
+3. Take that child by its work type, as in section 2. Take one child only; the next one is taken when the person asks for it.
