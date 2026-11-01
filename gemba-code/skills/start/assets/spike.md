@@ -11,4 +11,4 @@
 - Queda claro qué cambia en el alcance de la versión.
 ```
 
-The answer never goes in the issue or the repo, and Done when never says where it lives: the findings page is created when the Spike starts, not when it is declared.
+The answer never goes in the issue or the repo, and Done when never says where it lives: the findings page is created when the test ends, not when the Spike is declared or taken.
