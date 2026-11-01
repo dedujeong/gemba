@@ -75,3 +75,12 @@ Once the plan is approved, build the criteria in the planned order, each one in 
 A commit is one change you would revert whole, and it leaves the branch working. A mechanical change (a rename, a move, formatting) goes in its own commit before the behavior change. If a criterion is too big for one commit, split it by behavior, one commit per cycle. If it cannot be split, say so and let the person decide: the issue is not edited outside Backlog.
 
 Never skip, weaken or delete a test to get green. If the test is wrong, say why and fix it in its own commit.
+
+## 9. Finish
+
+When every criterion is built and every test is green, log the real time worked in Implement on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`):
+
+- `started`: the time the issue entered Implement, read from the issue's changelog (`getJiraIssue` with `expand: changelog`).
+- `timeSpent`: the time from then until now. Never copy the original estimate.
+
+Tell the person the time you logged, so they can correct it. Moving the issue to Review is not part of this skill.
