@@ -51,4 +51,14 @@ Before changing anything, go and see where the work happens, without modifying a
 - Run the existing tests and note which pass.
 - For a Bug, reproduce it by hand and note what you saw.
 
-What you find feeds the plan; it is not a separate deliverable.
+What you find feeds the plan, in section 7; it is not a separate deliverable.
+
+## 7. Plan the work
+
+When the walk is done and before any code or test changes, enter plan mode (`EnterPlanMode`) and present the plan:
+
+- The commits you intend to make, in order: first the mechanical changes (renames, moves, formatting), each in its own commit, then at least one commit per criterion.
+- For each criterion, the test that will show it and why it fails now.
+- Anything the walk found that the criteria do not cover. If a criterion looks wrong or incomplete, say so: the issue is not edited outside Backlog, so the person decides.
+
+Change nothing until the maintainer approves the plan (`ExitPlanMode`).
