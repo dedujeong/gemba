@@ -5,7 +5,7 @@ description: Prepare a project for Gemba Code by writing its Gemba block in the 
 
 # Set up the project
 
-You write the project's data in its `CLAUDE.md`, so every session knows where to declare and publish without asking. The data is the Gemba block in `assets/gemba-block.md`. You write nothing else to the repository.
+You write the project's data in its `CLAUDE.md`, so every session knows where to declare and publish without asking. The data is the Gemba block in `assets/gemba-block.md`. Besides it, you only set what the sections below name.
 
 ## 1. Read what is there
 
@@ -36,9 +36,17 @@ Follow `assets/gemba-block.md`: same heading, same fields, same order.
 
 If you cannot write files, put the whole resulting `CLAUDE.md` in the reply and say that nothing was written.
 
-## 4. Report
+## 4. Leave the merge message with `into main`
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Nothing else.
+Git leaves `into main` out of the message of a merge into `main` unless told otherwise, and the release merge of `develop` into `main` must say where it went. Read the value with `git config --get merge.suppressDest`. If it exists and is empty, change nothing. Otherwise run `git config merge.suppressDest ""` in the repository: the setting lives in `.git/config`, so nothing is committed. If you cannot run commands, put the command in the reply and say that it was not run.
+
+## 5. Turn off the Claude attribution
+
+Claude Code adds its own attribution lines to commits and pull requests, and the method's commits are one line with no footer. In `.claude/settings.json` at the root of the repository, set `"attribution": {"commit": "", "pr": ""}`. If the file does not exist, create it with only that key. If it exists, add or replace only the `attribution` key. Keep every other key and the rest of the file unchanged. If the value is already there, change nothing. If you cannot write files, put the whole resulting file in the reply and say that nothing was written.
+
+## 6. Report
+
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting and for the attribution, whether it was set, already there or not written. Nothing else.
 
 ## Style
 
