@@ -1,6 +1,6 @@
 ---
 name: version-close
-description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones. Use when someone says "cierra la versión", "termina el release", "libera la versión" or that the work of a version is finished.
+description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones; otherwise publish the release: merge develop into main, tag it and create the GitHub release. Use when someone says "cierra la versión", "publica la versión", "termina el release", "libera la versión" or that the work of a version is finished.
 ---
 
 # Close a version
@@ -21,6 +21,18 @@ Search its open issues with `searchJiraIssuesUsingJql`: `project = <Jira Project
 - **None is left:** say that no issue keeps the version open and go on with the close.
 
 Without a connection to Jira, write the search you would make and take as its result the list the person gives you. Say that nothing was changed.
+
+## 3. Publish the release
+
+Only when the maintainer asks to publish and the release Task `Release <Product> vX.Y.Z` is already merged into `develop` with its bump commit. If it is not, say so and stop: the bump is the Task's work, not yours. The plugin is the one whose `plugin.json` that commit bumped, and the version is the one in the fix version name. This is the `merge` integration; the collaborative mode, where a pull request is reviewed, is not covered here.
+
+Do these in order, and stop at the first one that fails:
+
+1. `git checkout main`, `git merge --no-ff develop` with Git's default message, and `git push origin main`. Nothing is committed on `main` or `develop`; never squash or rebase.
+2. `claude plugin tag <plugin> --push`. It checks that `plugin.json` and the marketplace entry agree and tags `<plugin>--vX.Y.Z`. Only after `main` is pushed.
+3. `gh release create <plugin>--vX.Y.Z --title "<Product> vX.Y.Z" --notes-file <file>` on that tag. The title is the product name and version, never the tag. Write the notes in a temporary file outside the repository, following `.github/release-notes.md`: for the person who uses the plugin, what they can do and never how it was built, only the sections that have content, and a **Full Changelog** link comparing the previous release of the same plugin (`<plugin>--vA.B.C...<plugin>--vX.Y.Z`) with this one, never the latest tag of the repository. On the plugin's first release, link its commits up to the tag. Draw the notes from the version's issues, read from Jira.
+
+Without access to the repository or the remote, write the commands and notes you would use and say that nothing was run.
 
 ## Style
 
