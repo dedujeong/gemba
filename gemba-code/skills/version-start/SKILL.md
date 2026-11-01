@@ -60,7 +60,7 @@ Right after the fix version, declare every confirmed card through `start`, in th
 
 ## 8. Declare the release Task
 
-When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), and blocked by every other issue of the version (each Epic and each Story just created). It is the last issue to close, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
+When all the cards are declared, declare the version's release through `start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), with no blocking links. It is the last issue to close, because it waits for every other issue of the version to be Done or Cancelled, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
 
 - the version bump, integrated into `develop`;
 - `develop` merged into `main`;
