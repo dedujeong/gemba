@@ -61,4 +61,17 @@ When the walk is done and before any code or test changes, enter plan mode (`Ent
 - For each criterion, the test that will show it and why it fails now.
 - Anything the walk found that the criteria do not cover. If a criterion looks wrong or incomplete, say so: the issue is not edited outside Backlog, so the person decides.
 
-Change nothing until the maintainer approves the plan (`ExitPlanMode`).
+Change nothing until the maintainer approves the plan (`ExitPlanMode`). Then build it, as in section 8.
+
+## 8. Build each criterion
+
+Once the plan is approved, build the criteria in the planned order, each one in a red, green, refactor cycle:
+
+1. Red: write the test of the criterion and run it. It must fail for the expected reason, the one the plan gave. A test that passes before the code, or fails for another reason, is wrong: fix the test first.
+2. Green: write the least code that makes it pass.
+3. Refactor with the tests still green.
+4. Commit the test and the code together, in one line. Red is never committed.
+
+A commit is one change you would revert whole, and it leaves the branch working. A mechanical change (a rename, a move, formatting) goes in its own commit before the behavior change. If a criterion is too big for one commit, split it by behavior, one commit per cycle. If it cannot be split, say so and let the person decide: the issue is not edited outside Backlog.
+
+Never skip, weaken or delete a test to get green. If the test is wrong, say why and fix it in its own commit.
