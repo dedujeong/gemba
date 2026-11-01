@@ -51,5 +51,21 @@ class NextVersion(unittest.TestCase):
         self.assertEqual(run("Taller", [version("Taller v1.2.0")]).stdout.strip(), "Taller v1.3.0")
 
 
+class VersionStartProposesTheNumber(unittest.TestCase):
+    def skill(self):
+        with open(os.path.join(ROOT, "skills", "version-start", "SKILL.md"), encoding="utf-8") as f:
+            return f.read()
+
+    def test_the_skill_runs_the_script_to_propose_the_number(self):
+        text = self.skill()
+        self.assertIn("scripts/next_version.py", text)
+        self.assertIn("--fix", text)
+
+    def test_the_skill_no_longer_forbids_computing_the_number(self):
+        text = self.skill()
+        self.assertNotIn("never compute it yourself", text)
+        self.assertNotIn("Ask for the number", text)
+
+
 if __name__ == "__main__":
     unittest.main()

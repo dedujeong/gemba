@@ -40,7 +40,9 @@ Each Story Map card of the release is an activity with its stories in this relea
 
 Propose the Epics' due dates in board order, each one different from the others and none after the delivery date. Space them by the hours: an Epic's date is the day on which the hours of work since the start date, counted at the hours per day, reach the estimates of the Epics so far, rounded up to a whole day. An Epic fits when the sum of its Stories' estimates is not more than the hours available from the day after the previous Epic's due date (from the start date, for the first) through its own due date. When an Epic does not fit, say so before asking for the confirmation: name the Epic, its hours and the hours available. Never cut stories, lower estimates or move the dates on your own: the maintainer decides.
 
-After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. Never ask for it and never name a new one: it only labels the Task, and the maintainer can change it when they confirm.
+Propose the version number with the project's published versions: read them with `executeRead` → `getJiraProjectVersions`, save the result to a temporary file outside the repository (`mktemp`), run `python3 scripts/next_version.py "<Product>" <file>` and delete the file. It prints the name of the next release, which raises the minor number. If the maintainer says the version is a bug fix on a published one, run it again with `--fix`, which raises the third number. Show that name as the fix version, and use its number in the release Task. The maintainer confirms it or changes it together with the release.
+
+After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with the number proposed above, its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. Never ask for it and never name a new one: it only labels the Task, and the maintainer can change it when they confirm.
 
 Then ask the maintainer to confirm the release. They can change any estimate, priority, component, blocker or due date before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.
 
@@ -50,7 +52,7 @@ If they ask for a change (a story in or out, moved to another release or activit
 
 Once the maintainer confirms the release, create its fix version before declaring anything, so every issue hangs from it.
 
-- Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirms. Ask for the number; never compute it yourself. If it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
+- Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirmed in step 5, without asking for it again. If the maintainer changed it and it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
 - Start date and release date: the ones the maintainer gave in step 5. Ask only for one that is still missing.
 - Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
 
