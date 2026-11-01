@@ -1,6 +1,6 @@
 ---
 name: version-close
-description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones; otherwise publish the release (merge develop into main, tag it, create the GitHub release) release the fix version in Jira and paint the delivered release gray on the Story Map. Use when someone says "cierra la versión", "publica la versión", "termina el release", "libera la versión" or that the work of a version is finished.
+description: Close a version: check that no issue of its fix version is outside Done or Cancelled, and when one is, do not close and name the open ones; otherwise publish the release (merge develop into main, tag it, create the GitHub release) release the fix version in Jira and paint the delivered release gray on the Story Map, and hand learn the real time against the estimate. Use when someone says "cierra la versión", "publica la versión", "termina el release", "libera la versión" or that the work of a version is finished.
 ---
 
 # Close a version
@@ -58,3 +58,14 @@ Only once the fix version is released. The Story Map is the board of the product
 3. Read the board again. The response of the write is stale and says `ok` even when it changed nothing, so it is never the source: report the color of the release and the count of its stickies from this reading only. If a sticky of the release is not gray, say so and do not report it as done.
 
 Without a connection to Confluence, write the calls and the second reading, say that the reported color would come from it, and say that nothing was changed.
+
+## 6. Hand the facts to learn
+
+Only once the release is gray, as the second reading of the board showed. Learn is the review of a closed release in Gemba Product's `story-map` skill; you give it the facts from Jira and the board, and you do not calibrate anything or compute a delivery date from the worklogs.
+
+1. Search the version's issues with `searchJiraIssuesUsingJql` (`project = <Jira Project> AND fixVersion = "<version>"`), asking for key, type, summary, status, original estimate and time spent. The delivered ones are those in Done; one in Cancelled was not delivered, so it is listed apart and its estimate does not enter the totals.
+2. Hand over a table with every delivered issue, each with its original estimate and the time recorded in its worklogs, and say `none` where it has no estimate or no time. Add the estimates and the times with a tool (Bash), never from memory, and give both totals.
+3. State that the release of the version is gray on the Story Map, as the reading after the write showed.
+4. Tell the maintainer that Gemba Product's `story-map` skill takes it from here to review the release and prepare the next one.
+
+Without a connection to Jira, write the search, take the list the person gives you as its result, and hand over the same facts.
