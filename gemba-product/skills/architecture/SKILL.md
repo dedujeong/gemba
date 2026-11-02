@@ -65,8 +65,10 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 | Waiting on a Spike | Rough draft | note |
 | Ready to decide | Ready for review | none |
 | Accepted | Verified | success |
+| Superseded | stays Verified | warning, links the new ADR |
 
 - When the person accepts an ADR, mark it as accepted: move the page status to Verified and add a `success` panel. Only the status and the panel change; the five sections stay as they are.
+- An accepted ADR is never edited. When its decision changes, create a new ADR with the next number that says in its Context which ADR it replaces (`Reemplaza a ADR-000N`), and leave the old one as it is. The only thing added to the old ADR is a `warning` panel that links the new one; its status stays Verified and its five sections do not change. Do not touch the ADRs of other decisions.
 - Content states are per space: in a space that does not have the state yet, `setConfluenceContentStatus` needs the name and the color (`#ffc400` for Rough draft). A state id taken from another space returns 404.
 - If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
 
