@@ -48,6 +48,7 @@ When the answers are written, propose the architecture decisions the MVP needs, 
 
 - A decision comes from the stack, hosting, data, access or isolation between clients. Propose one only when a story of the current release or a constraint of the brief needs it, and name that story or constraint next to the decision. A need you infer yourself is not a reason: a decision that no story and no constraint states is not proposed, even when it is common practice (backups, monitoring, dashboards).
 - It belongs here when it changes the price, what the client signs or the cost of operating. When it only changes code, it is left to development and is not proposed.
+- Show each decision with the proposed option, two or three real alternatives and why the proposed option wins over them, so the person can reject it. An alternative is real when someone could choose it in this case: say what it offers and what makes it lose here. A name alone, or an option that fails the constraints at first glance, is not an alternative.
 
 ## Style
 
