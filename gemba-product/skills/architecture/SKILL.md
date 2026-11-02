@@ -80,6 +80,19 @@ The step hands work to the version, and proposes it without declaring anything i
 - A decision that waits on a business answer, not on a test, goes to Open decisions of the Product Brief and is not proposed as a Spike.
 - When the step ends, propose as Tasks the cross-cutting work that the decisions imply and no story of the current release covers: for example the walking skeleton, roles and permissions, or the deploy. Each Task has a summary and names the ADR or decision that implies it. Work that a story already asks for is not a Task, and neither is work no decision implies: nothing is proposed just in case, the same cut as section 4.
 
+## 7. Draw the Architecture page
+
+When the ADRs are written, create the `Architecture` page of the product's space with the diagrams of the system, so the person sees at a glance who uses it and which systems it talks to. `references/diagrams.md` says which levels to draw and what each shape means.
+
+1. Write the spec of the diagrams as `assets/architecture-template.json` defines, from the decisions already taken: the actors from the Story Map and the brief, the systems the ADRs name, and one relation per arrow saying what flows along it.
+2. Build the board with `python3 scripts/build_architecture.py spec.json board.svg`. It rejects an arrow to an element that is not in the diagram and an arrow with no label, so read the error and fix the spec, never the script.
+3. Create the whiteboard with `createConfluenceContent` (`contentType: whiteboard`, the SVG as the body), titled `Diagrams`, in the product's space.
+4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 6, so the version finds them in one place. Its status follows `../pitch/SKILL.md` section 6.
+5. Read the board again after writing it, because the answer of a patch is stale.
+
+- Content in the person's language; the diagram headings stay in English.
+- If there is no Confluence connection, write the spec and the page body in the reply and say that nothing was published.
+
 ## Style
 
 - Conversation in the person's language; headings and labels in English.
