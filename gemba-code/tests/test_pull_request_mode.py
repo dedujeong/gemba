@@ -119,6 +119,12 @@ class PublishingNeverMergesIntoMainInPullRequestMode(unittest.TestCase):
         self.assertIn("Nothing is merged into `main`", text)
         self.assertIn("gh pr create --base main --head develop", text)
 
+    def test_a_pull_request_into_main_that_is_already_open_is_reused_not_created_again(self):
+        text = section(self.skill(), "3. Publish the release")
+        check = "gh pr list --base main --head develop --state open"
+        self.assertIn(check, text)
+        self.assertLess(text.index(check), text.index("gh pr create --base main"))
+
     def test_the_tag_and_the_release_wait_for_the_maintainer_to_merge_it(self):
         text = section(self.skill(), "3. Publish the release")
         self.assertIn("git merge-base --is-ancestor origin/develop origin/main", text)
