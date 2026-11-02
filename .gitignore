@@ -9,3 +9,6 @@ __pycache__/
 
 # Results written by claude plugin eval on each run
 **/evals/results/
+
+# Session handoffs written by session-close, one per session
+.gemba/sessions/
