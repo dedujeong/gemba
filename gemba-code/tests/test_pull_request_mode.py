@@ -53,6 +53,12 @@ class ReviewOpensThePullRequest(unittest.TestCase):
         self.assertIn("gh pr create --base develop", text)
         self.assertIn("comes out clean", text)
 
+    def test_a_pull_request_that_is_already_open_is_updated_by_the_push_not_created_again(self):
+        text = section(self.skill(), "5. Open the pull request")
+        check = "gh pr list --head <branch> --state open"
+        self.assertIn(check, text)
+        self.assertLess(text.index(check), text.index("gh pr create --base develop"))
+
     def test_the_pull_request_is_titled_with_the_key_and_the_summary_and_filled_from_the_template(self):
         text = section(self.skill(), "5. Open the pull request")
         self.assertIn('--title "<KEY> <Summary>"', text)
