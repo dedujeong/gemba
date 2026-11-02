@@ -1,6 +1,6 @@
 ---
 name: shows-alternatives-for-each-decision
-description: Each architecture decision Claude proposes shows the proposed option, two or three real alternatives and why the proposed one was chosen.
+description: An architecture decision Claude proposes shows the proposed option, two or three real alternatives with the reason each loses, and why the proposed one was chosen.
 allowed_tools: [Read, Glob, Grep, Skill]
 max_turns: 6
 ---
@@ -20,4 +20,4 @@ El release actual del Story Map, con el MVP cerrado, tiene estas historias:
 3. Consultar el estado de mi orden con un enlace.
 4. Ver, como dueño, las órdenes abiertas.
 
-Ahora toca proponer las decisiones de arquitectura. No hay conexión a Confluence en esta sesión: escribe tu propuesta en la respuesta.
+Las demás decisiones de arquitectura ya las tomamos y las registramos. Falta una sola: con qué se construye la aplicación, es decir el lenguaje y el framework. Propónmela ahora y no toques las otras. No hay conexión a Confluence en esta sesión: escribe tu propuesta en la respuesta.
