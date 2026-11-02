@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts. Reads the Product Brief and the current release of the Story Map, then asks one round of questions about budget, operation, team and data and proposes only the decisions the MVP needs.
+description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts, or when someone accepts, records or replaces an architecture decision (an ADR). Reads the Product Brief and the current release of the Story Map, asks one round of questions about budget, operation, team and data, proposes only the decisions the MVP needs and records each one as an ADR.
 ---
 
 # Architecture
@@ -50,6 +50,27 @@ When the answers are written, propose the architecture decisions the MVP needs, 
 - It belongs here when it changes the price, what the client signs or the cost of operating. When it only changes code, it is left to development and is not proposed.
 - When a decision depends on the plan of a provider, look up its limits and cite the source of each one, as `references/plan-limits.md` says. This includes the alternatives. Before answering, reread the proposal: every statement about a price (free or paid), a quota, commercial use, a pause or an expiry has its source or the mark Assumption, and one that has neither is removed. That includes the paid tier of an alternative: do not write that it allows commercial use or that it costs, unless you cite it. Without a web tool you still propose every decision, with its limits marked Assumption.
 - Show each decision with the proposed option, two or three real alternatives and why the proposed option wins over them, so the person can reject it. An alternative is real when someone could choose it in this case: say what it offers and what makes it lose here. The reason it loses rests on a story, a constraint, a cited source or the mark Assumption, never on "as far as I remember". A name alone, or an option that fails the constraints at first glance, is not an alternative.
+
+## 5. Record the ADRs
+
+When the person agrees to record a decision, write one ADR for it, as `assets/adr-template.md` defines: one page per decision, never two decisions in one page. Create it in the `Decisions` folder of the product's space: search for the folder first and create it only if it does not exist.
+
+- Title `ADR-000N <Decision>`, numbered after the highest `ADR-` already in the folder.
+- Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
+- Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
+
+| ADR state | Page status | Panel |
+|---|---|---|
+| Proposed | Rough draft | none |
+| Waiting on a Spike | Rough draft | note |
+| Ready to decide | Ready for review | none |
+| Accepted | Verified | success |
+| Superseded | stays Verified | warning, links the new ADR |
+
+- When the person accepts an ADR, mark it as accepted: move the page status to Verified and add a `success` panel. Only the status and the panel change; the five sections stay as they are.
+- An accepted ADR is never edited. When its decision changes, create a new ADR with the next number that says in its Context which ADR it replaces (`Reemplaza a ADR-000N`), and leave the old one as it is. The only thing added to the old ADR is a `warning` panel that links the new one; its status stays Verified and its five sections do not change. Do not touch the ADRs of other decisions.
+- Content states are per space: in a space that does not have the state yet, `setConfluenceContentStatus` needs the name and the color (`#ffc400` for Rough draft). A state id taken from another space returns 404.
+- If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
 
 ## Style
 
