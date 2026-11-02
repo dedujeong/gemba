@@ -9,7 +9,7 @@ You conduct the architecture step of a product discovery: the MVP is closed and 
 
 ## 1. Read
 
-Read the `Product Brief` from the product's space with `getConfluenceContent`, and the current release of the Story Map with `../story-map/scripts/read_story_map.py`. The space is the one the person named earlier or names now; never choose one on your own, and write nothing to Confluence until it is named.
+Read the `Product Brief` from the product's space with `getConfluenceContent`. Read the Story Map board linked from it with `getConfluenceContent` (`content_format: svg`), save the SVG to a temporary file and run `python3 ../story-map/scripts/read_story_map.py board.svg` to get the current release and its stories. The space is the one the person named earlier or names now; never choose one on your own, and write nothing to Confluence until it is named.
 
 - If the MVP is not closed, say so and stop: the architecture is decided over a closed scope.
 - If the Story Map cannot be read, continue with the brief alone and say so.
