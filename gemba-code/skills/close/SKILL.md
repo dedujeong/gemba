@@ -1,6 +1,6 @@
 ---
 name: close
-description: Close an issue that is in Review: merge its branch into develop, push, delete the branch and move the issue to Done. Use when the maintainer says "cierra", "close" or "intégralo" followed by an issue key.
+description: Close an issue that is in Review: merge its branch into develop, push, delete the branch and move the issue to Done; in a project in pull request mode the maintainer merges the pull request and this only syncs develop, deletes the branch and moves the issue to Done. Use when the maintainer says "cierra", "close" or "intégralo" followed by an issue key.
 ---
 
 # Close an issue
@@ -9,11 +9,11 @@ You close one issue that is in Review, once the maintainer has said to. Nothing 
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
 
 ## 2. Merge and move to Done
 
-Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. If it is an Epic, close it as in section 3; if it is a Spike, as in section 4. Otherwise, in this order:
+Read the issue with `getJiraIssue` (view `evidence`). Only an issue in Review is closed: if it is in any other state, do not merge, do not push and do not move it to Done; say which state it is in and stop. If it is an Epic, close it as in section 3; if it is a Spike, as in section 4. Otherwise, if `Integration` is `pull request`, close it as in section 5. If it is `merge`, in this order:
 
 1. Merge the branch into `develop`: `git switch develop`, then `git merge --no-ff <branch>` with Git's default message. Never squash and never rebase.
 2. Push `develop`: `git push origin develop`.
@@ -34,3 +34,16 @@ A Spike is never merged: its work is not code for `develop`, its answer is the f
 3. Set its findings page to Verified with `updateConfluenceContent`.
 4. Log the real time worked in Review, as in section 2.
 5. Move the Spike to Done with `transitionJiraIssue`, using the transition that goes to Done.
+
+## 5. Close in pull request mode
+
+When `Integration` is `pull request`, the maintainer merges the pull request on GitHub and nothing is merged here. Check the pull request of the branch with `gh pr view <branch> --json state,mergedAt,url`:
+
+- If it is not merged (open, or closed without merging): do not move the issue to Done and do not delete the branch. Say the state of the pull request with its link, and that the merge is the maintainer's decision. Stop there.
+- If it is merged, in this order:
+  1. `git switch develop` and `git pull origin develop`, which bring in the merge commit the maintainer made.
+  2. Delete the local branch: `git branch -d <branch>`. Delete the remote one with `git push origin --delete <branch>` only if it still exists (`git ls-remote --exit-code --heads origin <branch>`).
+  3. Log the real time worked in Review, as in section 2 (`addOrEditJiraIssueWorklog`).
+  4. Move the issue to Done with `transitionJiraIssue`, using the transition that goes to Done.
+
+Without the GitHub CLI or the remote, say that the state of the pull request could not be checked, and do not move the issue to Done.

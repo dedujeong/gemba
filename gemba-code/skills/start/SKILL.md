@@ -31,7 +31,7 @@ Declare one issue per request. The exception is a Story Map card with two or mor
 | --- | --- |
 | Summary | English, understandable on its own, no parentheses. The branch comes from the key and the summary |
 | Priority | Highest, High, Medium or Low, by how much other work waits on it |
-| Component | The part of the repository the change touches, in lowercase; it is also the commit scope. Read the existing ones with `executeRead` → `listJiraProjectComponents` and reuse one when it fits; naming a new one in the create call creates it. An Epic has no component |
+| Component | The part of the repository the change touches, in lowercase; it is also the commit scope. Read the existing ones with `executeRead` → `listJiraProjectComponents` and reuse one when it fits. When none fits, propose a new one and say that it is new; naming it in the create call creates it. In a project with no components yet, take the part from the structure and stack that the Product Brief and the `CLAUDE.md` describe, or from what the issue itself names (`api`, `web`, `db`, `ci`). Prefer few broad components to one per issue. An Epic has no component |
 | Fix version | The one named by the person or by version-start. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that version-start has to create it. Never create a version here |
 | Original estimate | Story, Task and Bug: the expected hours of one person working with Claude. Spike: its timebox in hours. Epic: none. Follow `references/estimation.md` |
 | Due date | Epic only, set by the maintainer. Ask for it if they did not give it |
