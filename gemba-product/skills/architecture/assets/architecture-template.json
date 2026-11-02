@@ -1,0 +1,36 @@
+{
+  "product": {
+    "name": "<Product name, as the Product Brief writes it>",
+    "description": "<What it is, in a few words: 'web app for ...'>"
+  },
+  "context": {
+    "description": "<Who uses the product and which systems it talks to>",
+    "actors": ["<Role that uses it>", "<Another role>"],
+    "externals": [
+      {"name": "<System somebody else runs>", "description": "<What it gives the product>"}
+    ],
+    "relations": [
+      {"from": "<Role>", "to": "<Product name>", "label": "<what that role does there>"},
+      {"from": "<Product name>", "to": "<System>", "label": "<what flows to it>"}
+    ]
+  },
+  "containers": {
+    "description": "<What runs where and what each part is in charge of>",
+    "actors": ["<Role that reaches a piece directly>"],
+    "boundaries": [
+      {
+        "name": "<Where these pieces run, with its plan>",
+        "containers": [
+          {"name": "<Piece>", "description": "<What it is in charge of>"},
+          {"name": "<Store>", "description": "<What it keeps>", "shape": "database"}
+        ]
+      }
+    ],
+    "externals": [
+      {"name": "<System somebody else runs>", "description": "<What it gives the product>"}
+    ],
+    "relations": [
+      {"from": "<Piece>", "to": "<Store>", "label": "<what flows between them>"}
+    ]
+  }
+}
