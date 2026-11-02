@@ -9,7 +9,7 @@ You save where the session stands, so the next one continues without the convers
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`, and write the content of the handoff in it; its headings stay in English.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`, and write the content of the handoff in it; its headings stay in English.
 
 ## 2. Keep the handoffs out of git
 
@@ -55,7 +55,13 @@ One option: the one you would take first, with the reason. Never a list.
 
 Fill every section; write `none` where there is nothing. If you cannot write files, put the whole handoff in the reply and say that nothing was written.
 
-## 5. Report
+## 5. Offer to back up the branch
+
+Only when `Integration` is `pull request` and the current branch is not a Spike's. In `merge` mode work branches are never pushed, so offer nothing.
+
+Check whether the branch has commits that `origin` does not have: `git rev-list --count @{u}..HEAD`, or, when the branch has no upstream yet, that `git ls-remote --exit-code --heads origin <branch>` finds nothing. If it has any, offer to push the branch as a backup, so the work does not depend on this machine. Push it with `git push -u origin <branch>` only if the person says yes, and open no pull request: that is `review`'s job, once the review comes out clean. Once pushed, a correction to a pushed commit is a new commit, not a fixup. Say that when you offer.
+
+## 6. Report
 
 Report the path of the handoff and, in one line per section, what it says. Say that `.gemba/sessions` is ignored by git, checking that `git status` does not list it. Commit nothing.
 
