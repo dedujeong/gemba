@@ -37,6 +37,7 @@ The four topics, and what each one decides:
 When the person has answered the round, write the answers into the `Constraints` section of the `Product Brief` before anything else. It is a live doc: update it as `../pitch/SKILL.md` section 7 describes, reading it first, editing only the nodes that change and keeping everything that was already there. Do not re-create the page, and do not change its status or put a version in the title or the body.
 
 - One bullet per constraint, with a bold label, as `../pitch/assets/brief-template.md` defines for Constraints. A new answer is added next to the bullets that already exist and never replaces one.
+- If the brief has no `Constraints` section, create it as an H2 in the position the template gives it: after the sections that precede it in `../pitch/assets/brief-template.md` that the brief has, and before Glossary and the sections that follow, so the order of the template holds.
 - Label each fact by its source as `../pitch/SKILL.md` section 4 says: what the person states about their own project is Interview; anything you add or infer is Assumption.
 - An answer that is an open business decision, not a restriction, goes to Open decisions as an unchecked item and not to Constraints.
 - If there is no Confluence connection, write the whole updated body in the reply and say that nothing was published.
