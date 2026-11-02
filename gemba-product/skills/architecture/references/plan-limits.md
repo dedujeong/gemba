@@ -33,6 +33,14 @@ If you cannot search because there is no web tool in the session, say so once an
 
 If the search finds nothing, or two sources disagree, say so and label the limit Assumption, as `../../pitch/SKILL.md` section 4 defines. Do not state it as a fact and do not drop it: a limit the decision depends on is either cited or marked.
 
+## Alternatives lose on the story, not on price
+
+The description of an alternative and the reason it loses are where an unsourced price slips in. Describe it by what it does and lose it by a story or a constraint of the brief. If the price is what decides it, cite it or mark it Assumption.
+
+- Wrong: "Cloudflare D1: es gratuito y está integrado, pero es SQLite." and "Logs de Cloudflare sin alertas: cuesta cero, pero nadie se entera de un error." and "Un VPS pequeño: no es gratis y añade tareas de operación."
+- Right: "Cloudflare D1: está integrado en el hosting, pero es SQLite y Equipo sabe Postgres." and "Logs de Cloudflare sin alertas: pierde porque nadie se entera de un error y Operación pide alertas." and "Un VPS pequeño: pierde porque añade tareas de operación a una sola persona."
+- Right, when the price decides: "Un VPS pequeño: pierde porque Costo pide planes gratuitos y este no lo es (Assumption: no verificado)."
+
 ## What memory gets wrong
 
 Two cases from a real run, where a decision made from memory would have been wrong:
