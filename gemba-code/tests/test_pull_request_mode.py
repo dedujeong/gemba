@@ -151,5 +151,31 @@ class SessionCloseOffersTheBackup(unittest.TestCase):
         self.assertLess(text.index("## 4. Write the handoff"), text.index("## 5. Offer to back up the branch"))
 
 
+class MethodRulesDescribePullRequestMode(unittest.TestCase):
+    def rules(self):
+        return read("references", "context.md")
+
+    def test_the_pull_request_is_opened_by_review_with_the_key_and_the_summary(self):
+        text = section(self.rules(), "Merges")
+        self.assertIn("`review`", text)
+        self.assertIn("`<KEY> <Summary>`", text)
+
+    def test_the_maintainer_merges_and_close_only_waits_for_it(self):
+        text = section(self.rules(), "Merges")
+        self.assertIn("GitHub's default message", text)
+        self.assertIn("`close` merges nothing", text)
+
+    def test_no_skill_merges_into_develop_or_main_in_pull_request_mode(self):
+        text = section(self.rules(), "Merges")
+        self.assertIn("No skill merges into `develop` or `main`", text)
+        self.assertIn("branch protection", text)
+
+    def test_done_in_pull_request_mode_means_the_pull_request_was_merged(self):
+        self.assertIn("has merged the pull request", section(self.rules(), "Work cycle"))
+
+    def test_the_rules_still_fit_the_session_start_hook(self):
+        self.assertLess(len(self.rules()), 10000)
+
+
 if __name__ == "__main__":
     unittest.main()

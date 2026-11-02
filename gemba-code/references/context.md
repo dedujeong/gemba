@@ -19,7 +19,7 @@ These rules apply to every session in a project that uses Gemba Code. The projec
 - Backlog: the item is declared and waits.
 - Implement: when its branch is created from `develop`, before the first change.
 - Review: when its implementation is finished, with every test green, before the merge. No item reaches Done without Review.
-- Done: when its branch is merged into `develop` and pushed. A Spike reaches Done when its findings are published and its branch is deleted.
+- Done: when its branch is merged into `develop` and pushed (in `pull request` mode, when the maintainer has merged the pull request and the local `develop` is up to date). A Spike reaches Done when its findings are published and its branch is deleted.
 - Cancelled: from any state, when the person drops the item. Its branch, if any, is deleted without merging.
 - When the item leaves Implement and when it leaves Review, log the real time worked in that state on the item, never a copy of the estimate.
 
@@ -36,7 +36,7 @@ Prevents: a board that does not say where each item really is, and estimates tha
 How a branch reaches `develop` depends on `Integration` in the Gemba section:
 
 - `merge`: merge the branch locally into `develop` with `git merge --no-ff` and Git's default message (`Merge branch '<branch>' into develop`), push `develop` and delete the branch. Work branches are not pushed.
-- `pull request`: push the branch and open a pull request into `develop`. The maintainer reviews it and decides the merge, always as a merge commit.
+- `pull request`: when `review` finds every criterion met, it pushes the branch and opens a pull request into `develop`, titled `<KEY> <Summary>` exactly as in Jira. The maintainer reviews it and decides the merge, always as a merge commit with GitHub's default message. `close` merges nothing: it waits for that merge, brings `develop` up to date and deletes the branch. Publishing a version opens a pull request from `develop` into `main` the same way. No skill merges into `develop` or `main` in this mode; blocking `main` for real is a branch protection of GitHub, outside the plugin.
 
 In both: never squash, and never rebase a branch onto `develop` or `main`; to bring in new work from `develop`, merge it into the branch. Prevents: lost history and rewritten commits that someone else already has.
 
