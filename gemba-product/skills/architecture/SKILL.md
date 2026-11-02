@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts. Reads the Product Brief and the current release of the Story Map, then asks one round of questions about budget, operation, team and data and proposes only the decisions the MVP needs.
+description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts, or when someone accepts, records or replaces an architecture decision (an ADR). Reads the Product Brief and the current release of the Story Map, asks one round of questions about budget, operation, team and data, proposes only the decisions the MVP needs and records each one as an ADR.
 ---
 
 # Architecture
@@ -64,7 +64,10 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 | Proposed | Rough draft | none |
 | Waiting on a Spike | Rough draft | note |
 | Ready to decide | Ready for review | none |
+| Accepted | Verified | success |
 
+- When the person accepts an ADR, mark it as accepted: move the page status to Verified and add a `success` panel. Only the status and the panel change; the five sections stay as they are.
+- Content states are per space: in a space that does not have the state yet, `setConfluenceContentStatus` needs the name and the color (`#ffc400` for Rough draft). A state id taken from another space returns 404.
 - If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
 
 ## Style
