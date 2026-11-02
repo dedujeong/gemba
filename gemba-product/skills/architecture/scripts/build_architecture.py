@@ -43,6 +43,13 @@ X_ACTOR, X_PRODUCT, X_EXTERNAL = -1117.0, -540.0, 97.0
 X_LABEL, HEADING_DY = -1160.1, -173.0
 ACTOR_STEP, BOX_STEP = 242.0, 242.0
 
+# A boundary is a section around the pieces that run in the same place, stacked inside it.
+PAD_X, PAD_TOP, PAD_BOTTOM, GAP_IN = 28.8, 70.0, 40.0, 90.0
+SECTION_W = BOX_W + 2 * PAD_X
+X_BOUNDARY, BOUNDARY_STEP = -668.8, SECTION_W + 80.0
+BLOCK_GAP, EXTERNAL_GAP, EXTERNAL_STEP = 300.0, 120.0, BOX_W + 80.0
+SECTION_FILL = "#e9f2fe"
+
 MARKER_ID = "arrowhead-6-rgb_117__129__149_"
 ARROWHEAD = (
     f'<defs id="defs-{MARKER_ID}"><marker markerWidth="6" markerHeight="6" refX="0" refY="3" '
@@ -70,6 +77,8 @@ class Diagram:
         self.out = []
         self.box_of = {}
         self.arrows = 0
+        self.sections = 0
+        self.floor = 0.0
 
     def _put(self, name, eid, x, y, w, h):
         self.box_of[name] = (eid, x, y, w, h)
@@ -87,12 +96,23 @@ class Diagram:
         )
         self._put(name, eid, x, y, ACTOR_SIDE, ACTOR_SIDE)
 
-    def box(self, name, description, x, y, external=False, shape="process"):
+    def section(self, title, x, y, height):
+        """A deployment boundary: the pieces that run in the same place, with the plan in its title."""
+        sid = f"{self.prefix}-s{self.sections}"
+        self.sections += 1
+        self.out.append(
+            f'<rect width="{round(SECTION_W, 2)}" height="{round(height, 2)}" fill="{SECTION_FILL}" '
+            f'x="{round(x, 2)}" y="{round(y, 2)}" id="{sid}" data-type="section" data-title="{escape(title)}"/>'
+        )
+        return sid
+
+    def box(self, name, description, x, y, external=False, shape="process", parent=None):
         eid = f"{self.prefix}-b{len(self.box_of)}"
         fill, stroke = (EXTERNAL, STROKE_EXTERNAL) if external else (INTERNAL, STROKE_INTERNAL)
+        belongs = f' belongs-to="{parent}"' if parent else ""
         self.out.append(
             f'<rect width="{BOX_W}" height="{BOX_H}" fill="{fill}" x="{x}" y="{y}" stroke="{stroke}" '
-            f'stroke-width="0.5" id="{eid}" data-type="shape" data-shape="{shape}"/>'
+            f'stroke-width="0.5" id="{eid}" data-type="shape" data-shape="{shape}"{belongs}/>'
         )
         # Several tspans in one shape read as a single line, so the description follows the name with a space.
         spans = f'<tspan font-size="{FS}">{escape(name)}</tspan>'
@@ -136,7 +156,7 @@ class Diagram:
         )
 
     def bottom(self):
-        return max((y + h for _, _, y, _, h in self.box_of.values()), default=0.0)
+        return max([y + h for _, _, y, _, h in self.box_of.values()] + [self.floor], default=0.0)
 
 
 def anchor_point(x, y, w, h, side):
@@ -186,8 +206,48 @@ def context_diagram(spec, top):
     return out + d.out, d.bottom()
 
 
+def deployable_pieces(spec):
+    """The pieces of the product that are deployed on their own, across every boundary."""
+    boundaries = spec.get("containers", {}).get("boundaries", [])
+    return [piece for boundary in boundaries for piece in boundary.get("containers", [])]
+
+
+def containers_diagram(spec, top):
+    """What runs where and what each part is in charge of. Only for a product with more than one piece."""
+    containers = spec["containers"]
+    d = Diagram("con")
+    out = [heading("heading-containers", "Containers", containers.get("description", ""), top + HEADING_DY)]
+
+    for i, actor in enumerate(containers.get("actors", [])):
+        d.actor(actor, X_ACTOR, round(top + PAD_TOP + i * ACTOR_STEP, 2))
+
+    tallest = 0.0
+    for i, boundary in enumerate(containers["boundaries"]):
+        pieces = boundary.get("containers", [])
+        height = PAD_TOP + len(pieces) * BOX_H + max(len(pieces) - 1, 0) * GAP_IN + PAD_BOTTOM
+        tallest = max(tallest, height)
+        x = round(X_BOUNDARY + i * BOUNDARY_STEP, 2)
+        sid = d.section(boundary["name"], x, top, height)
+        for j, piece in enumerate(pieces):
+            d.box(piece["name"], piece.get("description", ""), round(x + PAD_X, 2),
+                  round(top + PAD_TOP + j * (BOX_H + GAP_IN), 2),
+                  shape=piece.get("shape", "process"), parent=sid)
+
+    y_external = round(top + tallest + EXTERNAL_GAP, 2)
+    for i, external in enumerate(containers.get("externals", [])):
+        d.box(external["name"], external.get("description", ""),
+              round(X_BOUNDARY + i * EXTERNAL_STEP, 2), y_external, external=True)
+
+    d.floor = top + tallest
+    draw_relations(d, containers.get("relations", []), "containers")
+    return out + d.out, d.bottom()
+
+
 def build(spec):
-    elements, _ = context_diagram(spec, 0.0)
+    elements, floor = context_diagram(spec, 0.0)
+    if len(deployable_pieces(spec)) > 1:
+        more, _ = containers_diagram(spec, round(floor + BLOCK_GAP, 2))
+        elements += more
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="50000" height="50000" '
         f'viewBox="-25160.1 -25173 50000 50000" font-family="{FONT}">'
@@ -206,3 +266,10 @@ if __name__ == "__main__":
     print(f'Context: {len(context.get("actors", []))} actors, '
           f'{len(context.get("externals", []))} external systems, '
           f'{len(context.get("relations", []))} arrows')
+    pieces = deployable_pieces(spec)
+    if len(pieces) > 1:
+        containers = spec["containers"]
+        print(f'Containers: {len(pieces)} pieces in {len(containers["boundaries"])} boundaries, '
+              f'{len(containers.get("relations", []))} arrows')
+    else:
+        print("Containers: not drawn, the product has one deployable piece")

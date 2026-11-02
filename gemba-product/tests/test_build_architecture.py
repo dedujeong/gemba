@@ -156,5 +156,119 @@ class ContextDiagram(unittest.TestCase):
         self.assertIn("Administrador", str(caught.exception))
 
 
+CONTAINERS = {
+    "description": "Qué corre dónde y de qué se encarga cada parte",
+    "boundaries": [
+        {"name": "Cloudflare Pages (gratuito)",
+         "containers": [{"name": "Web app", "description": "SPA en React y TypeScript"}]},
+        {"name": "Supabase (plan gratuito)",
+         "containers": [
+             {"name": "Postgres", "description": "agency_id y RLS", "shape": "database"},
+             {"name": "Auth", "description": "acceso, un rol por usuario"},
+         ]},
+    ],
+    "externals": [{"name": "Sentry", "description": "alertas de errores"}],
+    "relations": [
+        {"from": "Web app", "to": "Postgres", "label": "lee y escribe por HTTPS"},
+        {"from": "Web app", "to": "Auth", "label": "inicia sesión"},
+        {"from": "Web app", "to": "Sentry", "label": "reporta errores"},
+    ],
+}
+
+
+def with_containers(boundaries=None):
+    spec = copy.deepcopy(SPEC)
+    spec["containers"] = copy.deepcopy(CONTAINERS)
+    if boundaries is not None:
+        spec["containers"]["boundaries"] = boundaries
+    return spec
+
+
+def headings(root):
+    return {
+        "".join(list(t)[0].itertext()): float(t.get("y"))
+        for t in tags(root, "text")
+        if t.get("data-type") == "text" and list(t) and list(t)[0].get("font-weight") == "bold"
+    }
+
+
+class ContainersDiagram(unittest.TestCase):
+    def test_it_has_a_containers_heading_with_its_description(self):
+        root = build(with_containers())
+        self.assertIn("Containers", headings(root))
+        said = [t for t in tags(root, "text") if "Containers" in "".join(t.itertext())]
+        self.assertIn(CONTAINERS["description"], "".join(said[0].itertext()))
+
+    def test_one_boundary_section_per_place_with_its_title(self):
+        root = build(with_containers())
+        sections = [r for r in tags(root, "rect") if r.get("data-type") == "section"]
+        self.assertEqual([s.get("data-title") for s in sections],
+                         [b["name"] for b in CONTAINERS["boundaries"]])
+
+    def test_each_piece_sits_inside_its_boundary(self):
+        root = build(with_containers())
+        sections = {s.get("id"): s for s in tags(root, "rect") if s.get("data-type") == "section"}
+        pieces = [r for r in tags(root, "rect")
+                  if r.get("data-type") == "shape" and r.get("belongs-to") in sections]
+        self.assertEqual(len(pieces), 3)
+        for piece in pieces:
+            section = sections[piece.get("belongs-to")]
+            self.assertGreaterEqual(float(piece.get("x")), float(section.get("x")))
+            self.assertGreaterEqual(float(piece.get("y")), float(section.get("y")))
+            self.assertLessEqual(float(piece.get("x")) + 220, float(section.get("x")) + float(section.get("width")))
+            self.assertLessEqual(float(piece.get("y")) + 160, float(section.get("y")) + float(section.get("height")))
+
+    def test_a_store_is_drawn_as_a_database(self):
+        root = build(with_containers())
+        stores = [r for r in tags(root, "rect") if r.get("data-shape") == "database"]
+        self.assertEqual(len(stores), 1)
+        label = [t for t in tags(root, "text") if t.get("belongs-to") == stores[0].get("id")]
+        self.assertIn("Postgres", "".join(label[0].itertext()))
+
+    def test_the_containers_diagram_sits_below_the_context_one(self):
+        root = build(with_containers())
+        marks = headings(root)
+        self.assertGreater(marks["Containers"], marks["Context"])
+        context_bottom = max(float(r.get("y")) + float(r.get("height"))
+                             for r in tags(root, "rect") if r.get("id", "").startswith("ctx-"))
+        container_top = min(float(r.get("y")) for r in tags(root, "rect") if r.get("id", "").startswith("con-"))
+        self.assertGreater(container_top, context_bottom)
+
+    def test_an_external_system_of_the_diagram_is_gray(self):
+        root = build(with_containers())
+        gray = [r for r in tags(root, "rect")
+                if r.get("fill") == EXTERNAL and r.get("id", "").startswith("con-")]
+        self.assertEqual(len(gray), 1)
+
+    def test_one_arrow_with_its_label_per_relation(self):
+        root = build(with_containers())
+        connectors = [p for p in tags(root, "polyline") if p.get("id", "").startswith("con-")]
+        self.assertEqual(len(connectors), len(CONTAINERS["relations"]))
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text")
+                if t.get("data-type") == "pathLabel" and t.get("id", "").startswith("con-")]
+        for relation in CONTAINERS["relations"]:
+            self.assertIn(relation["label"], said)
+
+    def test_a_single_piece_gets_no_containers_diagram(self):
+        spec = with_containers(boundaries=[
+            {"name": "Cloudflare Pages (gratuito)", "containers": [{"name": "Web app", "description": "todo"}]}])
+        spec["containers"]["relations"] = []
+        root = build(spec)
+        self.assertNotIn("Containers", headings(root))
+        self.assertEqual([r for r in tags(root, "rect") if r.get("data-type") == "section"], [])
+
+    def test_a_product_with_no_containers_gets_no_containers_diagram(self):
+        root = build(SPEC)
+        self.assertNotIn("Containers", headings(root))
+
+    def test_an_arrow_to_an_element_of_the_other_diagram_is_rejected(self):
+        spec = with_containers()
+        spec["containers"]["relations"].append(
+            {"from": "Web app", "to": "Administrador", "label": "le muestra el kanban"})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Administrador", str(caught.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
