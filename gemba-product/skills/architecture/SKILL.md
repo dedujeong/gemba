@@ -32,6 +32,15 @@ The four topics, and what each one decides:
 - Word every question about what is true today, as `../pitch/SKILL.md` section 3 requires, even when the topic looks forward: what they pay today for hosting and tools, who operates their systems today, which languages and tools the team already uses, what personal data they already handle. Do not ask what they would pay, who would operate it or what they would prefer.
 - Propose no stack, hosting or decision in this round: decisions come after the answers.
 
+## 3. Write the answers into Constraints
+
+When the person has answered the round, write the answers into the `Constraints` section of the `Product Brief` before anything else. It is a live doc: update it as `../pitch/SKILL.md` section 7 describes, reading it first, editing only the nodes that change and keeping everything that was already there. Do not re-create the page, and do not change its status or put a version in the title or the body.
+
+- One bullet per constraint, with a bold label, as `../pitch/assets/brief-template.md` defines for Constraints. A new answer is added next to the bullets that already exist and never replaces one.
+- Label each fact by its source as `../pitch/SKILL.md` section 4 says: what the person states about their own project is Interview; anything you add or infer is Assumption.
+- An answer that is an open business decision, not a restriction, goes to Open decisions as an unchecked item and not to Constraints.
+- If there is no Confluence connection, write the whole updated body in the reply and say that nothing was published.
+
 ## Style
 
 - Conversation in the person's language; headings and labels in English.
