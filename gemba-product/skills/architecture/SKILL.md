@@ -78,6 +78,7 @@ The step hands work to the version, and proposes it without declaring anything i
 
 - A decision that cannot be taken without evidence, because only a test can show it (a limit, a behavior, whether a provider fits), is not decided in the proposal. Do not name a provider or an option as the final one, not even as a provisional preference. Propose a Spike for it, with the question it answers, a timebox in hours (a proposal, the person sets it) and the decision it unblocks. Its ADR waits in the state Waiting on a Spike, as section 5 says.
 - A decision that waits on a business answer, not on a test, goes to Open decisions of the Product Brief and is not proposed as a Spike.
+- When the step ends, propose as Tasks the cross-cutting work that the decisions imply and no story of the current release covers: for example the walking skeleton, roles and permissions, or the deploy. Each Task has a summary and names the ADR or decision that implies it. Work that a story already asks for is not a Task, and neither is work no decision implies: nothing is proposed just in case, the same cut as section 4.
 
 ## Style
 
