@@ -1,6 +1,6 @@
 ---
 name: architecture
-description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts. Reads the Product Brief and the current release of the Story Map, then asks one round of questions about budget, operation, team and data.
+description: Decide the architecture of a product once its MVP is closed. Use when the Story Map has a closed MVP and someone says "decide la arquitectura", "qué stack usamos", "dónde lo hospedamos" or "toca la arquitectura", or when a closed brief needs technical decisions before development starts. Reads the Product Brief and the current release of the Story Map, then asks one round of questions about budget, operation, team and data and proposes only the decisions the MVP needs.
 ---
 
 # Architecture
@@ -41,6 +41,13 @@ When the person has answered the round, write the answers into the `Constraints`
 - Label each fact by its source as `../pitch/SKILL.md` section 4 says: what the person states about their own project is Interview; anything you add or infer is Assumption.
 - An answer that is an open business decision, not a restriction, goes to Open decisions as an unchecked item and not to Constraints.
 - If there is no Confluence connection, write the whole updated body in the reply and say that nothing was published.
+
+## 4. Propose the decisions
+
+When the answers are written, propose the architecture decisions the MVP needs, and only those. Nothing is proposed "just in case".
+
+- A decision comes from the stack, hosting, data, access or isolation between clients. Propose one only when a story of the current release or a constraint of the brief needs it, and name that story or constraint next to the decision. A need you infer yourself is not a reason: a decision that no story and no constraint states is not proposed, even when it is common practice (backups, monitoring, dashboards).
+- It belongs here when it changes the price, what the client signs or the cost of operating. When it only changes code, it is left to development and is not proposed.
 
 ## Style
 
