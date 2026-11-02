@@ -68,5 +68,37 @@ class ReviewOpensThePullRequest(unittest.TestCase):
         self.assertIn("Integrate nothing", section(self.skill(), "6. Report and stop"))
 
 
+class CloseLeavesTheMergeToTheMaintainer(unittest.TestCase):
+    def skill(self):
+        return read("skills", "close", "SKILL.md")
+
+    def test_close_reads_the_integration_of_the_project(self):
+        self.assertIn("Integration", section(self.skill(), "1. Find the project"))
+
+    def test_in_merge_mode_close_still_merges_with_no_ff(self):
+        self.assertIn("git merge --no-ff", section(self.skill(), "2. Merge and move to Done"))
+
+    def test_in_pull_request_mode_close_goes_to_its_own_section(self):
+        self.assertIn("section 5", section(self.skill(), "2. Merge and move to Done"))
+
+    def test_in_pull_request_mode_close_never_merges(self):
+        text = section(self.skill(), "5. Close in pull request mode")
+        self.assertNotIn("git merge", text)
+        self.assertIn("maintainer", text)
+
+    def test_a_pull_request_not_merged_keeps_the_issue_in_review(self):
+        text = section(self.skill(), "5. Close in pull request mode")
+        self.assertIn("gh pr view", text)
+        self.assertIn("not merged", text)
+        self.assertIn("do not move the issue to Done", text)
+
+    def test_a_merged_pull_request_syncs_develop_and_removes_the_branch_before_done(self):
+        text = section(self.skill(), "5. Close in pull request mode")
+        for step in ("git switch develop", "git pull origin develop", "git branch -d", "addOrEditJiraIssueWorklog"):
+            self.assertIn(step, text)
+        self.assertLess(text.index("git pull origin develop"), text.index("transitionJiraIssue"))
+        self.assertLess(text.index("addOrEditJiraIssueWorklog"), text.index("transitionJiraIssue"))
+
+
 if __name__ == "__main__":
     unittest.main()
