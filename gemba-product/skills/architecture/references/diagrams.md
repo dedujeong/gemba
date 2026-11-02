@@ -1,0 +1,40 @@
+# Architecture diagrams
+
+Which diagram to draw, where it lives, and what the Confluence whiteboard does with it. The rules below were learned by building a board by hand and reading it back, so they are what the connector stores, not what its format guide suggests.
+
+## Which levels
+
+C4 levels, by where they belong:
+
+| Level | When | Where |
+|---|---|---|
+| Context | Always | Architecture page |
+| Containers | More than one deployable piece | Architecture page |
+| Deployment, sequence | Only when an ADR needs it | Inside that ADR |
+| Components | During development | Gemba Code, aligned with the Jira components |
+| Code | Never | |
+
+A product with one deployable piece gets Context alone: a Containers diagram with a single box says nothing the Context diagram does not.
+
+## What each shape means
+
+| Element | How it is drawn | Why |
+|---|---|---|
+| A role that uses the product | A 124x124 rectangle, fill `#cfe1fd`, with its name as free text underneath | `data-shape="user"` renders square, so a person is a plain rectangle with a label |
+| The product, or one of its pieces | A 220x160 `process` shape, fill `#cfe1fd`, stroke `#1558bc` | |
+| A store | The same, with `data-shape="database"` | |
+| A system somebody else runs | The same, fill `#f0f1f2`, stroke `#7d818a` | Gray says the team does not operate it |
+| A deployment boundary | A `section` rect with `data-title`, its pieces carrying `belongs-to` | The title names the plan it runs on |
+| An arrow | A `polyline` with `data-type="connector"`, `begins-at`, `ends-at`, the two anchors at proportion `0.5`, `line-type="angled"` and `marker-end` | |
+| What flows along an arrow | A `pathLabel` text bound to the connector with `belongs-to` | |
+
+Several `tspan` inside one shape read as a single line, so a name and its description go in one run of text, not stacked.
+
+## What the connector does to a board
+
+- The arrowhead needs its own `defs`, `marker` and `polygon`, each with an id.
+- Shapes are normalized to fixed sizes and the anchors go back to `0.5`. The routing is recalculated, so a bad route is fixed by replacing the connector with other anchors, never by moving its points.
+- `pathLabels` survive only on create. Inserted by a patch they are dropped and the call still answers `ok: true`. A label added later has to be free text, which does not follow its connector.
+- One `update_elements_svg` per call: several ids or operations in one patch apply only the first and still answer `ok: true`.
+- A `replace_svg` of the whole board moved the x of free texts nobody touched.
+- The answer of a patch is stale. Read the board again after writing, and look at the PNG when the layout matters.
