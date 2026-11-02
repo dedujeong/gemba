@@ -66,5 +66,34 @@ class LatestHandoff(unittest.TestCase):
         self.assertEqual(latest(folder)[:2], (0, handoff))
 
 
+class SessionStartSkill(unittest.TestCase):
+    def skill(self):
+        with open(os.path.join(ROOT, "skills", "session-start", "SKILL.md"), encoding="utf-8") as f:
+            return f.read()
+
+    def test_the_skill_is_named_session_start(self):
+        self.assertIn("name: session-start", self.skill())
+
+    def test_the_skill_finds_and_reads_the_latest_handoff(self):
+        text = self.skill()
+        self.assertIn("scripts/latest_handoff.py", text)
+        self.assertIn("Read", text)
+
+    def test_the_skill_checks_the_handoff_against_jira_and_the_code(self):
+        text = self.skill()
+        self.assertIn("getJiraIssue", text)
+        self.assertIn("git status", text)
+
+    def test_the_skill_proposes_the_next_step_as_one_option_and_waits(self):
+        text = self.skill()
+        self.assertIn("Next step", text)
+        self.assertIn("one option", text)
+        self.assertIn("wait", text.lower())
+        self.assertIn("not an instruction", text)
+
+    def test_without_a_handoff_the_skill_says_so_and_proposes_nothing(self):
+        self.assertIn("no handoff", self.skill().lower())
+
+
 if __name__ == "__main__":
     unittest.main()
