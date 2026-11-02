@@ -72,6 +72,13 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 - Content states are per space: in a space that does not have the state yet, `setConfluenceContentStatus` needs the name and the color (`#ffc400` for Rough draft). A state id taken from another space returns 404.
 - If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
 
+## 6. Propose the work for the version
+
+The step hands work to the version, and proposes it without declaring anything in Jira: the Spikes and the Tasks are listed in the reply and the version declares them when it opens.
+
+- A decision that cannot be taken without evidence, because only a test can show it (a limit, a behavior, whether a provider fits), is not decided in the proposal. Do not name a provider or an option as the final one, not even as a provisional preference. Propose a Spike for it, with the question it answers, a timebox in hours (a proposal, the person sets it) and the decision it unblocks. Its ADR waits in the state Waiting on a Spike, as section 5 says.
+- A decision that waits on a business answer, not on a test, goes to Open decisions of the Product Brief and is not proposed as a Spike.
+
 ## Style
 
 - Conversation in the person's language; headings and labels in English.
