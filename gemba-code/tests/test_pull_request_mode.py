@@ -125,5 +125,31 @@ class PublishingNeverMergesIntoMainInPullRequestMode(unittest.TestCase):
         self.assertIn("the merge into `main` is the maintainer's decision", text)
 
 
+class SessionCloseOffersTheBackup(unittest.TestCase):
+    def skill(self):
+        return read("skills", "session-close", "SKILL.md")
+
+    def test_session_close_reads_the_integration_of_the_project(self):
+        self.assertIn("Integration", section(self.skill(), "1. Find the project"))
+
+    def test_in_pull_request_mode_it_offers_to_push_the_branch_and_pushes_only_if_the_person_says_yes(self):
+        text = section(self.skill(), "5. Offer to back up the branch")
+        self.assertIn("`pull request`", text)
+        self.assertIn("git push -u origin", text)
+        self.assertIn("only if the person says yes", text)
+
+    def test_the_backup_opens_no_pull_request_and_leaves_spikes_alone(self):
+        text = section(self.skill(), "5. Offer to back up the branch")
+        self.assertIn("open no pull request", text)
+        self.assertIn("Spike", text)
+
+    def test_in_merge_mode_it_offers_nothing(self):
+        self.assertIn("`merge`", section(self.skill(), "5. Offer to back up the branch"))
+
+    def test_the_handoff_is_written_before_the_offer(self):
+        text = self.skill()
+        self.assertLess(text.index("## 4. Write the handoff"), text.index("## 5. Offer to back up the branch"))
+
+
 if __name__ == "__main__":
     unittest.main()
