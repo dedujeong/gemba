@@ -27,6 +27,7 @@ The four topics, and what each one decides:
 | Team | Languages and tools they already know: picks the stack |
 | Data | Personal data, minors, payments: isolation and legal compliance |
 
+- Before asking, note which topics the brief or the Story Map already answer, even in part and wherever they appear, not only in a section named Constraints. Ask nothing about those topics: not to confirm them and not to go deeper. When a topic is answered only in part, ask only for the part that is missing. If the four are answered, say so and ask nothing.
 - Ask one question per topic, and a second one only when the topic cannot be understood without it.
 - Word every question about what is true today, as `../pitch/SKILL.md` section 3 requires, even when the topic looks forward: what they pay today for hosting and tools, who operates their systems today, which languages and tools the team already uses, what personal data they already handle. Do not ask what they would pay, who would operate it or what they would prefer.
 - Propose no stack, hosting or decision in this round: decisions come after the answers.
