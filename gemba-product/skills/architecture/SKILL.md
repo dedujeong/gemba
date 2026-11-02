@@ -51,6 +51,22 @@ When the answers are written, propose the architecture decisions the MVP needs, 
 - When a decision depends on the plan of a provider, look up its limits and cite the source of each one, as `references/plan-limits.md` says. This includes the alternatives. Before answering, reread the proposal: every statement about a price (free or paid), a quota, commercial use, a pause or an expiry has its source or the mark Assumption, and one that has neither is removed. That includes the paid tier of an alternative: do not write that it allows commercial use or that it costs, unless you cite it. Without a web tool you still propose every decision, with its limits marked Assumption.
 - Show each decision with the proposed option, two or three real alternatives and why the proposed option wins over them, so the person can reject it. An alternative is real when someone could choose it in this case: say what it offers and what makes it lose here. The reason it loses rests on a story, a constraint, a cited source or the mark Assumption, never on "as far as I remember". A name alone, or an option that fails the constraints at first glance, is not an alternative.
 
+## 5. Record the ADRs
+
+When the person agrees to record a decision, write one ADR for it, as `assets/adr-template.md` defines: one page per decision, never two decisions in one page. Create it in the `Decisions` folder of the product's space: search for the folder first and create it only if it does not exist.
+
+- Title `ADR-000N <Decision>`, numbered after the highest `ADR-` already in the folder.
+- Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
+- Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
+
+| ADR state | Page status | Panel |
+|---|---|---|
+| Proposed | Rough draft | none |
+| Waiting on a Spike | Rough draft | note |
+| Ready to decide | Ready for review | none |
+
+- If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
+
 ## Style
 
 - Conversation in the person's language; headings and labels in English.
