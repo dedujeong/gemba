@@ -57,6 +57,8 @@ When the answers are written, propose the architecture decisions the MVP needs, 
 When the person agrees to record a decision, write one ADR for it, as `assets/adr-template.md` defines: one page per decision, never two decisions in one page. Create it in the `Decisions` folder of the product's space: search for the folder first and create it only if it does not exist.
 
 - Title `ADR-000N <Decision>`, numbered after the highest `ADR-` already in the folder.
+- Create each ADR as a live doc (`contentType: live_doc`), like the ADRs already in the folder, never as a classic page.
+- Write Source as a block card, not as text: `<a href="URL" data-card-appearance="block"></a>` placed directly after the Source heading, with no empty paragraph between them.
 - Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
 - Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
 
