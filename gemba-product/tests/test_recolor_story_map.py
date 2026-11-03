@@ -34,14 +34,14 @@ SPEC_LATER["releases"].append({"name": "Later", "stories": [["Some day"], []]})
 
 def old_scheme(svg):
     """The same board painted the way it was before the new colors."""
-    return re.sub(r'(data-type="sticky" fill=")(#\w+)"', lambda m: f'{m.group(1)}{OLD_SCHEME.get(m.group(2), m.group(2))}"', svg)
+    return re.sub(r'(data-type="(?:sticky|rectangle)" fill=")(#\w+)"', lambda m: f'{m.group(1)}{OLD_SCHEME.get(m.group(2), m.group(2))}"', svg)
 
 
 def apply(svg, plan):
     """Do what update_elements_svg does: change only the fill of the stickies named."""
     for fill, ids in plan.items():
         for sid in ids:
-            svg = re.sub(rf'(id="{sid}" data-type="sticky" fill=")#\w+"', rf'\g<1>{fill}"', svg)
+            svg = re.sub(rf'(id="{sid}" data-type="(?:sticky|rectangle)" fill=")#\w+"', rf'\g<1>{fill}"', svg)
     return svg
 
 

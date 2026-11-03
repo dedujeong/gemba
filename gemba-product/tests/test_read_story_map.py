@@ -114,7 +114,7 @@ def arranged_by_hand(svg):
     """Move every sticky some distance, as a person arranging the board would, without leaving its column and row."""
     def move(m):
         tag = m.group(0)
-        if 'data-type="sticky"' not in tag:
+        if 'data-type="sticky"' not in tag and 'data-type="rectangle"' not in tag:
             return tag
         tag = re.sub(r' x="([-\d.]+)"', lambda a: f' x="{float(a.group(1)) + 55}"', tag)
         return re.sub(r' y="([-\d.]+)"', lambda a: f' y="{float(a.group(1)) + 30}"', tag)

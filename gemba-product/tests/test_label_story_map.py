@@ -30,7 +30,7 @@ def board(spec=SPEC_3, hand=False):
 
 def first_row_y(svg, texts):
     """The y of the first row of stickies whose text is in `texts`."""
-    ys = {m.group(1): float(m.group(2)) for m in re.finditer(r'id="(s\d+)" data-type="sticky" fill="#\w+" x="[-\d.]+" y="([-\d.]+)"', svg)}
+    ys = {m.group(1): float(m.group(2)) for m in re.finditer(r'id="(s\d+)" data-type="(?:sticky|rectangle)" fill="#\w+" x="[-\d.]+" y="([-\d.]+)"', svg)}
     owners = {m.group(1): m.group(2) for m in re.finditer(r'belongs-to="(s\d+)"><tspan[^>]*>([^<]*)</tspan>', svg)}
     return min(ys[sid] for sid, text in owners.items() if text in texts)
 
@@ -129,7 +129,7 @@ class Shapes(unittest.TestCase):
         moves = {text: dy for dy, texts in rows.values() for text in texts}
         for text, dy in moves.items():
             sid = owners[text]
-            svg = re.sub(rf'(id="{sid}" data-type="sticky" fill="#\w+" x="[-\d.]+" y=")([-\d.]+)',
+            svg = re.sub(rf'(id="{sid}" data-type="(?:sticky|rectangle)" fill="#\w+" x="[-\d.]+" y=")([-\d.]+)',
                          lambda m: f"{m.group(1)}{float(m.group(2)) + dy}", svg)
         original = build_story_map.build(SPEC_3)
         for name, (dy, texts) in rows.items():

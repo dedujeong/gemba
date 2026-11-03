@@ -69,14 +69,25 @@ NS = {"s": "http://www.w3.org/2000/svg"}
 
 
 def stickies(svg):
-    """Return {text: fill} for every sticky on the board."""
+    """Return {text: fill} for every sticky and story rectangle on the board."""
     root = ET.fromstring(svg)
-    fills = {el.get("id"): el.get("fill") for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == "sticky"}
+    fills = {el.get("id"): el.get("fill") for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") in ("sticky", "rectangle")}
     out = {}
     for el in root.iter("{%s}text" % NS["s"]):
         owner = el.get("belongs-to")
         if owner in fills:
             out[("".join(el.itertext())).strip()] = fills[owner]
+    return out
+
+
+def shapes(svg, kind):
+    """Return [(text, rect)] for every rect of the given data-type, with its attributes as floats where numeric."""
+    root = ET.fromstring(svg)
+    rects = {el.get("id"): el for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == kind}
+    out = []
+    for el in root.iter("{%s}text" % NS["s"]):
+        if el.get("belongs-to") in rects:
+            out.append((("".join(el.itertext())).strip(), rects[el.get("belongs-to")]))
     return out
 
 
@@ -106,6 +117,43 @@ class BoardContent(unittest.TestCase):
         spec["releases"][1]["stories"].append(["one column too many"])
         with self.assertRaises(ValueError):
             build_story_map.build(spec)
+
+
+class StoryRectangles(unittest.TestCase):
+    """Each story is drawn at the size of its Jira card, so declaring it does not move the map."""
+
+    def setUp(self):
+        self.svg = build_story_map.build(SPEC)
+        self.stories = {"Save a date per customer", "Send a WhatsApp reminder",
+                        "Who sends it when the owner is away?", "Import dates from the notebook"}
+
+    def test_each_story_is_a_rectangle_of_the_jira_card_size(self):
+        rects = dict(shapes(self.svg, "rectangle"))
+        self.assertEqual(set(rects), self.stories)
+        for text, rect in rects.items():
+            self.assertEqual((rect.get("width"), rect.get("height")), ("345", "136.91"), text)
+
+    def test_a_story_rectangle_has_the_color_of_its_release(self):
+        rects = dict(shapes(self.svg, "rectangle"))
+        self.assertEqual(rects["Save a date per customer"].get("fill"), CURRENT)
+        self.assertEqual(rects["Import dates from the notebook"].get("fill"), NEXT)
+
+    def test_the_text_is_centered_on_its_rectangle(self):
+        root = ET.fromstring(self.svg)
+        rects = {el.get("id"): el for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == "rectangle"}
+        for el in root.iter("{%s}text" % NS["s"]):
+            rect = rects.get(el.get("belongs-to"))
+            if rect is not None:
+                self.assertEqual(float(el.get("x")), round(float(rect.get("x")) + 172.5, 2))
+                self.assertEqual(float(el.get("y")), round(float(rect.get("y")) + 68.45, 2))
+                self.assertEqual(el.get("width"), "276")
+
+    def test_persona_activities_and_tasks_stay_stickies(self):
+        stickies_ = dict(shapes(self.svg, "sticky"))
+        self.assertEqual(set(stickies_), {"Shop owner (primary)", "Customer", "Record a service", "Remind",
+                                          "Save the next service date", "Send the reminder"})
+        for rect in stickies_.values():
+            self.assertEqual((rect.get("width"), rect.get("height")), ("240.05", "144.03"))
 
 
 class FixedColors(unittest.TestCase):
