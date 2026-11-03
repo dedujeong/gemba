@@ -146,13 +146,32 @@ A gap they cannot decide yet goes on the map as an open question, there and then
 python3 scripts/add_story_map.py board.svg --to "<release>" --task "<task>" --text "<question>" --open
 ```
 
-It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red sticky does not close, as section 8 says, so the question comes back before the close.
+It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red sticky does not close, as section 9 says, so the question comes back before the close.
 
-## 8. Close the MVP
+## 8. Run a pre-mortem
+
+Only the MVP gets a pre-mortem, the technique of Gary Klein: before building it, find out why it could fail. When the person asks to close the MVP and the gaps of section 6 are decided (section 7), do not close it yet. Ask once, in one message:
+
+- Imagine that the MVP already shipped and the product failed. Write the reasons why.
+
+If this conversation already holds the review of section 6 with each gap decided, come straight here and do not walk the map again.
+
+Then wait. The reasons are theirs: do not offer any of your own before they write theirs, because it would anchor them, and do not close anything while they write. If the conversation already holds the reasons of this pre-mortem, do not ask again.
+
+Once they wrote the reasons, review them one by one. Each reason becomes what the person decides, and no reason decides itself:
+
+- **A story.** The reason becomes a story in the release they choose and the task whose column it belongs to, written there and then with `add_story_map.py ... --traces`, as section 7 describes. A story of the current release carries `--traces`.
+- **A risk of the brief.** The reason becomes a new row of the Riskiest assumptions table: the reason as the assumption, its status saying that it comes from the pre-mortem of the MVP and labeled Assumption (`pitch` section 4), and the risk level the person gives (High, Medium or Lower). If they did not give a level, ask once; do not guess it. Edit the brief in place with granular edits, as `pitch` section 7 describes, and keep everything that was already there.
+- **A red sticky.** The reason the person cannot decide yet becomes an open question on the map, with `add_story_map.py ... --open` in the column of the task where the failure would show, and an item in the brief's Open decisions, both as section 7 describes. Propose the task if they did not name one; they decide. A release with a red sticky does not close (section 9).
+- **Dropped.** A reason they judge irrelevant is named in the reply with the reason they gave, and nothing is written, like a discarded gap in section 7.
+
+## 9. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
 
-A release with an open question does not close. Before anything else, read the board (section 4) and run `python3 scripts/read_story_map.py board.svg --gaps`, which names each red sticky of the current release with the task it sits in. If there is one, do not close the release: name every open question it printed, say that the close waits for those decisions (section 7), and record nothing. The question is theirs to answer, so do not answer it to clear the way.
+The pre-mortem of section 8 comes first: when they ask to close the MVP and this conversation has no pre-mortem yet, run it before anything else here.
+
+A release with an open question does not close. Before recording anything, read the board (section 4) and run `python3 scripts/read_story_map.py board.svg --gaps`, which names each red sticky of the current release with the task it sits in. If there is one, do not close the release: name every open question it printed, say that the close waits for those decisions (section 7), and record nothing. The question is theirs to answer, so do not answer it to clear the way.
 
 When no open question is left and they close it:
 
@@ -163,7 +182,7 @@ When no open question is left and they close it:
 
 If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
 
-## 9. Review a closed release and prepare the next one
+## 10. Review a closed release and prepare the next one
 
 When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
 
