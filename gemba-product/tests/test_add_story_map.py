@@ -13,7 +13,7 @@ sys.path.insert(0, SCRIPTS)
 import add_story_map  # noqa: E402
 import build_story_map  # noqa: E402
 import read_story_map  # noqa: E402
-from test_build_story_map import CURRENT, LATER, NEXT, SPEC, delivered_first  # noqa: E402
+from test_build_story_map import CURRENT, LATER, NEXT, OPEN, SPEC, delivered_first  # noqa: E402
 from test_move_story_map import SPEC_3, board, first_top, label_tops, moves, sticky  # noqa: E402
 
 ROW_STEP = build_story_map.ROW_STEP
@@ -136,6 +136,31 @@ class Checks(unittest.TestCase):
         self.assertIn("delivered", message)
 
 
+class OpenQuestion(unittest.TestCase):
+    def test_an_undecided_gap_is_red_whatever_the_row_it_lands_in(self):
+        svg = board()
+        fills = {name: inserted(add_story_map.add_patch(svg, name, "Send the reminder",
+                                                        "Who sends it when the owner is away?", is_open=True))["fill"]
+                 for name in ("MVP", "Release 2", "Later")}
+        self.assertEqual(fills, {"MVP": OPEN, "Release 2": OPEN, "Later": OPEN})
+
+    def test_an_open_question_of_the_current_release_needs_no_traces(self):
+        patch = add_story_map.add_patch(board(), "MVP", "Send the reminder", "Who confirms the visit?", is_open=True)
+        self.assertIn("<insert_svg", patch)
+
+    def test_the_board_reads_it_as_an_open_question_and_not_as_a_story(self):
+        svg = board()
+        patch = add_story_map.add_patch(svg, "MVP", "Save the next service date", "Who owns the date when two shops share a customer?", is_open=True)
+        release = next(r for r in read_story_map.parse(applied(svg, patch))["releases"] if r["name"] == "MVP")
+        self.assertEqual((release["count"], release["open"]), (2, 2))
+
+    def test_the_task_it_lands_in_is_still_a_gap(self):
+        svg = board(delivered_first(SPEC_3))
+        patch = add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Who sends it when the owner is away?", is_open=True)
+        self.assertEqual(read_story_map.gaps(read_story_map.parse(applied(svg, patch))),
+                         [{"activity": "Remind", "task": "Send the reminder"}])
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *extra, spec=SPEC_3):
         with tempfile.TemporaryDirectory() as tmp:
@@ -154,6 +179,12 @@ class CommandLine(unittest.TestCase):
         done = self.run_cli("--to", "Release 2", "--task", "Charge the service", "--text", "Editable message templates")
         self.assertNotEqual(done.returncode, 0)
         self.assertIn("Charge the service", done.stderr)
+
+
+    def test_the_open_flag_prints_a_red_sticky(self):
+        done = self.run_cli("--to", "MVP", "--task", "Send the reminder", "--text", "Who confirms the visit?", "--open")
+        self.assertEqual(done.returncode, 0, done.stderr)
+        self.assertEqual(inserted(done.stdout)["fill"], OPEN)
 
 
 if __name__ == "__main__":

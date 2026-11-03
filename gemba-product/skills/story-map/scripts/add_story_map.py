@@ -1,6 +1,6 @@
 """Write the patch that adds a story to a story map board.
 
-Usage: python3 add_story_map.py board.svg --to NAME --task TASK --text TEXT [--traces WHERE]
+Usage: python3 add_story_map.py board.svg --to NAME --task TASK --text TEXT [--traces WHERE] [--open]
 
 Accepts the SVG exactly as getConfluenceContent returns it, like read_story_map.py, and
 finds the rows and the columns the same way. NAME is the label of the row the story goes
@@ -16,6 +16,11 @@ release, orange in the next one, light orange later and in the Later row. A deli
 release takes no story. A story of the current release needs --traces, the part of the
 brief it serves, the same cut build_story_map.py makes.
 
+--open adds an open question instead of a story: a red sticky in the column of its task,
+whatever the row it lands in, and it needs no --traces, because a question nobody could
+decide yet is not a story. read_story_map.py counts it apart and still reads its task as
+a step with no story.
+
 The output is a replace_svg per label that moves, the insert_svg with the new sticky and
 its text, and an update_elements_svg per sticky that moves. Confluence gives the inserted
 sticky a new id: read the board again afterwards to report what it says.
@@ -27,7 +32,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
 
-from build_story_map import release_fills, sticky_svg
+from build_story_map import OPEN, release_fills, sticky_svg
 from move_story_map import row_top, shift_patch, stack_y
 from read_story_map import BACKBONE, current, parse, read_bands
 
@@ -52,7 +57,7 @@ def free_id(svg):
     return sid
 
 
-def add_patch(svg, target, task, text, traces=""):
+def add_patch(svg, target, task, text, traces="", is_open=False):
     labels, bands = read_bands(svg)
     names = [l["name"] for l in labels if l["name"] not in BACKBONE]
     if target not in names:
@@ -67,10 +72,10 @@ def add_patch(svg, target, task, text, traces=""):
     if board["releases"][index]["delivered"]:
         raise ValueError(f'"{target}" is delivered: a release that shipped takes no story')
     being = current(board)
-    if being and being["name"] == target and not traces.strip():
+    if not is_open and being and being["name"] == target and not traces.strip():
         raise ValueError(f'"{target}" is the current release: story "{text}" needs --traces '
                          "to a problem, the primary job or a Quality bar condition")
-    fill = release_fills([{"name": r["name"], "released": r["delivered"]} for r in board["releases"]])[index]
+    fill = OPEN if is_open else release_fills([{"name": r["name"], "released": r["delivered"]} for r in board["releases"]])[index]
 
     target_label = next(l for l in labels if l["name"] == target)
     sid = free_id(svg)
@@ -90,8 +95,9 @@ if __name__ == "__main__":
     parser.add_argument("--task", required=True, metavar="TASK", help="the text of the task whose column it belongs to")
     parser.add_argument("--text", required=True, metavar="TEXT", help="the story, in one short sentence")
     parser.add_argument("--traces", default="", metavar="WHERE", help="the part of the brief it serves; required in the current release")
+    parser.add_argument("--open", action="store_true", help="add an open question, a red sticky, instead of a story")
     args = parser.parse_args()
     try:
-        print(add_patch(open(args.board, encoding="utf-8").read(), args.to, args.task, args.text, args.traces))
+        print(add_patch(open(args.board, encoding="utf-8").read(), args.to, args.task, args.text, args.traces, args.open))
     except ValueError as error:
         parser.error(str(error))

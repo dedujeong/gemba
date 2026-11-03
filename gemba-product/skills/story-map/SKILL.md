@@ -140,6 +140,14 @@ The story lands in the column of the task the gap left uncovered and takes the c
 
 A gap they discard is named in the reply with the reason they gave, and nothing is written: it does not become a story and it does not go on the board. A discard is a decision, not a move: do not ask which release it goes to instead, and do not bring it back later.
 
+A gap they cannot decide yet goes on the map as an open question, there and then: a red sticky in the column of the task it leaves uncovered, inside the row of the release being closed, where it reads under its activity. Write it without asking for one more confirmation, because the sticky decides nothing: it is their question, written where it is seen, and it is what keeps the release from closing. Same read and same patch as a story, with `--open` and no `--traces`, because a question is not a story:
+
+```
+python3 scripts/add_story_map.py board.svg --to "<release>" --task "<task>" --text "<question>" --open
+```
+
+It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red sticky does not close, as section 8 says, so the question comes back before the close.
+
 ## 8. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
