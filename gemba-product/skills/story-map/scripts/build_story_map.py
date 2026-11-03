@@ -102,6 +102,15 @@ def label_svg(lid, top, title, description, width=344.12, scale=1, chars=LABEL_C
     )
 
 
+def sticky_svg(sid, x, y, fill, text):
+    """A sticky: its rect and the text that belongs to it, centered on the card."""
+    return [
+        f'<rect width="{CARD_W}" height="{CARD_H}" id="{sid}" data-type="sticky" fill="{fill}" x="{x}" y="{y}"/>',
+        f'<text x="{round(x + CARD_W / 2, 2)}" y="{round(y + CARD_H / 2, 2)}" width="216" text-anchor="middle" '
+        f'font-size="{FS}" fill="#172b4d" id="{sid}-text" belongs-to="{sid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>',
+    ]
+
+
 class Board:
     def __init__(self):
         self.out = []
@@ -109,12 +118,7 @@ class Board:
 
     def sticky(self, x, y, fill, text):
         self.n += 1
-        sid = f"s{self.n}"
-        self.out.append(f'<rect width="{CARD_W}" height="{CARD_H}" id="{sid}" data-type="sticky" fill="{fill}" x="{x}" y="{y}"/>')
-        self.out.append(
-            f'<text x="{round(x + CARD_W / 2, 2)}" y="{round(y + CARD_H / 2, 2)}" width="216" text-anchor="middle" '
-            f'font-size="{FS}" fill="#172b4d" id="{sid}-text" belongs-to="{sid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>'
-        )
+        self.out += sticky_svg(f"s{self.n}", x, y, fill, text)
 
     def row_label(self, lid, top, title, description, width=344.12, scale=1, chars=LABEL_CHARS):
         self.out.append(label_svg(lid, top, title, description, width, scale, chars))
