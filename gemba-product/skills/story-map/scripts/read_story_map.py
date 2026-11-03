@@ -1,6 +1,6 @@
 """Read a story map whiteboard SVG back into releases, activities, tasks, and stories.
 
-Usage: python3 read_story_map.py board.svg [--json] [--mvp] [--previous N]
+Usage: python3 read_story_map.py board.svg [--json] [--mvp] [--gaps] [--previous N]
 
 Accepts the SVG exactly as getConfluenceContent returns it, including the line-number
 prefixes. Works on boards edited by hand, as long as:
@@ -18,6 +18,10 @@ old colors has gray in every later release, so it reads wrong until it is recolo
 A release's "count" is its stories; red stickies (open questions) are not stories and
 are counted apart in "open". --previous N is the number of stories the current release
 had when it was last reported; the script then says how much it grew, shrank or stayed.
+
+--gaps walks the current release left to right and prints the tasks with no story: the
+steps a user would take that the release does not cover, and then its open questions,
+the gaps nobody could decide yet. A release with one of those does not close.
 
 --mvp prints only the current release, its stories grouped by activity and task, for
 whoever builds it. Nothing is copied anywhere: the board in Confluence is the only
@@ -132,6 +136,41 @@ def change(r, previous):
     return release["count"] - previous if release else 0
 
 
+def gaps(r):
+    """The tasks of the current release with no story, left to right: the steps it leaves uncovered.
+
+    An open question is not a story, so a task whose only sticky is red is a gap too.
+    """
+    release = current(r)
+    return [{"activity": t["activity"], "task": t["task"]}
+            for t in (release["tasks"] if release else [])
+            if not any(not st["open"] for st in t["stories"])]
+
+
+def open_questions(r):
+    """The open questions of the current release, left to right: the gaps nobody could decide yet."""
+    release = current(r)
+    return [{"activity": t["activity"], "task": t["task"], "text": st["text"]}
+            for t in (release["tasks"] if release else [])
+            for st in t["stories"] if st["open"]]
+
+
+def gaps_markdown(r):
+    release = current(r)
+    if not release:
+        return "Every release is delivered: there is none to close."
+    rows, questions = gaps(r), open_questions(r)
+    if rows:
+        lines = [f'{release["name"]}: {plural(len(rows), "task", "tasks")} with no story']
+        lines += [f'- {g["activity"]}: {g["task"]}' for g in rows]
+    else:
+        lines = [f'{release["name"]}: every task has a story.']
+    if questions:
+        lines.append(f'{release["name"]}: {plural(len(questions), "open question", "open questions")} with no decision')
+        lines += [f'- {q["activity"]}: {q["task"]}: {q["text"]}' for q in questions]
+    return "\n".join(lines)
+
+
 def for_development(r):
     """The current release as development reads it: stories by activity and task, open questions apart."""
     release = current(r)
@@ -198,7 +237,9 @@ def to_markdown(r):
 
 if __name__ == "__main__":
     data = parse(open(sys.argv[1], encoding="utf-8").read())
-    if "--mvp" in sys.argv:
+    if "--gaps" in sys.argv:
+        print(gaps_markdown(data))
+    elif "--mvp" in sys.argv:
         print(mvp_markdown(for_development(data)))
     elif "--json" in sys.argv:
         print(json.dumps(data, ensure_ascii=False, indent=2))

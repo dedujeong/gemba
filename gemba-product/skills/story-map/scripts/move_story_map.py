@@ -15,6 +15,9 @@ If the stack gets deeper and would reach the next row, the rows below move down 
 missing, so the spacing the builder gives is kept: their stickies and their labels move
 together. Nothing above the target moves, and the rows the stories leave are not closed up.
 
+`row_top`, `stack_y` and `shift_patch` are the placement of a sticky in a row; add_story_map.py
+puts a new sticky in a row with the same three.
+
 The output is one update_elements_svg per sticky (x and y; its text follows it, tested on
 a real board), plus a replace_svg for each label that moves. It does not change colors:
 read the board again afterwards and run recolor_story_map.py, so each story takes the color
@@ -29,6 +32,35 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I doe
 from build_story_map import CARD_W, RELEASE_GAP, ROW_STEP
 from label_story_map import replace_patch
 from read_story_map import BACKBONE, read_bands
+
+
+def row_top(bands, label, moving=()):
+    """Where a row starts: its first row of stickies, or its label when it has none. Stickies on the move do not count."""
+    return min((s["y"] for s in bands[label["name"]] if s["id"] not in moving), default=label["y"])
+
+
+def stack_y(row, x, top):
+    """The y a sticky takes in the column x of a row: under the stickies it would overlap, or the top of the row."""
+    stack = [s["y"] for s in row if abs(s["x"] - x) < CARD_W]
+    return round(max(stack) + ROW_STEP, 2) if stack else top
+
+
+def shift_patch(svg, labels, bands, target_label, deepest, moving=()):
+    """The ops that push the rows below the target down when it grew, labels and their stickies together.
+
+    `deepest` is the y of the lowest sticky of the target row once the new ones are placed.
+    Returns (label ops, sticky ops), empty when nothing has to move.
+    """
+    below = labels[labels.index(target_label) + 1:]
+    shift = max(0, round(deepest + RELEASE_GAP - row_top(bands, below[0], moving), 2)) if below else 0
+    if not shift:
+        return [], []
+    label_ops = [replace_patch(svg, l["name"], top=round(row_top(bands, l, moving) + shift, 2)) for l in below]
+    sticky_ops = [f'<update_elements_svg ids="{s["id"]}">\n<attr x="{s["x"]}" y="{round(s["y"] + shift, 2)}"/>\n</update_elements_svg>'
+                  for l in below
+                  for s in sorted(bands[l["name"]], key=lambda s: (s["y"], s["x"]))
+                  if s["id"] not in moving]
+    return label_ops, sticky_ops
 
 
 def move_patch(svg, ids, target):
@@ -48,33 +80,20 @@ def move_patch(svg, ids, target):
         if name == target:
             raise ValueError(f'"{story["text"]}" is already in {target}')
 
-    def row_top(label):
-        """Where a row starts: its first row of stickies, or its label when it has none. Stories on the move do not count."""
-        return min((s["y"] for s in bands[label["name"]] if s["id"] not in ids), default=label["y"])
-
     target_label = next(l for l in labels if l["name"] == target)
     row = list(bands[target])
     placed = {}
     for sid in ids:
         story = by_id[sid][1]
-        stack = [s["y"] for s in row if abs(s["x"] - story["x"]) < CARD_W]  # any sticky it would overlap
-        y = round(max(stack) + ROW_STEP, 2) if stack else row_top(target_label)
+        y = stack_y(row, story["x"], row_top(bands, target_label, ids))
         placed[sid] = (story["x"], y)
         row.append({"id": sid, "x": story["x"], "y": y})
 
-    below = labels[labels.index(target_label) + 1:]
-    shift = max(0, round(max(s["y"] for s in row) + RELEASE_GAP - row_top(below[0]), 2)) if below else 0
-    below = below if shift else []
-
-    parts = []
-    for l in below:
-        parts.append(replace_patch(svg, l["name"], top=round(row_top(l) + shift, 2)))
-    for sid, (x, y) in placed.items():
-        parts.append(f'<update_elements_svg ids="{sid}">\n<attr x="{x}" y="{y}"/>\n</update_elements_svg>')
-    for l in below:
-        for s in sorted(bands[l["name"]], key=lambda s: (s["y"], s["x"])):
-            if s["id"] not in placed:
-                parts.append(f'<update_elements_svg ids="{s["id"]}">\n<attr x="{s["x"]}" y="{round(s["y"] + shift, 2)}"/>\n</update_elements_svg>')
+    label_ops, sticky_ops = shift_patch(svg, labels, bands, target_label, max(s["y"] for s in row), ids)
+    parts = list(label_ops)
+    parts += [f'<update_elements_svg ids="{sid}">\n<attr x="{x}" y="{y}"/>\n</update_elements_svg>'
+              for sid, (x, y) in placed.items()]
+    parts += sticky_ops
     return "\n".join(parts)
 
 
