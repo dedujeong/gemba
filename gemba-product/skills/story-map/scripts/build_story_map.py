@@ -44,6 +44,8 @@ from xml.sax.saxutils import escape
 
 FONT = "Atlassian Sans, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Ubuntu, Helvetica Neue, sans-serif"
 CARD_W, CARD_H = 240.05, 144.03
+# A story is drawn at the size of its Jira card, so declaring it does not move the map.
+STORY_W, STORY_H = 345, 136.91
 X_LABEL, X0, PITCH = -120.56, 318.51, 303.33
 Y_PERSONA, BACKBONE_STEP = -185.02, 250.68
 ROW_STEP, RELEASE_GAP = 184.03, 245.6
@@ -108,6 +110,15 @@ def sticky_svg(sid, x, y, fill, text):
         f'<rect width="{CARD_W}" height="{CARD_H}" id="{sid}" data-type="sticky" fill="{fill}" x="{x}" y="{y}"/>',
         f'<text x="{round(x + CARD_W / 2, 2)}" y="{round(y + CARD_H / 2, 2)}" width="216" text-anchor="middle" '
         f'font-size="{FS}" fill="#172b4d" id="{sid}-text" belongs-to="{sid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>',
+    ]
+
+
+def rectangle_svg(rid, x, y, fill, text):
+    """A story: a rectangle the size of its Jira card and the text that belongs to it, centered on it."""
+    return [
+        f'<rect width="{STORY_W}" height="{STORY_H}" id="{rid}" data-type="rectangle" fill="{fill}" x="{x}" y="{y}"/>',
+        f'<text x="{round(x + STORY_W / 2, 2)}" y="{round(y + STORY_H / 2, 2)}" width="276" text-anchor="middle" '
+        f'font-size="{FS}" fill="#172b4d" id="{rid}-text" belongs-to="{rid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>',
     ]
 
 
