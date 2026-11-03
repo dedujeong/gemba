@@ -88,6 +88,9 @@ The step hands work to the version, and proposes it without declaring anything i
 When the ADRs are written, create the `Architecture` page of the product's space with the diagrams of the system, so the person sees at a glance who uses it and which systems it talks to. `references/diagrams.md` says which levels to draw and what each shape means.
 
 1. Write the spec of the diagrams as `assets/architecture-template.json` defines, from the decisions already taken: the actors from the Story Map and the brief, the systems the ADRs name, and one relation per arrow saying what flows along it.
+   Besides Context and Containers, the spec carries what the product keeps and how it changes, taken from the stories of the current release and never inferred:
+   - `data_model`: one entity for each thing the stories name, with its main fields and a labelled relation between entities. An entity no story mentions is not drawn, and with no entities the diagram is left out.
+   - `states`: one item for each entity that changes state in a story, with its states, the event that creates it (`initial`) and each event that moves it (`transitions`). An entity that never changes state gets none, and a state or an event no story states is not added.
 2. Build the board with `python3 scripts/build_architecture.py spec.json board.svg`. It rejects an arrow to an element that is not in the diagram and an arrow with no label, so read the error and fix the spec, never the script.
 3. Create the whiteboard with `createConfluenceContent` (`contentType: whiteboard`, the SVG as the body), titled `Diagrams`, in the product's space.
 4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 6, so the version finds them in one place. Its status follows `../pitch/SKILL.md` section 6.
