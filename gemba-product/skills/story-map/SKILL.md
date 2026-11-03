@@ -158,6 +158,13 @@ If this conversation already holds the review of section 6 with each gap decided
 
 Then wait. The reasons are theirs: do not offer any of your own before they write theirs, because it would anchor them, and do not close anything while they write. If the conversation already holds the reasons of this pre-mortem, do not ask again.
 
+Once they wrote the reasons, review them one by one. Each reason becomes what the person decides, and no reason decides itself:
+
+- **A story.** The reason becomes a story in the release they choose and the task whose column it belongs to, written there and then with `add_story_map.py ... --traces`, as section 7 describes. A story of the current release carries `--traces`.
+- **A risk of the brief.** The reason becomes a new row of the Riskiest assumptions table: the reason as the assumption, its status saying that it comes from the pre-mortem of the MVP and labeled Assumption (`pitch` section 4), and the risk level the person gives (High, Medium or Lower). If they did not give a level, ask once; do not guess it. Edit the brief in place with granular edits, as `pitch` section 7 describes, and keep everything that was already there.
+- **A red sticky.** The reason the person cannot decide yet becomes an open question on the map, with `add_story_map.py ... --open` in the column of the task where the failure would show, and an item in the brief's Open decisions, both as section 7 describes. Propose the task if they did not name one; they decide. A release with a red sticky does not close (section 9).
+- **Dropped.** A reason they judge irrelevant is named in the reply with the reason they gave, and nothing is written, like a discarded gap in section 7.
+
 ## 9. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
