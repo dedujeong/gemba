@@ -70,11 +70,7 @@ Estamos trabajando el Story Map de la app de recordatorios para talleres mecáni
 61  <text x="438.53" y="879.55" width="216" text-anchor="middle" font-size="15.47px" fill="#172b4d" id="s8-text" belongs-to="s8">
 62  <tspan font-size="15.47px">Registrar vehículo</tspan>
 63  </text>
-64  <rect width="240.05" height="144.03" id="s9" data-type="sticky" fill="#fce4a6" x="621.84" y="807.54"/>
-65  <text x="741.87" y="879.55" width="216" text-anchor="middle" font-size="15.47px" fill="#172b4d" id="s9-text" belongs-to="s9">
-66  <tspan font-size="15.47px">Envío automático</tspan>
-67  </text>
-68  </svg>
+64  </svg>
 </board>
 
 Actualiza la etiqueta del Release 2.
