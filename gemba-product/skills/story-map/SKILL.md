@@ -110,7 +110,7 @@ When the person asks to update a board to the current colors, change only the fi
 
 ## 6. Check the release before closing it
 
-When the person asks to close a release, the MVP or a later one, check it before closing it and name every gap the passes below find. This step only names gaps: what to do with each one is the person's decision, and nothing is written to the board or the brief here.
+When the person asks to close a release, the MVP or a later one, check it before closing it and name every gap the passes below find. This step only names gaps: what to do with each one is the person's decision, taken in section 7, and nothing is written to the board or the brief here.
 
 1. **Walk the map.** Read the board (section 4) and run:
 
@@ -126,11 +126,35 @@ It walks the current release left to right and prints each task with no story, w
 
 4. **Handoffs.** Follow the brief's Current workflow and the activities of the map, and go through every point where the work changes hands, one by one: a person hands it to the product, the product hands it to someone outside, one role hands it to another, a system hands it back. Name for each one who hands it to whom and which story carries it, and name the handoffs no story covers: what somebody sends that nothing receives, and what somebody does outside the product that nothing records.
 
-## 7. Close the MVP
+## 7. Decide each gap
+
+Every gap of section 6 is decided before the release closes, one by one with the person. Nothing is decided for them: name the gap with what it leaves uncovered and let them say what happens to it.
+
+A gap they decide to cover becomes a story in the release they chose, written there and then. Read the board right before the patch (section 5) and run:
+
+```
+python3 scripts/add_story_map.py board.svg --to "<release>" --task "<task>" --text "<story>" --traces "<part of the brief>"
+```
+
+The story lands in the column of the task the gap left uncovered and takes the color of its row. A story of the current release carries `--traces`, the part of the brief it serves, like every other story of that release; a delivered release takes no story. Send the patch with `updateConfluenceContent` and the SVG you read as `context.content`, whole and with its line numbers. Then read the board again and report from that read: Confluence gives the inserted sticky a new id, and the answer to a patch does not say what happened (`references/whiteboard.md`).
+
+A gap they discard is named in the reply with the reason they gave, and nothing is written: it does not become a story and it does not go on the board. A discard is a decision, not a move: do not ask which release it goes to instead, and do not bring it back later.
+
+A gap they cannot decide yet goes on the map as an open question, there and then: a red sticky in the column of the task it leaves uncovered, inside the row of the release being closed, where it reads under its activity. Write it without asking for one more confirmation, because the sticky decides nothing: it is their question, written where it is seen, and it is what keeps the release from closing. Same read and same patch as a story, with `--open` and no `--traces`, because a question is not a story:
+
+```
+python3 scripts/add_story_map.py board.svg --to "<release>" --task "<task>" --text "<question>" --open
+```
+
+It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red sticky does not close, as section 8 says, so the question comes back before the close.
+
+## 8. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
 
-When they close it:
+A release with an open question does not close. Before anything else, read the board (section 4) and run `python3 scripts/read_story_map.py board.svg --gaps`, which names each red sticky of the current release with the task it sits in. If there is one, do not close the release: name every open question it printed, say that the close waits for those decisions (section 7), and record nothing. The question is theirs to answer, so do not answer it to clear the way.
+
+When no open question is left and they close it:
 
 - Recount the MVP stories from the board right then (section 4), not from memory.
 - In the brief's Open decisions, add a checked item that records the closing with its date as a date node and the number of MVP stories, for example "MVP cerrado el <date node> con 12 historias." Edit the brief in place with granular edits and keep everything else.
@@ -139,7 +163,7 @@ When they close it:
 
 If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
 
-## 8. Review a closed release and prepare the next one
+## 9. Review a closed release and prepare the next one
 
 When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
 

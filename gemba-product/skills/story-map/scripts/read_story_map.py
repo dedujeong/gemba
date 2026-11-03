@@ -20,7 +20,8 @@ are counted apart in "open". --previous N is the number of stories the current r
 had when it was last reported; the script then says how much it grew, shrank or stayed.
 
 --gaps walks the current release left to right and prints the tasks with no story: the
-steps a user would take that the release does not cover.
+steps a user would take that the release does not cover, and then its open questions,
+the gaps nobody could decide yet. A release with one of those does not close.
 
 --mvp prints only the current release, its stories grouped by activity and task, for
 whoever builds it. Nothing is copied anywhere: the board in Confluence is the only
@@ -146,15 +147,27 @@ def gaps(r):
             if not any(not st["open"] for st in t["stories"])]
 
 
+def open_questions(r):
+    """The open questions of the current release, left to right: the gaps nobody could decide yet."""
+    release = current(r)
+    return [{"activity": t["activity"], "task": t["task"], "text": st["text"]}
+            for t in (release["tasks"] if release else [])
+            for st in t["stories"] if st["open"]]
+
+
 def gaps_markdown(r):
     release = current(r)
     if not release:
         return "Every release is delivered: there is none to close."
-    rows = gaps(r)
-    if not rows:
-        return f'{release["name"]}: every task has a story.'
-    lines = [f'{release["name"]}: {plural(len(rows), "task", "tasks")} with no story']
-    lines += [f'- {g["activity"]}: {g["task"]}' for g in rows]
+    rows, questions = gaps(r), open_questions(r)
+    if rows:
+        lines = [f'{release["name"]}: {plural(len(rows), "task", "tasks")} with no story']
+        lines += [f'- {g["activity"]}: {g["task"]}' for g in rows]
+    else:
+        lines = [f'{release["name"]}: every task has a story.']
+    if questions:
+        lines.append(f'{release["name"]}: {plural(len(questions), "open question", "open questions")} with no decision')
+        lines += [f'- {q["activity"]}: {q["task"]}: {q["text"]}' for q in questions]
     return "\n".join(lines)
 
 
