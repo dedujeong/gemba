@@ -113,4 +113,6 @@ En esta sesión no hay conexión a Confluence: escribe en tu respuesta lo que ha
 100  </svg>
 </board>
 
+Antes de cerrar ya hicimos el recorrido de huecos del mapa y decidí cada uno, y también el pre-mortem: imaginé que el producto fracasó, escribí las razones y las revisamos una por una; las que valían ya quedaron decididas y no queda ninguna pendiente.
+
 Cierro el MVP. Queda como está en el tablero.
