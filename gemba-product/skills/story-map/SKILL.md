@@ -26,7 +26,7 @@ Rules for the MVP cut:
 - Every Quality bar condition becomes an MVP story (for example a money calculation or a permission rule). Previous systems often fail on exactly these basics.
 - Design principles that change how a task works become stories too.
 - Every MVP story says where it comes from in the brief: the Problem, the Primary job or a Quality bar condition. A story that traces to none of them does not belong in the MVP.
-- An unresolved question that blocks a story is a red sticky (`"open": true`) and also an item in the brief's Open decisions.
+- An unresolved question that blocks a story is a red rectangle (`"open": true`) and also an item in the brief's Open decisions.
 - Prefer a manual step in the MVP over automation; the automated version goes to a later release.
 
 ## Colors
@@ -74,7 +74,7 @@ Before citing any number, recount from the board at that moment, never from memo
 python3 scripts/read_story_map.py board.svg --previous <stories the current release had when last reported>
 ```
 
-It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. A gray release is read as delivered and is not part of the current release's scope; the current release is the first one that is not delivered (the MVP until it ships). An open question (red sticky) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
+It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. A gray release is read as delivered and is not part of the current release's scope; the current release is the first one that is not delivered (the MVP until it ships). An open question (red rectangle) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
 
 When the MVP grew, say by how much and recommend which stories move to the next release, naming them. Start with the ones that trace to no Quality bar condition and that a manual step covers. The person decides.
 
@@ -82,7 +82,7 @@ When the MVP grew, say by how much and recommend which stories move to the next 
 
 The person may arrange the board by hand. Changing its content must keep that layout:
 
-- Change only stickies, with `updateConfluenceContent` and patch operations (`replace_svg`, `insert_svg`), and read the board right before each patch so the patch carries the positions the person left.
+- Change only stories and the cards of the map (stickies and story rectangles), with `updateConfluenceContent` and patch operations (`replace_svg`, `insert_svg`), and read the board right before each patch so the patch carries the positions the person left.
 - The row labels (User persona, Activities, Tasks, each release and Later) are changed through the API too, with `scripts/label_story_map.py`, and the person is asked for no step in the interface. The board header (product name and vision) is the one free text Claude does not replace: Confluence moves it, so the person changes it in the interface.
 - Do not recreate the board. Creating it again would drop the layout and leave a second board.
 
@@ -140,13 +140,13 @@ The story lands in the column of the task the gap left uncovered and takes the c
 
 A gap they discard is named in the reply with the reason they gave, and nothing is written: it does not become a story and it does not go on the board. A discard is a decision, not a move: do not ask which release it goes to instead, and do not bring it back later.
 
-A gap they cannot decide yet goes on the map as an open question, there and then: a red sticky in the column of the task it leaves uncovered, inside the row of the release being closed, where it reads under its activity. Write it without asking for one more confirmation, because the sticky decides nothing: it is their question, written where it is seen, and it is what keeps the release from closing. Same read and same patch as a story, with `--open` and no `--traces`, because a question is not a story:
+A gap they cannot decide yet goes on the map as an open question, there and then: a red rectangle in the column of the task it leaves uncovered, inside the row of the release being closed, where it reads under its activity. Write it without asking for one more confirmation, because the sticky decides nothing: it is their question, written where it is seen, and it is what keeps the release from closing. Same read and same patch as a story, with `--open` and no `--traces`, because a question is not a story:
 
 ```
 python3 scripts/add_story_map.py board.svg --to "<release>" --task "<task>" --text "<question>" --open
 ```
 
-It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red sticky does not close, as section 9 says, so the question comes back before the close.
+It goes as an item in the brief's Open decisions too, the pair the MVP cut already asks for (section 2): edit the brief in place with granular edits and keep everything that was already there. A release with a red rectangle does not close, as section 9 says, so the question comes back before the close.
 
 ## 8. Run a pre-mortem
 
@@ -162,7 +162,7 @@ Once they wrote the reasons, review them one by one. Each reason becomes what th
 
 - **A story.** The reason becomes a story in the release they choose and the task whose column it belongs to, written there and then with `add_story_map.py ... --traces`, as section 7 describes. A story of the current release carries `--traces`.
 - **A risk of the brief.** The reason becomes a new row of the Riskiest assumptions table: the reason as the assumption, its status saying that it comes from the pre-mortem of the MVP and labeled Assumption (`pitch` section 4), and the risk level the person gives (High, Medium or Lower). If they did not give a level, ask once; do not guess it. Edit the brief in place with granular edits, as `pitch` section 7 describes, and keep everything that was already there.
-- **A red sticky.** The reason the person cannot decide yet becomes an open question on the map, with `add_story_map.py ... --open` in the column of the task where the failure would show, and an item in the brief's Open decisions, both as section 7 describes. Propose the task if they did not name one; they decide. A release with a red sticky does not close (section 9).
+- **A red rectangle.** The reason the person cannot decide yet becomes an open question on the map, with `add_story_map.py ... --open` in the column of the task where the failure would show, and an item in the brief's Open decisions, both as section 7 describes. Propose the task if they did not name one; they decide. A release with a red rectangle does not close (section 9).
 - **Dropped.** A reason they judge irrelevant is named in the reply with the reason they gave, and nothing is written, like a discarded gap in section 7.
 
 ## 9. Close the MVP
@@ -171,7 +171,7 @@ Only the discovery lead closes the MVP, and only by saying so explicitly. "It lo
 
 The pre-mortem of section 8 comes first: when they ask to close the MVP and this conversation has no pre-mortem yet, run it before anything else here.
 
-A release with an open question does not close. Before recording anything, read the board (section 4) and run `python3 scripts/read_story_map.py board.svg --gaps`, which names each red sticky of the current release with the task it sits in. If there is one, do not close the release: name every open question it printed, say that the close waits for those decisions (section 7), and record nothing. The question is theirs to answer, so do not answer it to clear the way.
+A release with an open question does not close. Before recording anything, read the board (section 4) and run `python3 scripts/read_story_map.py board.svg --gaps`, which names each red rectangle of the current release with the task it sits in. If there is one, do not close the release: name every open question it printed, say that the close waits for those decisions (section 7), and record nothing. The question is theirs to answer, so do not answer it to clear the way.
 
 When no open question is left and they close it:
 
@@ -190,7 +190,7 @@ When a release has shipped and the person asks to review it, the facts of what w
 2. **What the board says.** Read the board (section 4). A gray release is delivered: it is read as delivered and does not count in the scope of the next one. The current release is the first one that is not delivered; Later is never the current release.
 3. **What was not delivered.** For each such Story, read its description and propose the sticky it matches (same task, same release). If no sticky is clear, say so; never guess. Ask the person where each one goes: the next release or Later. Nothing moves before they answer.
 4. **Apply what the person decides,** reading the board again before each patch and sending each patch with `updateConfluenceContent` and that read as `context.content`, whole:
-   - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its sticky `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it.
+   - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it.
    - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest move up (section 5, Recolor).
    - If the scope of a release changed, update its label (section 5, Change or add a row label).
 5. **Recount** from the board with `read_story_map.py` before citing any number (section 4), and tell the person which release is now the current one and how many stories it has.

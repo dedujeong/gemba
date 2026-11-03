@@ -8,7 +8,8 @@ What the Atlassian connector accepts and returns for whiteboards, learned by pro
 
 ## Elements
 
-- **Sticky:** `<rect data-type="sticky" id width="240.05" height="144.03" x y fill>` plus a `<text belongs-to="ID">` with one `<tspan>` holding the text. Confluence normalizes fills to its palette (for example `#ffefae` becomes `#fce4a6`; see Colors).
+- **Story rectangle:** `<rect data-type="rectangle" id width="345" height="136.91" x y fill>` plus a `<text belongs-to="ID">` centered on it (text at `x + 172.5`, `y + 68.45`, `width="276"`). It is the size of the Jira card, so declaring a story puts its card where the rectangle was. Stories are drawn this way; the columns are 408.28 apart and the rows of a cell 176.91. The readers, move, add, label and recolor treat it as a story, exactly like a sticky; boards drawn with story stickies still read the same.
+- **Sticky (persona, activities, tasks, and the stories of older boards):** `<rect data-type="sticky" id width="240.05" height="144.03" x y fill>` plus a `<text belongs-to="ID">` with one `<tspan>` holding the text. Confluence normalizes fills to its palette (for example `#ffefae` becomes `#fce4a6`; see Colors).
 - **Free text:** `<text data-type="text" x y width font-scale>` with tspans. Row labels use a blank tspan, a bold 27px title tspan, and a 15.47px description tspan; a reader finds the rows by that bold 27px title.
 - **Mentions:** a `<tspan data-mention-id>` sent through the API is stored as plain text, with or without `data-access-level`. Only mentions made in the UI work, so the generated board names no people.
 - **Font sizes:** tspans keep only `15.47px` and `27px`; any other size becomes `15.47px`. Use `font-scale` on the `<text>` to enlarge.
@@ -98,5 +99,7 @@ The answer to a patch cannot be trusted to say what happened:
 - It carries the version the board had before the patch (a patch that made version 10 answered 9), and a read right after can still show the old number with the new content. Do not use the version number as evidence, and a jump in it is not someone else's edit.
 - It says `ok: true` even when it changed nothing, for example when the `context` does not contain an id the patch names.
 - Report the result by reading the board again after the patch: the fills and positions come from that read, never from the answer.
+
+Story rectangles, tested on `14680139` (a private board in a personal space): creating the board keeps each `data-type="rectangle"` with its 345 x 136.91 size and fill, and rewrites the `belongs-to` of its text to the new id; `update_elements_svg` with `x` and `y` moves the rectangle and its text follows (the text keeps its offset, `y + 68.45`); `insert_svg` with a `rect` and its `<text belongs-to>` keeps the link, the fill and the position, and gives the rect a new id. An `insert_svg` needs the whole numbered board as `context.content`: with only the last lines Confluence rejects it as "outside body.context.content". `read_story_map.py`, `move_story_map.py` and `add_story_map.py` read the stored board without changes.
 
 Not tested: a patch with a stale read, and deleting stickies.
