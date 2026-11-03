@@ -41,6 +41,32 @@ def applied(svg, patch):
     return svg.replace("</svg>", op.group(1).strip() + "\n</svg>")
 
 
+def inserted_rect(patch):
+    """The attributes of the rect an insert_svg op adds."""
+    op = re.search(r'<insert_svg line="\d+">(.*?)</insert_svg>', patch, re.S)
+    return dict(re.findall(r'([\w:-]+)="([^"]*)"', re.search(r"<rect\b[^>]*>", op.group(1)).group(0)))
+
+
+class StoryRectangle(unittest.TestCase):
+    def test_a_story_is_added_as_a_rectangle_of_the_jira_card_size(self):
+        patch = add_story_map.add_patch(board(), "Release 2", "Send the reminder", "Editable message templates")
+        rect = inserted_rect(patch)
+        self.assertEqual((rect["data-type"], rect["width"], rect["height"]), ("rectangle", "345", "136.91"))
+        self.assertEqual(rect["fill"], NEXT)
+
+    def test_an_open_question_is_added_as_a_red_rectangle(self):
+        patch = add_story_map.add_patch(board(), "Release 2", "Send the reminder", "Who pays for the messages?", is_open=True)
+        rect = inserted_rect(patch)
+        self.assertEqual((rect["data-type"], rect["fill"]), ("rectangle", OPEN))
+
+    def test_the_new_rectangle_reads_as_a_story_or_an_open_question(self):
+        svg = board()
+        story = read_story_map.parse(applied(svg, add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Editable message templates")))
+        question = read_story_map.parse(applied(svg, add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Who pays?", is_open=True)))
+        self.assertEqual((story["releases"][1]["count"], story["releases"][1]["open"]), (2, 0))
+        self.assertEqual((question["releases"][1]["count"], question["releases"][1]["open"]), (1, 1))
+
+
 class Placement(unittest.TestCase):
     def test_puts_the_story_in_the_column_of_its_task_and_the_row_of_its_release(self):
         svg = board()

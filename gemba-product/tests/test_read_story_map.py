@@ -25,6 +25,41 @@ def board(spec=SPEC):
     return as_read(build_story_map.build(spec))
 
 
+def with_story_rectangles(svg, only=None):
+    """The same board with its stories (the stickies that are not persona, activities or tasks) drawn as Jira-card rectangles.
+    With `only`, just the stories whose text is in it."""
+    backbone = {build_story_map.PERSONA, build_story_map.ACTIVITY, build_story_map.TASK}
+    texts = {m.group(1): m.group(2) for m in re.finditer(r'belongs-to="(\w+)"[^>]*>[\s\d]*<tspan[^>]*>([^<]*)</tspan>', svg)}
+    def swap(m):
+        tag = m.group(0)
+        fill = re.search(r' fill="([^"]*)"', tag).group(1)
+        sid = re.search(r' id="([^"]*)"', tag).group(1)
+        if 'data-type="sticky"' not in tag or fill in backbone or (only is not None and texts.get(sid) not in only):
+            return tag
+        tag = tag.replace('data-type="sticky"', 'data-type="rectangle"')
+        return re.sub(r'width="[\d.]+" height="[\d.]+"', 'width="345" height="136.91"', tag)
+    return re.sub(r"<rect\b[^>]*>", swap, svg)
+
+
+class StoryRectangles(unittest.TestCase):
+    """A story drawn as a rectangle of the Jira card counts exactly like a sticky."""
+
+    def test_a_board_of_rectangles_reads_like_one_of_stickies(self):
+        plain = read_story_map.parse(board())
+        self.assertEqual(read_story_map.parse(with_story_rectangles(board())), plain)
+        self.assertEqual(plain["releases"][0]["count"], 2)
+
+    def test_a_board_with_both_shapes_reads_the_same(self):
+        mixed = with_story_rectangles(board(), only={"Save a date per customer", "Import dates from the notebook"})
+        self.assertEqual(read_story_map.parse(mixed), read_story_map.parse(board()))
+
+    def test_a_red_rectangle_is_an_open_question_not_a_story(self):
+        mvp = read_story_map.parse(with_story_rectangles(board()))["releases"][0]
+        self.assertEqual((mvp["count"], mvp["open"]), (2, 1))
+        light = read_story_map.parse(with_story_rectangles(board().replace("#ffd5d2", "#ffeceb")))["releases"][0]
+        self.assertEqual((light["count"], light["open"]), (2, 1))
+
+
 class Counts(unittest.TestCase):
     def test_counts_stories_per_release_without_open_questions(self):
         counts = read_story_map.parse(board())["releases"]
@@ -79,7 +114,7 @@ def arranged_by_hand(svg):
     """Move every sticky some distance, as a person arranging the board would, without leaving its column and row."""
     def move(m):
         tag = m.group(0)
-        if 'data-type="sticky"' not in tag:
+        if 'data-type="sticky"' not in tag and 'data-type="rectangle"' not in tag:
             return tag
         tag = re.sub(r' x="([-\d.]+)"', lambda a: f' x="{float(a.group(1)) + 55}"', tag)
         return re.sub(r' y="([-\d.]+)"', lambda a: f' y="{float(a.group(1)) + 30}"', tag)

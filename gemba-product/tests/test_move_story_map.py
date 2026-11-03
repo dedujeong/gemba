@@ -125,7 +125,7 @@ class RowsBelow(unittest.TestCase):
         svg = board()
         later = sticky(svg, "Some day")
         extra = 500
-        roomy = re.sub(rf'(id="{later["id"]}" data-type="sticky" fill="#\w+" x="[-\d.]+" y=")([-\d.]+)',
+        roomy = re.sub(rf'(id="{later["id"]}" data-type="(?:sticky|rectangle)" fill="#\w+" x="[-\d.]+" y=")([-\d.]+)',
                        lambda m: f"{m.group(1)}{float(m.group(2)) + extra}", svg)
         story = sticky(roomy, "Save a date per customer")
         self.assertNotIn(later["id"], moves(move_story_map.move_patch(roomy, [story["id"]], "Release 2")))
@@ -159,7 +159,7 @@ class Shapes(unittest.TestCase):
     def test_a_neighbour_that_overlaps_the_column_counts_as_the_stack(self):
         svg = board()
         below = sticky(svg, "Import dates from the notebook")
-        shifted = re.sub(rf'(id="{below["id"]}" data-type="sticky" fill="#\w+" x=")([-\d.]+)',
+        shifted = re.sub(rf'(id="{below["id"]}" data-type="(?:sticky|rectangle)" fill="#\w+" x=")([-\d.]+)',
                          lambda m: f"{m.group(1)}{float(m.group(2)) + 130}", svg)
         story = sticky(shifted, "Save a date per customer")
         y = moves(move_story_map.move_patch(shifted, [story["id"]], "Release 2"))[story["id"]][1]
