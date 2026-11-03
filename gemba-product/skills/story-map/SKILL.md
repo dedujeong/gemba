@@ -122,6 +122,8 @@ It walks the current release left to right and prints each task with no story, w
 
 2. **CRUD of each entity.** List the entities the release works with, taken from the stories and from the brief (Business rules, Current workflow). Then show, in a table with one row per entity, whether the release creates it, reads it, changes it and deletes it, naming the story that does each one, and name what is missing. Something the person can enter but not correct, or that piles up with no way to remove it, is a gap even if the brief does not ask for it. When the brief names no entity, say which ones you took from the stories and that they are derived.
 
+3. **State × event.** For each entity that changes state, take its states and the events that move it from the brief and the stories, and cross every state with every event in a matrix. Name each combination no story covers, and say what would happen today if it arrived: a reminder already sent for a service the customer then cancels, a service marked done twice, an event that reaches a state nothing can leave. An entity with no states is said to have none, and nothing is invented for it.
+
 ## 7. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
