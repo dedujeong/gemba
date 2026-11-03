@@ -108,7 +108,19 @@ When the person asks to update a board to the current colors, change only the fi
 4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
 5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
 
-## 6. Close the MVP
+## 6. Check the release before closing it
+
+When the person asks to close a release, the MVP or a later one, check it before closing it and name every gap the passes below find. This step only names gaps: what to do with each one is the person's decision, and nothing is written to the board or the brief here.
+
+1. **Walk the map.** Read the board (section 4) and run:
+
+```
+python3 scripts/read_story_map.py board.svg --gaps
+```
+
+It walks the current release left to right and prints each task with no story, with its activity. Walk them in that order, as the user would go through the product, and name each step the release leaves uncovered. A task whose only sticky is an open question counts as uncovered.
+
+## 7. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
 
@@ -121,7 +133,7 @@ When they close it:
 
 If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
 
-## 7. Review a closed release and prepare the next one
+## 8. Review a closed release and prepare the next one
 
 When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
 

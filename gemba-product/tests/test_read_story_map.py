@@ -175,6 +175,24 @@ class DeliveredReleases(unittest.TestCase):
         self.assertNotIn("grew", read_story_map.summary(data, 4))
 
 
+class Gaps(unittest.TestCase):
+    """The walk of the map before closing: the tasks of the current release with no story."""
+
+    def test_names_the_tasks_of_the_current_release_with_no_story(self):
+        data = read_story_map.parse(board(delivered_first(SPEC)))
+        self.assertEqual(read_story_map.gaps(data),
+                         [{"activity": "Remind", "task": "Send the reminder"}])
+
+    def test_a_release_that_covers_every_task_has_no_gaps(self):
+        self.assertEqual(read_story_map.gaps(read_story_map.parse(board())), [])
+
+    def test_a_task_with_only_an_open_question_is_a_gap(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][0]["stories"][1] = [{"text": "Who sends it when the owner is away?", "open": True}]
+        self.assertEqual(read_story_map.gaps(read_story_map.parse(board(spec))),
+                         [{"activity": "Remind", "task": "Send the reminder"}])
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *extra):
         with tempfile.TemporaryDirectory() as tmp:
@@ -212,6 +230,19 @@ class CommandLine(unittest.TestCase):
                                  capture_output=True, text=True, check=True).stdout
         self.assertIn("## Release 2", out)
         self.assertNotIn("Delivered story", out)
+
+    def test_gaps_option_names_the_tasks_with_no_story_of_the_current_release(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "board.svg")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(board(delivered_first(SPEC)))
+            out = subprocess.run([sys.executable, "-I", os.path.join(SCRIPTS, "read_story_map.py"), path, "--gaps"],
+                                 capture_output=True, text=True, check=True).stdout
+        self.assertIn("Release 2: 1 task with no story", out)
+        self.assertIn("- Remind: Send the reminder", out)
+
+    def test_gaps_option_says_so_when_every_task_has_a_story(self):
+        self.assertIn("MVP: every task has a story", self.run_cli("--gaps"))
 
     def test_says_the_first_release_stayed(self):
         self.assertIn("MVP stayed the same (was 2, now 2)", self.run_cli("--previous", "2"))
