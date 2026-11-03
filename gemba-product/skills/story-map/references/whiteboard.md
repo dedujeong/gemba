@@ -74,6 +74,7 @@ Tested on `9404418` (a replace of the MVP label and an insert of a new one in on
 
 - A replaced `<text>` keeps its id and goes to the end of the board, so every line number after it shifts: read the board again before the next patch.
 - `<insert_svg line="N">` inserts before line N. With N the line of `</svg>`, the new element goes last and the SVG stays valid. The inserted element gets a new id.
+- A sticky inserted as a `rect` plus its `<text belongs-to>` keeps its link: Confluence gives the rect a new id, rewrites the text's `belongs-to` to it, and keeps the fill, position and text. Tested on `12615681`, a board with no Story Map: the inserted `new-story` came back as the rect `YafMl2I7Kh8fVmOWpv3sa` with `belongs-to="YafMl2I7Kh8fVmOWpv3sa"` on its text, and the 115 lines before it were unchanged. Read the board again after the insert to learn the new id.
 - Every other piece kept its coordinates. Send the SVG you read as `context.content`, as it came back: do not retype it.
 
 A row label is a free text, and Confluence reads the `y` of a free text as its vertical center. To leave its top at `top`, send `y = top + height / 2`: a label with a one-line description is 102 tall (add 51), with two lines 124 (add 62), at about 42 characters per line at width 344. `scripts/label_story_map.py` does this arithmetic and puts the top level with the first row of stickies of the release.
