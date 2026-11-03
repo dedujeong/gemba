@@ -41,5 +41,16 @@
     "relations": [
       {"from": "<Entity>", "to": "<Other entity>", "label": "<how they relate, with its cardinality>"}
     ]
-  }
+  },
+  "states": [
+    {
+      "entity": "<Entity of the data model that changes state>",
+      "description": "<How it changes>",
+      "initial": {"state": "<First state>", "event": "<What creates it>"},
+      "states": ["<First state>", "<Another state>"],
+      "transitions": [
+        {"from": "<First state>", "to": "<Another state>", "event": "<What moves it>"}
+      ]
+    }
+  ]
 }

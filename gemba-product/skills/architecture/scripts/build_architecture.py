@@ -17,6 +17,11 @@ Spec (see ../assets/architecture-template.json):
 "relations": [{"from", "to", "label"}]}. It draws one box per entity with its main fields and
 an arrow per relation, below the other diagrams; with no entities it is not drawn.
 
+"states" is optional, one item per entity that changes state: {"entity", "description",
+"initial": {"state", "event"}, "states": [...], "transitions": [{"from", "to", "event"}]}. The
+entity must be in the data model. It draws a box per state and an arrow per event, starting
+from a marker with the event that creates the entity; an arrow with no event is rejected.
+
 Every relation names two elements of its own diagram and says what flows between
 them: an unlabelled arrow tells the reader nothing, so it is rejected.
 
@@ -56,6 +61,9 @@ SECTION_FILL = "#e9f2fe"
 
 # Entities of the data model sit in a grid, a few per row.
 ENTITY_COLUMNS, ENTITY_GAP_X, ENTITY_GAP_Y = 3, 300.0, 150.0
+
+# The states of an entity: the same grid, with a small start marker at the left of the first row.
+START_SIDE, START_FILL, START_GAP = 40, "#b7b9be", 300.0
 
 MARKER_ID = "arrowhead-6-rgb_117__129__149_"
 ARROWHEAD = (
@@ -102,6 +110,15 @@ class Diagram:
             f'<tspan font-size="{FS}">{escape(name)}</tspan></text>'
         )
         self._put(name, eid, x, y, ACTOR_SIDE, ACTOR_SIDE)
+
+    def start(self, x, y):
+        """The start marker of a state diagram: a small square the first arrow leaves from."""
+        eid = f"{self.prefix}-start"
+        self.out.append(
+            f'<rect width="{START_SIDE}" height="{START_SIDE}" fill="{START_FILL}" x="{x}" y="{y}" '
+            f'stroke="{STROKE_EXTERNAL}" stroke-width="0.5" id="{eid}" data-type="rectangle"/>'
+        )
+        self._put("Start", eid, x, y, START_SIDE, START_SIDE)
 
     def section(self, title, x, y, height):
         """A deployment boundary: the pieces that run in the same place, with the plan in its title."""
@@ -267,6 +284,33 @@ def data_model_diagram(spec, top):
     return out + d.out, d.bottom()
 
 
+def state_diagram(spec, diagram, index, top):
+    """How one entity changes: a box per state and an arrow per event, with the event that creates it."""
+    entity = diagram["entity"]
+    if entity not in [e["name"] for e in spec.get("data_model", {}).get("entities", [])]:
+        raise ValueError(f'states: "{entity}" is not an entity of the data model')
+    states = diagram.get("states", [])
+    initial = diagram.get("initial", {})
+    if initial.get("state") not in states:
+        raise ValueError(f'states of {entity}: the initial state "{initial.get("state")}" is not one of its states')
+    where = f"states of {entity}"
+    d = Diagram(f"st{index}")
+    out = [heading(f"heading-states-{index}", f"States of {entity}", diagram.get("description", ""), top + HEADING_DY)]
+    d.start(round(X_ACTOR, 2), round(top + (BOX_H - START_SIDE) / 2, 2))
+    for i, state in enumerate(states):
+        col, row = i % ENTITY_COLUMNS, i // ENTITY_COLUMNS
+        d.box(state, "", round(X_ACTOR + START_SIDE + START_GAP + col * (BOX_W + ENTITY_GAP_X), 2),
+              round(top + row * (BOX_H + ENTITY_GAP_Y), 2))
+    relations = [{"from": "Start", "to": initial["state"], "label": initial.get("event")}]
+    for transition in diagram.get("transitions", []):
+        for name in (transition.get("from"), transition.get("to")):
+            if name not in states:
+                raise ValueError(f'{where}: "{name}" is not one of its states')
+        relations.append({"from": transition["from"], "to": transition["to"], "label": transition.get("event")})
+    draw_relations(d, relations, where)
+    return out + d.out, d.bottom()
+
+
 def build(spec):
     elements, floor = context_diagram(spec, 0.0)
     if len(deployable_pieces(spec)) > 1:
@@ -274,6 +318,9 @@ def build(spec):
         elements += more
     if spec.get("data_model", {}).get("entities"):
         more, floor = data_model_diagram(spec, round(floor + BLOCK_GAP, 2))
+        elements += more
+    for index, diagram in enumerate(spec.get("states", [])):
+        more, floor = state_diagram(spec, diagram, index, round(floor + BLOCK_GAP, 2))
         elements += more
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="50000" height="50000" '
@@ -305,3 +352,6 @@ if __name__ == "__main__":
         print(f'Data model: {len(model["entities"])} entities, {len(model.get("relations", []))} arrows')
     else:
         print("Data model: not drawn, the spec lists no entities")
+    for diagram in spec.get("states", []):
+        print(f'States of {diagram["entity"]}: {len(diagram.get("states", []))} states, '
+              f'{len(diagram.get("transitions", [])) + 1} arrows')

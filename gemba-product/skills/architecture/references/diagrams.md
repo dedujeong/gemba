@@ -11,6 +11,7 @@ C4 levels, by where they belong:
 | Context | Always | Architecture page |
 | Containers | More than one deployable piece | Architecture page |
 | Data model | The stories name entities the product keeps | Architecture page |
+| States of an entity | An entity of the data model changes state | Architecture page, one diagram per entity |
 | Deployment, sequence | Only when an ADR needs it | Inside that ADR |
 | Components | During development | Gemba Code, aligned with the Jira components |
 | Code | Never | |
@@ -26,6 +27,8 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 | A store | The same, with `data-shape="database"` | |
 | A system somebody else runs | The same, fill `#f0f1f2`, stroke `#7d818a` | Gray says the team does not operate it |
 | An entity of the data model | The same 220x160 `process` shape, with its name followed by its main fields in one run of text | The fields come from what the stories name; an entity with no fields is not drawn |
+| A state of an entity | The same `process` shape, with only its name | |
+| The start of a state diagram | A 40x40 gray rectangle, with an arrow to the first state labelled with the event that creates the entity | |
 | A deployment boundary | A `section` rect with `data-title`, its pieces carrying `belongs-to` | The title names the plan it runs on |
 | An arrow | A `polyline` with `data-type="connector"`, `begins-at`, `ends-at`, the two anchors at proportion `0.5`, `line-type="angled"` and `marker-end` | |
 | What flows along an arrow | A `pathLabel` text bound to the connector with `belongs-to` | |
