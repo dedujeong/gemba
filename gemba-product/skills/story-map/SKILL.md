@@ -120,6 +120,8 @@ python3 scripts/read_story_map.py board.svg --gaps
 
 It walks the current release left to right and prints each task with no story, with its activity. Walk them in that order, as the user would go through the product, and name each step the release leaves uncovered. A task whose only sticky is an open question counts as uncovered.
 
+2. **CRUD of each entity.** List the entities the release works with, taken from the stories and from the brief (Business rules, Current workflow). Then show, in a table with one row per entity, whether the release creates it, reads it, changes it and deletes it, naming the story that does each one, and name what is missing. Something the person can enter but not correct, or that piles up with no way to remove it, is a gap even if the brief does not ask for it. When the brief names no entity, say which ones you took from the stories and that they are derived.
+
 ## 7. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
