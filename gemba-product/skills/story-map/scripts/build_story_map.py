@@ -48,9 +48,10 @@ CARD_W, CARD_H = 240.05, 144.03
 # A story is drawn at the size of its Jira card, so declaring it does not move the map.
 STORY_W, STORY_H = 345, 136.91
 STORY_MID_X, STORY_MID_Y = 172.5, 68.45  # where Confluence centers the text of a card, measured on a board
-X_LABEL, X0, PITCH = -120.56, 318.51, 303.33
+X_LABEL, X0 = -120.56, 318.51
+PITCH = round(STORY_W + 63.28, 2)  # a story card and the gap between columns
 Y_PERSONA, BACKBONE_STEP = -185.02, 250.68
-ROW_STEP, RELEASE_GAP = 184.03, 245.6
+ROW_STEP, RELEASE_GAP = round(STORY_H + 40, 2), 245.6  # a story card and the gap between rows
 
 # Fills are values of the closed sticky palette of Confluence: any other hex is
 # snapped to the nearest one and the stored color differs from the requested one.

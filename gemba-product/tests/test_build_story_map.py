@@ -156,6 +156,38 @@ class StoryRectangles(unittest.TestCase):
             self.assertEqual((rect.get("width"), rect.get("height")), ("240.05", "144.03"))
 
 
+class Spacing(unittest.TestCase):
+    """Columns and rows are spaced for rectangles of the Jira card size: nothing on the board overlaps."""
+
+    def boxes(self, spec):
+        root = ET.fromstring(build_story_map.build(spec))
+        return [(float(r.get("x")), float(r.get("y")), float(r.get("width")), float(r.get("height")), r.get("id"))
+                for r in root.iter("{%s}rect" % NS["s"])]
+
+    def overlaps(self, boxes):
+        return [(a[4], b[4]) for i, a in enumerate(boxes) for b in boxes[i + 1:]
+                if a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]]
+
+    def test_no_two_shapes_overlap(self):
+        self.assertEqual(self.overlaps(self.boxes(SPEC)), [])
+
+    def test_stories_stacked_in_a_cell_and_in_several_columns_do_not_overlap(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][1]["stories"] = [["Third", "Fourth", "Fifth"], ["Sixth", "Seventh"]]
+        spec["releases"].append({"name": "Later", "stories": [["Eighth", "Ninth"], ["Tenth"]]})
+        self.assertEqual(self.overlaps(self.boxes(spec)), [])
+
+    def test_columns_leave_the_same_gap_as_before_between_cards_of_the_jira_size(self):
+        xs = sorted({round(b[0], 2) for b in self.boxes(SPEC)})
+        self.assertEqual([round(b - a, 2) for a, b in zip(xs, xs[1:])], [408.28])
+
+    def test_stories_stacked_in_a_cell_are_a_card_and_a_gap_apart(self):
+        column = [b for b in self.boxes(SPEC) if b[2] == 345 and b[0] == round(build_story_map.col_x(1), 2) and b[1] < 1400]
+        ys = sorted(b[1] for b in column)
+        self.assertEqual(len(ys), 2)
+        self.assertEqual(round(ys[1] - ys[0], 2), 176.91)
+
+
 class FixedColors(unittest.TestCase):
     def test_each_row_uses_its_fixed_color(self):
         texts = stickies(build_story_map.build(SPEC))
