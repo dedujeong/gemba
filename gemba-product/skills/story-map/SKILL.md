@@ -90,7 +90,7 @@ Details are in `references/whiteboard.md`.
 
 ### Change or add a row label
 
-When the scope of a release changes, its label changes with it. The script changes the text under the title, not the title itself; renaming a row is a change for the interface. Change the stickies first, then read the board again, because the label goes level with the top of the first row of stickies of its release as the board is now:
+When the scope of a release changes, its label changes with it. The script changes the text under the title and leaves the title as it is; do not bring the title up unless the person asks to rename the row, and then say that the script does not rename it. Change the stickies first, then read the board again, because the label goes level with the top of the first row of stickies of its release as the board is now:
 
 1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
 2. To change the text of a label: `python3 scripts/label_story_map.py board.svg --label "<row name>" --description "<new text>"`. Without `--description` it only realigns the label. For a row without stickies, add `--top <y>`.
