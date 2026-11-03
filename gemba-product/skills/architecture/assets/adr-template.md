@@ -1,6 +1,6 @@
 # ADR template
 
-One page per decision, in the `Decisions` folder of the product's space. Headings stay in English; content in the person's language.
+One live doc per decision, in the `Decisions` folder of the product's space. Headings stay in English; content in the person's language.
 
 ## Title
 
@@ -8,7 +8,7 @@ One page per decision, in the `Decisions` folder of the product's space. Heading
 
 ## Sections
 
-Five H3 sections, always in this order.
+Five H2 sections, always in this order.
 
 ### Context
 
@@ -28,19 +28,19 @@ What the decision commits the product to: cost, operation, what gets harder.
 
 ### Source
 
-A block card to the page or source the decision rests on: the Product Brief, the Story Map or the provider page cited for a plan limit (`references/plan-limits.md`).
+A block card (a link with `data-card-appearance="block"`, directly under the heading and with no empty paragraph between them) to the page or source the decision rests on: the Product Brief, the Story Map or the provider page cited for a plan limit (`references/plan-limits.md`).
 
 ```html
-<h3>Context</h3>
+<h2>Context</h2>
 <p>...</p>
-<h3>Decision</h3>
+<h2>Decision</h2>
 <p>...</p>
-<h3>Alternatives</h3>
+<h2>Alternatives</h2>
 <ul>
   <li>...</li>
 </ul>
-<h3>Consequences</h3>
+<h2>Consequences</h2>
 <p>...</p>
-<h3>Source</h3>
-<p><a href="SOURCE_URL">Source page</a></p>
+<h2>Source</h2>
+<a href="SOURCE_URL" data-card-appearance="block"></a>
 ```
