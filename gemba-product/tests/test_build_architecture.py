@@ -270,5 +270,226 @@ class ContainersDiagram(unittest.TestCase):
         self.assertIn("Administrador", str(caught.exception))
 
 
+DATA_MODEL = {
+    "description": "Qué se guarda y cómo se relaciona",
+    "entities": [
+        {"name": "Clase", "fields": ["id", "nombre", "horario", "cupo"]},
+        {"name": "Reserva", "fields": ["id", "clase_id", "nombre", "teléfono"]},
+        {"name": "Dueña", "fields": ["id", "correo"]},
+    ],
+    "relations": [
+        {"from": "Reserva", "to": "Clase", "label": "muchas reservas por clase"},
+        {"from": "Dueña", "to": "Clase", "label": "administra muchas clases"},
+    ],
+}
+
+
+def with_data_model(**changes):
+    spec = copy.deepcopy(SPEC)
+    spec["data_model"] = copy.deepcopy(DATA_MODEL)
+    spec["data_model"].update(changes)
+    return spec
+
+
+class DataModelDiagram(unittest.TestCase):
+    def test_it_has_a_data_model_heading_with_its_description(self):
+        root = build(with_data_model())
+        self.assertIn("Data model", headings(root))
+        said = [t for t in tags(root, "text") if "Data model" in "".join(t.itertext())]
+        self.assertIn(DATA_MODEL["description"], "".join(said[0].itertext()))
+
+    def test_one_box_per_entity_with_its_fields(self):
+        root = build(with_data_model())
+        boxes = [r for r in shapes(root, shape="process") if r.get("id", "").startswith("dat-")]
+        self.assertEqual(len(boxes), len(DATA_MODEL["entities"]))
+        said = {}
+        for box in boxes:
+            label = [t for t in tags(root, "text") if t.get("belongs-to") == box.get("id")]
+            said[box.get("id")] = "".join(label[0].itertext())
+        for entity in DATA_MODEL["entities"]:
+            text = next(v for v in said.values() if v.startswith(entity["name"]))
+            for field in entity["fields"]:
+                self.assertIn(field, text)
+
+    def test_one_arrow_with_its_label_per_relation(self):
+        root = build(with_data_model())
+        connectors = [p for p in tags(root, "polyline") if p.get("id", "").startswith("dat-")]
+        self.assertEqual(len(connectors), len(DATA_MODEL["relations"]))
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text")
+                if t.get("data-type") == "pathLabel" and t.get("id", "").startswith("dat-")]
+        for relation in DATA_MODEL["relations"]:
+            self.assertIn(relation["label"], said)
+
+    def test_every_arrow_joins_two_boxes_of_the_diagram(self):
+        root = build(with_data_model())
+        ids = {r.get("id") for r in tags(root, "rect") if r.get("id", "").startswith("dat-")}
+        for connector in [p for p in tags(root, "polyline") if p.get("id", "").startswith("dat-")]:
+            self.assertIn(connector.get("begins-at"), ids)
+            self.assertIn(connector.get("ends-at"), ids)
+
+    def test_the_boxes_of_a_row_leave_room_for_the_label_of_their_arrow(self):
+        root = build(with_data_model())
+        a, b = [r for r in tags(root, "rect") if r.get("id") in ("dat-b0", "dat-b1")]
+        gap = float(b.get("x")) - (float(a.get("x")) + float(a.get("width")))
+        longest = max(len(r["label"]) for r in DATA_MODEL["relations"])
+        self.assertGreaterEqual(gap, longest * 9)
+
+    def test_the_data_model_sits_below_the_context_diagram(self):
+        root = build(with_data_model())
+        y = headings(root)
+        self.assertGreater(y["Data model"], y["Context"])
+
+    def test_the_data_model_sits_below_containers_when_there_are_some(self):
+        spec = with_containers()
+        spec["data_model"] = copy.deepcopy(DATA_MODEL)
+        y = headings(build(spec))
+        self.assertGreater(y["Data model"], y["Containers"])
+
+    def test_a_relation_to_an_entity_that_is_not_there_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"].append({"from": "Reserva", "to": "Pago", "label": "se paga con"})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Pago", str(caught.exception))
+
+    def test_an_entity_with_no_fields_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["entities"].append({"name": "Pago", "fields": []})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Pago", str(caught.exception))
+
+    def test_a_relation_with_no_label_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0] = {"from": "Reserva", "to": "Clase"}
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Reserva", str(caught.exception))
+
+    def test_a_spec_with_no_data_model_gets_no_data_model_diagram(self):
+        self.assertNotIn("Data model", headings(build(SPEC)))
+
+    def test_a_data_model_with_no_entities_gets_no_diagram(self):
+        root = build(with_data_model(entities=[], relations=[]))
+        self.assertNotIn("Data model", headings(root))
+
+
+RESERVA = {
+    "entity": "Reserva",
+    "description": "Cómo cambia una reserva",
+    "initial": {"state": "Apartada", "event": "la alumna aparta su lugar"},
+    "states": ["Apartada", "Cancelada", "Asistida"],
+    "transitions": [
+        {"from": "Apartada", "to": "Cancelada", "event": "la alumna cancela su lugar"},
+        {"from": "Apartada", "to": "Asistida", "event": "la dueña marca la asistencia"},
+    ],
+}
+
+
+def with_states(*diagrams):
+    spec = with_data_model()
+    spec["states"] = [copy.deepcopy(d) for d in (diagrams or [RESERVA])]
+    return spec
+
+
+def of(root, prefix, tag):
+    return [e for e in tags(root, tag) if e.get("id", "").startswith(prefix)]
+
+
+class StateDiagram(unittest.TestCase):
+    def test_it_has_a_heading_naming_the_entity_with_its_description(self):
+        root = build(with_states())
+        self.assertIn("States of Reserva", headings(root))
+        said = [t for t in tags(root, "text") if "States of Reserva" in "".join(t.itertext())]
+        self.assertIn(RESERVA["description"], "".join(said[0].itertext()))
+
+    def test_one_box_per_state(self):
+        root = build(with_states())
+        boxes = [r for r in of(root, "st0-", "rect") if r.get("data-shape") == "process"]
+        self.assertEqual(len(boxes), len(RESERVA["states"]))
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text") if t.get("belongs-to") in {b.get("id") for b in boxes}]
+        for state in RESERVA["states"]:
+            self.assertIn(state, said)
+
+    def test_one_arrow_with_its_event_per_transition_and_one_for_the_start(self):
+        root = build(with_states())
+        connectors = of(root, "st0-", "polyline")
+        self.assertEqual(len(connectors), len(RESERVA["transitions"]) + 1)
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text")
+                if t.get("data-type") == "pathLabel" and t.get("id", "").startswith("st0-")]
+        for transition in RESERVA["transitions"]:
+            self.assertIn(transition["event"], said)
+        self.assertIn(RESERVA["initial"]["event"], said)
+
+    def test_the_start_arrow_ends_at_the_initial_state(self):
+        root = build(with_states())
+        initial = next(t for t in tags(root, "text")
+                       if "".join(t.itertext()).strip() == "Apartada" and t.get("belongs-to"))
+        start = [c for c in of(root, "st0-", "polyline") if c.get("id").endswith("-r1")][0]
+        self.assertEqual(start.get("ends-at"), initial.get("belongs-to"))
+
+    def test_each_entity_with_states_gets_its_own_diagram(self):
+        clase = {"entity": "Clase", "description": "Cómo cambia una clase",
+                 "initial": {"state": "Abierta", "event": "la dueña la publica"},
+                 "states": ["Abierta", "Llena"],
+                 "transitions": [{"from": "Abierta", "to": "Llena", "event": "se ocupa el último lugar"}]}
+        root = build(with_states(RESERVA, clase))
+        y = headings(root)
+        self.assertIn("States of Reserva", y)
+        self.assertIn("States of Clase", y)
+        self.assertGreater(y["States of Clase"], y["States of Reserva"])
+
+    def test_the_states_of_a_row_leave_room_for_the_label_of_their_arrow(self):
+        root = build(with_states())
+        boxes = sorted([r for r in of(root, "st0-", "rect") if r.get("data-shape") == "process"],
+                       key=lambda r: float(r.get("x")))
+        gap = float(boxes[1].get("x")) - (float(boxes[0].get("x")) + float(boxes[0].get("width")))
+        longest = max(len(t["event"]) for t in RESERVA["transitions"])
+        self.assertGreaterEqual(gap, longest * 9)
+
+    def test_the_start_marker_leaves_room_for_the_label_of_its_arrow(self):
+        root = build(with_states())
+        start = next(r for r in tags(root, "rect") if r.get("id") == "st0-start")
+        first = next(r for r in tags(root, "rect") if r.get("id") == "st0-b1")
+        gap = float(first.get("x")) - (float(start.get("x")) + float(start.get("width")))
+        self.assertGreaterEqual(gap, len(RESERVA["initial"]["event"]) * 9)
+
+    def test_the_states_sit_below_the_data_model(self):
+        y = headings(build(with_states()))
+        self.assertGreater(y["States of Reserva"], y["Data model"])
+
+    def test_a_transition_with_no_event_is_rejected(self):
+        bad = copy.deepcopy(RESERVA)
+        bad["transitions"][0] = {"from": "Apartada", "to": "Cancelada"}
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(with_states(bad))
+        self.assertIn("Apartada", str(caught.exception))
+
+    def test_a_transition_to_an_unknown_state_is_rejected(self):
+        bad = copy.deepcopy(RESERVA)
+        bad["transitions"].append({"from": "Apartada", "to": "Pagada", "event": "paga"})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(with_states(bad))
+        self.assertIn("Pagada", str(caught.exception))
+
+    def test_an_initial_state_that_is_not_listed_is_rejected(self):
+        bad = copy.deepcopy(RESERVA)
+        bad["initial"]["state"] = "Pagada"
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(with_states(bad))
+        self.assertIn("Pagada", str(caught.exception))
+
+    def test_an_entity_that_is_not_in_the_data_model_is_rejected(self):
+        bad = copy.deepcopy(RESERVA)
+        bad["entity"] = "Pago"
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(with_states(bad))
+        self.assertIn("Pago", str(caught.exception))
+
+    def test_a_spec_with_no_states_draws_none(self):
+        y = headings(build(with_data_model()))
+        self.assertFalse([h for h in y if h.startswith("States of")])
+
+
 if __name__ == "__main__":
     unittest.main()
