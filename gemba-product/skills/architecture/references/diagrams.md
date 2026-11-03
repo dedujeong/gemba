@@ -10,6 +10,7 @@ C4 levels, by where they belong:
 |---|---|---|
 | Context | Always | Architecture page |
 | Containers | More than one deployable piece | Architecture page |
+| Data model | The stories name entities the product keeps | Architecture page |
 | Deployment, sequence | Only when an ADR needs it | Inside that ADR |
 | Components | During development | Gemba Code, aligned with the Jira components |
 | Code | Never | |
@@ -24,6 +25,7 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 | The product, or one of its pieces | A 220x160 `process` shape, fill `#cfe1fd`, stroke `#1558bc` | |
 | A store | The same, with `data-shape="database"` | |
 | A system somebody else runs | The same, fill `#f0f1f2`, stroke `#7d818a` | Gray says the team does not operate it |
+| An entity of the data model | The same 220x160 `process` shape, with its name followed by its main fields in one run of text | The fields come from what the stories name; an entity with no fields is not drawn |
 | A deployment boundary | A `section` rect with `data-title`, its pieces carrying `belongs-to` | The title names the plan it runs on |
 | An arrow | A `polyline` with `data-type="connector"`, `begins-at`, `ends-at`, the two anchors at proportion `0.5`, `line-type="angled"` and `marker-end` | |
 | What flows along an arrow | A `pathLabel` text bound to the connector with `belongs-to` | |

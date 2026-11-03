@@ -13,6 +13,10 @@ Spec (see ../assets/architecture-template.json):
   }
 }
 
+"data_model" is optional: {"description", "entities": [{"name", "fields": [...]}],
+"relations": [{"from", "to", "label"}]}. It draws one box per entity with its main fields and
+an arrow per relation, below the other diagrams; with no entities it is not drawn.
+
 Every relation names two elements of its own diagram and says what flows between
 them: an unlabelled arrow tells the reader nothing, so it is rejected.
 
@@ -49,6 +53,9 @@ SECTION_W = BOX_W + 2 * PAD_X
 X_BOUNDARY, BOUNDARY_STEP = -668.8, SECTION_W + 80.0
 BLOCK_GAP, EXTERNAL_GAP, EXTERNAL_STEP = 300.0, 120.0, BOX_W + 80.0
 SECTION_FILL = "#e9f2fe"
+
+# Entities of the data model sit in a grid, a few per row.
+ENTITY_COLUMNS, ENTITY_GAP_X, ENTITY_GAP_Y = 3, 300.0, 150.0
 
 MARKER_ID = "arrowhead-6-rgb_117__129__149_"
 ARROWHEAD = (
@@ -243,10 +250,30 @@ def containers_diagram(spec, top):
     return out + d.out, d.bottom()
 
 
+def data_model_diagram(spec, top):
+    """What the product keeps: one box per entity with its main fields, and an arrow per relation."""
+    model = spec["data_model"]
+    d = Diagram("dat")
+    out = [heading("heading-data-model", "Data model", model.get("description", ""), top + HEADING_DY)]
+    for i, entity in enumerate(model["entities"]):
+        fields = entity.get("fields", [])
+        if not fields:
+            raise ValueError(f'data model: the entity "{entity["name"]}" has no fields: list its main fields')
+        col, row = i % ENTITY_COLUMNS, i // ENTITY_COLUMNS
+        d.box(entity["name"], ", ".join(fields),
+              round(X_ACTOR + col * (BOX_W + ENTITY_GAP_X), 2),
+              round(top + row * (BOX_H + ENTITY_GAP_Y), 2))
+    draw_relations(d, model.get("relations", []), "data model")
+    return out + d.out, d.bottom()
+
+
 def build(spec):
     elements, floor = context_diagram(spec, 0.0)
     if len(deployable_pieces(spec)) > 1:
-        more, _ = containers_diagram(spec, round(floor + BLOCK_GAP, 2))
+        more, floor = containers_diagram(spec, round(floor + BLOCK_GAP, 2))
+        elements += more
+    if spec.get("data_model", {}).get("entities"):
+        more, floor = data_model_diagram(spec, round(floor + BLOCK_GAP, 2))
         elements += more
     svg = (
         f'<svg xmlns="http://www.w3.org/2000/svg" version="1.1" width="50000" height="50000" '
@@ -273,3 +300,8 @@ if __name__ == "__main__":
               f'{len(containers.get("relations", []))} arrows')
     else:
         print("Containers: not drawn, the product has one deployable piece")
+    model = spec.get("data_model", {})
+    if model.get("entities"):
+        print(f'Data model: {len(model["entities"])} entities, {len(model.get("relations", []))} arrows')
+    else:
+        print("Data model: not drawn, the spec lists no entities")
