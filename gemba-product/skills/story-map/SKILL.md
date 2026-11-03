@@ -124,6 +124,8 @@ It walks the current release left to right and prints each task with no story, w
 
 3. **State × event.** For each entity that changes state, take its states and the events that move it from the brief and the stories, and cross every state with every event in a matrix. Name each combination no story covers, and say what would happen today if it arrived: a reminder already sent for a service the customer then cancels, a service marked done twice, an event that reaches a state nothing can leave. An entity with no states is said to have none, and nothing is invented for it.
 
+4. **Handoffs.** Follow the brief's Current workflow and the activities of the map, and go through every point where the work changes hands, one by one: a person hands it to the product, the product hands it to someone outside, one role hands it to another, a system hands it back. Name for each one who hands it to whom and which story carries it, and name the handoffs no story covers: what somebody sends that nothing receives, and what somebody does outside the product that nothing records.
+
 ## 7. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
