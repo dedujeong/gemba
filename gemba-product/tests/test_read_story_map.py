@@ -193,6 +193,24 @@ class Gaps(unittest.TestCase):
                          [{"activity": "Remind", "task": "Send the reminder"}])
 
 
+class OpenQuestions(unittest.TestCase):
+    def test_names_each_open_question_of_the_current_release_with_its_task(self):
+        self.assertEqual(read_story_map.open_questions(read_story_map.parse(board())),
+                         [{"activity": "Remind", "task": "Send the reminder",
+                           "text": "Who sends it when the owner is away?"}])
+
+    def test_a_release_without_red_stickies_has_none(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][0]["stories"][1] = [{"text": "Send a WhatsApp reminder", "traces": "Problem"}]
+        self.assertEqual(read_story_map.open_questions(read_story_map.parse(board(spec))), [])
+
+    def test_only_the_current_release_is_read(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][1]["stories"][1] = [{"text": "Still open in Release 2", "open": True}]
+        self.assertEqual([q["text"] for q in read_story_map.open_questions(read_story_map.parse(board(spec)))],
+                         ["Who sends it when the owner is away?"])
+
+
 class CommandLine(unittest.TestCase):
     def run_cli(self, *extra):
         with tempfile.TemporaryDirectory() as tmp:
@@ -246,6 +264,12 @@ class CommandLine(unittest.TestCase):
 
     def test_says_the_first_release_stayed(self):
         self.assertIn("MVP stayed the same (was 2, now 2)", self.run_cli("--previous", "2"))
+
+
+    def test_gaps_option_names_each_open_question_of_the_current_release(self):
+        out = self.run_cli("--gaps")
+        self.assertIn("MVP: 1 open question with no decision", out)
+        self.assertIn("- Remind: Send the reminder: Who sends it when the owner is away?", out)
 
 
 if __name__ == "__main__":
