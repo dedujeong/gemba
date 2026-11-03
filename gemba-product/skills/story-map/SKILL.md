@@ -108,7 +108,25 @@ When the person asks to update a board to the current colors, change only the fi
 4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
 5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
 
-## 6. Close the MVP
+## 6. Check the release before closing it
+
+When the person asks to close a release, the MVP or a later one, check it before closing it and name every gap the passes below find. This step only names gaps: what to do with each one is the person's decision, and nothing is written to the board or the brief here.
+
+1. **Walk the map.** Read the board (section 4) and run:
+
+```
+python3 scripts/read_story_map.py board.svg --gaps
+```
+
+It walks the current release left to right and prints each task with no story, with its activity. Walk them in that order, as the user would go through the product, and name each step the release leaves uncovered. A task whose only sticky is an open question counts as uncovered.
+
+2. **CRUD of each entity.** List the entities the release works with, taken from the stories and from the brief (Business rules, Current workflow). Then show, in a table with one row per entity, whether the release creates it, reads it, changes it and deletes it, naming the story that does each one, and name what is missing. Something the person can enter but not correct, or that piles up with no way to remove it, is a gap even if the brief does not ask for it. When the brief names no entity, say which ones you took from the stories and that they are derived.
+
+3. **State × event.** For each entity that changes state, take its states and the events that move it from the brief and the stories, and cross every state with every event in a matrix. Name each combination no story covers, and say what would happen today if it arrived: a reminder already sent for a service the customer then cancels, a service marked done twice, an event that reaches a state nothing can leave. An entity with no states is said to have none, and nothing is invented for it.
+
+4. **Handoffs.** Follow the brief's Current workflow and the activities of the map, and go through every point where the work changes hands, one by one: a person hands it to the product, the product hands it to someone outside, one role hands it to another, a system hands it back. Name for each one who hands it to whom and which story carries it, and name the handoffs no story covers: what somebody sends that nothing receives, and what somebody does outside the product that nothing records.
+
+## 7. Close the MVP
 
 Only the discovery lead closes the MVP, and only by saying so explicitly. "It looks complete", "it's fine" or the end of the review are not a closing: the MVP stays open, nothing is recorded and the page status does not change. Ask once whether they close it, and leave it to them.
 
@@ -121,7 +139,7 @@ When they close it:
 
 If there is no Confluence connection, write the item and the status in the reply and say that nothing was published.
 
-## 7. Review a closed release and prepare the next one
+## 8. Review a closed release and prepare the next one
 
 When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
 
