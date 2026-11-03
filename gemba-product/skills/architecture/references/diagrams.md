@@ -43,3 +43,4 @@ Several `tspan` inside one shape read as a single line, so a name and its descri
 - One `update_elements_svg` per call: several ids or operations in one patch apply only the first and still answer `ok: true`.
 - A `replace_svg` of the whole board moved the x of free texts nobody touched.
 - The answer of a patch is stale. Read the board again after writing, and look at the PNG when the layout matters.
+- The label of an arrow sits on its line, so the gap between two boxes has to fit it: about 9 units per character of the longest label, or the label covers the arrow and the text of the boxes. The data model and state diagrams leave 300 units. Learned by creating a board with 120 and reading its PNG.
