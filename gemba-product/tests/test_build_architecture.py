@@ -205,6 +205,22 @@ class NamesOnly(unittest.TestCase):
             self.assertIn(text, names)
 
 
+class NoLegendOrNotes(unittest.TestCase):
+    """A diagram stands on its own: besides its heading, its boxes and its arrows, nothing is written beside it."""
+
+    def test_every_text_is_a_heading_a_name_or_an_arrow_label(self):
+        spec = with_states()
+        spec["containers"] = copy.deepcopy(CONTAINERS)
+        root = build(spec)
+        shape_ids = {e.get("id") for e in tags(root, "rect")}
+        for text in tags(root, "text"):
+            heading = text.get("data-type") == "text" and list(text) and list(text)[0].get("font-weight") == "bold"
+            actor_name = text.get("data-type") == "text" and text.get("id", "").endswith("-name")
+            box = text.get("belongs-to") in shape_ids
+            arrow = text.get("data-type") == "pathLabel"
+            self.assertTrue(heading or actor_name or box or arrow, "".join(text.itertext()))
+
+
 class ContainersDiagram(unittest.TestCase):
     def test_it_has_a_containers_heading_with_its_description(self):
         root = build(with_containers())
