@@ -24,10 +24,10 @@ SPEC = {
         "actors": ["Administrador", "Operaciones", "Ventas"],
         "externals": [{"name": "Mapa base", "description": "proveedor por definir"}],
         "relations": [
-            {"from": "Administrador", "to": "Periplo", "label": "crea tours y tarifas"},
-            {"from": "Operaciones", "to": "Periplo", "label": "asigna salidas"},
-            {"from": "Ventas", "to": "Periplo", "label": "registra ventas"},
-            {"from": "Periplo", "to": "Mapa base", "label": "carga el mapa"},
+            {"from": "Administrador", "to": "Periplo", "label": "Crea tours y tarifas"},
+            {"from": "Operaciones", "to": "Periplo", "label": "Asigna salidas"},
+            {"from": "Ventas", "to": "Periplo", "label": "Registra ventas"},
+            {"from": "Periplo", "to": "Mapa base", "label": "Carga el mapa"},
         ],
     },
 }
@@ -141,7 +141,7 @@ class ContextDiagram(unittest.TestCase):
 
     def test_a_relation_to_an_element_that_is_not_there_is_rejected(self):
         spec = copy.deepcopy(SPEC)
-        spec["context"]["relations"].append({"from": "Periplo", "to": "Cobros", "label": "cobra"})
+        spec["context"]["relations"].append({"from": "Periplo", "to": "Cobros", "label": "Cobra"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Cobros", str(caught.exception))
@@ -167,9 +167,9 @@ CONTAINERS = {
     ],
     "externals": [{"name": "Sentry", "description": "alertas de errores"}],
     "relations": [
-        {"from": "Web app", "to": "Postgres", "label": "lee y escribe por HTTPS"},
-        {"from": "Web app", "to": "Auth", "label": "inicia sesión"},
-        {"from": "Web app", "to": "Sentry", "label": "reporta errores"},
+        {"from": "Web app", "to": "Postgres", "label": "Lee y escribe por HTTPS"},
+        {"from": "Web app", "to": "Auth", "label": "Inicia sesión"},
+        {"from": "Web app", "to": "Sentry", "label": "Reporta errores"},
     ],
 }
 
@@ -219,6 +219,40 @@ class NoLegendOrNotes(unittest.TestCase):
             box = text.get("belongs-to") in shape_ids
             arrow = text.get("data-type") == "pathLabel"
             self.assertTrue(heading or actor_name or box or arrow, "".join(text.itertext()))
+
+
+class CapitalizedLabels(unittest.TestCase):
+    """The label of an arrow says only its intention, and starts with a capital."""
+
+    def rejected(self, spec):
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("capital", str(caught.exception))
+
+    def test_a_lowercase_label_in_the_context_diagram_is_rejected(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["relations"][0]["label"] = "crea tours"
+        self.rejected(spec)
+
+    def test_a_lowercase_label_in_the_containers_diagram_is_rejected(self):
+        spec = with_containers()
+        spec["containers"]["relations"][0]["label"] = "lee y escribe"
+        self.rejected(spec)
+
+    def test_a_lowercase_label_in_the_data_model_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["label"] = "tiene"
+        self.rejected(spec)
+
+    def test_a_lowercase_event_in_a_state_diagram_is_rejected(self):
+        spec = with_states()
+        spec["states"][0]["transitions"][0]["event"] = "cancela"
+        self.rejected(spec)
+
+    def test_a_lowercase_event_that_creates_the_entity_is_rejected(self):
+        spec = with_states()
+        spec["states"][0]["initial"]["event"] = "aparta"
+        self.rejected(spec)
 
 
 class ContainersDiagram(unittest.TestCase):
@@ -293,7 +327,7 @@ class ContainersDiagram(unittest.TestCase):
     def test_an_arrow_to_an_element_of_the_other_diagram_is_rejected(self):
         spec = with_containers()
         spec["containers"]["relations"].append(
-            {"from": "Web app", "to": "Administrador", "label": "le muestra el kanban"})
+            {"from": "Web app", "to": "Administrador", "label": "Le muestra el kanban"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Administrador", str(caught.exception))
@@ -307,8 +341,8 @@ DATA_MODEL = {
         {"name": "Dueña", "fields": ["id", "correo"]},
     ],
     "relations": [
-        {"from": "Reserva", "to": "Clase", "label": "muchas reservas por clase"},
-        {"from": "Dueña", "to": "Clase", "label": "administra muchas clases"},
+        {"from": "Reserva", "to": "Clase", "label": "Muchas reservas por clase"},
+        {"from": "Dueña", "to": "Clase", "label": "Administra muchas clases"},
     ],
 }
 
@@ -376,7 +410,7 @@ class DataModelDiagram(unittest.TestCase):
 
     def test_a_relation_to_an_entity_that_is_not_there_is_rejected(self):
         spec = with_data_model()
-        spec["data_model"]["relations"].append({"from": "Reserva", "to": "Pago", "label": "se paga con"})
+        spec["data_model"]["relations"].append({"from": "Reserva", "to": "Pago", "label": "Se paga con"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Pago", str(caught.exception))
@@ -406,11 +440,11 @@ class DataModelDiagram(unittest.TestCase):
 RESERVA = {
     "entity": "Reserva",
     "description": "Cómo cambia una reserva",
-    "initial": {"state": "Apartada", "event": "la alumna aparta su lugar"},
+    "initial": {"state": "Apartada", "event": "La alumna aparta su lugar"},
     "states": ["Apartada", "Cancelada", "Asistida"],
     "transitions": [
-        {"from": "Apartada", "to": "Cancelada", "event": "la alumna cancela su lugar"},
-        {"from": "Apartada", "to": "Asistida", "event": "la dueña marca la asistencia"},
+        {"from": "Apartada", "to": "Cancelada", "event": "La alumna cancela su lugar"},
+        {"from": "Apartada", "to": "Asistida", "event": "La dueña marca la asistencia"},
     ],
 }
 
@@ -459,9 +493,9 @@ class StateDiagram(unittest.TestCase):
 
     def test_each_entity_with_states_gets_its_own_diagram(self):
         clase = {"entity": "Clase", "description": "Cómo cambia una clase",
-                 "initial": {"state": "Abierta", "event": "la dueña la publica"},
+                 "initial": {"state": "Abierta", "event": "La dueña la publica"},
                  "states": ["Abierta", "Llena"],
-                 "transitions": [{"from": "Abierta", "to": "Llena", "event": "se ocupa el último lugar"}]}
+                 "transitions": [{"from": "Abierta", "to": "Llena", "event": "Se ocupa el último lugar"}]}
         root = build(with_states(RESERVA, clase))
         y = headings(root)
         self.assertIn("States of Reserva", y)
@@ -496,7 +530,7 @@ class StateDiagram(unittest.TestCase):
 
     def test_a_transition_to_an_unknown_state_is_rejected(self):
         bad = copy.deepcopy(RESERVA)
-        bad["transitions"].append({"from": "Apartada", "to": "Pagada", "event": "paga"})
+        bad["transitions"].append({"from": "Apartada", "to": "Pagada", "event": "Paga"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(with_states(bad))
         self.assertIn("Pagada", str(caught.exception))

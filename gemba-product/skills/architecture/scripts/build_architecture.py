@@ -23,7 +23,8 @@ entity must be in the data model. It draws a box per state and an arrow per even
 from a marker with the event that creates the entity; an arrow with no event is rejected.
 
 Every relation names two elements of its own diagram and says what flows between
-them: an unlabelled arrow tells the reader nothing, so it is rejected.
+them: an unlabelled arrow tells the reader nothing, so it is rejected, and so is a
+label that does not start with a capital.
 
 The element shapes come from a board built by hand and read back, so they are what
 Confluence stores, not what the format guide suggests (see ../references/diagrams.md):
@@ -202,6 +203,8 @@ def draw_relations(diagram, relations, where):
         label = (relation.get("label") or "").strip()
         if not label:
             raise ValueError(f'{where}: the arrow from "{source}" to "{target}" says nothing: give it a label')
+        if label[0].islower():
+            raise ValueError(f'{where}: the label of the arrow from "{source}" to "{target}" must start with a capital: "{label}"')
         diagram.arrow(source, target, label)
 
 
