@@ -515,6 +515,16 @@ class StateDiagram(unittest.TestCase):
             self.assertIn(transition["event"], said)
         self.assertIn(RESERVA["initial"]["event"], said)
 
+    def test_each_transition_is_labelled_with_the_event_that_causes_it(self):
+        root = build(with_states())
+        boxes = {"".join(t.itertext()).strip(): t.get("belongs-to") for t in tags(root, "text") if t.get("belongs-to")}
+        labels = {t.get("belongs-to"): "".join(t.itertext()).strip() for t in tags(root, "text") if t.get("data-type") == "pathLabel"}
+        for transition in RESERVA["transitions"]:
+            joins = [c for c in of(root, "st0-", "polyline")
+                     if c.get("begins-at") == boxes[transition["from"]] and c.get("ends-at") == boxes[transition["to"]]]
+            self.assertEqual(len(joins), 1)
+            self.assertEqual(labels[joins[0].get("id")], transition["event"])
+
     def test_the_start_arrow_ends_at_the_initial_state(self):
         root = build(with_states())
         initial = next(t for t in tags(root, "text")
