@@ -60,6 +60,7 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 - Create each ADR as a live doc (`contentType: live_doc`), like the ADRs already in the folder, never as a classic page.
 - Write Source as a block card, not as text: `<a href="URL" data-card-appearance="block"></a>` placed directly after the Source heading, with no empty paragraph between them.
 - Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
+- Write the ADR about the decision, not about who made it or who said what. A fact that comes from something a person said names their role (the owner, the operator, the team) and its source label from `../pitch/SKILL.md` section 4 (Interview, Secondhand, Assumption), never the person's name, in any section or in the title.
 - Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
 
 | ADR state | Page status | Panel |

@@ -6,6 +6,10 @@ One live doc per decision, in the `Decisions` folder of the product's space. Hea
 
 `ADR-000N <Decision>`: the number is four digits, one more than the highest `ADR-` already in the folder (`ADR-0001` when it is empty), and the decision is a short noun phrase (`ADR-0004 Cloudflare Pages`). The number is never reused or renumbered.
 
+## Writing
+
+The ADR is about the decision, not about who made it. A fact that comes from what a person said names their role (`the owner`, `the operator`, `the team`) and its source label (Interview, Secondhand or Assumption), never the person's name.
+
 ## Sections
 
 Five H2 sections, always in this order.
