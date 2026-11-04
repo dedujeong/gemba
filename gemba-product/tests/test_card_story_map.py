@@ -41,6 +41,10 @@ def apply(svg, patch):
         for n, body in lines.items():
             if f'id="{m.group(1)}"' in body and "<rect" in body:
                 lines[n] = re.sub(r' x="[-\d.]+" y="[-\d.]+"', f' x="{m.group(2)}" y="{m.group(3)}"', body)
+    for m in re.finditer(r'<update_elements_svg ids="([^"]+)">\s*<attr fill="(#\w+)"\s*/>', patch):
+        for n, body in lines.items():
+            if any(f'id="{sid}"' in body for sid in m.group(1).split(",")) and "<rect" in body:
+                lines[n] = re.sub(r' fill="#\w+"', f' fill="{m.group(2)}"', body)
     return "\n".join(f"{n}  {lines[n]}" for n in sorted(lines))
 
 
@@ -159,6 +163,33 @@ class OpenQuestions(unittest.TestCase):
         patch = card_story_map.card_patch(svg, KEYS, SITE)
         self.assertNotIn("update_elements_svg", patch)
         self.assertEqual(read_story_map.parse(apply(svg, patch))["releases"][0]["open"], 1)
+
+
+def fills(svg):
+    """{story text: fill} of the story rectangles and stickies of the board, and of nothing else."""
+    _, bands = read_story_map.read_bands(svg)
+    return {s["text"]: s["fill"] for name, row in bands.items() if name not in read_story_map.BACKBONE for s in row}
+
+
+class NextReleases(unittest.TestCase):
+    """The releases after the one being declared are gray, and the cards in them are always gray."""
+    def setUp(self):
+        # A board painted the way it was before the gray: the next release orange and the Later row light orange.
+        self.svg = board(SPEC_3).replace('fill="#f0f1f2"', 'fill="#fce4a6"')
+
+    def test_the_stories_of_the_next_releases_turn_gray(self):
+        after = fills(apply(self.svg, card_story_map.card_patch(self.svg, KEYS, SITE)))
+        self.assertEqual((after["Import dates from the notebook"], after["Some day"]), (GRAY, GRAY))
+
+    def test_the_pending_stories_of_the_current_release_and_the_red_questions_keep_their_color(self):
+        before = fills(self.svg)
+        after = fills(apply(self.svg, card_story_map.card_patch(self.svg, {"Save a date per customer": "GEMBA-1"}, SITE)))
+        self.assertEqual(after["Send a WhatsApp reminder"], before["Send a WhatsApp reminder"])
+        self.assertEqual(after[QUESTION], OPEN)
+
+    def test_a_board_whose_next_releases_are_already_gray_gets_no_color_change(self):
+        patch = card_story_map.card_patch(board(SPEC_3), KEYS, SITE)
+        self.assertNotIn("<attr fill=", patch)
 
 
 class MissingCards(unittest.TestCase):

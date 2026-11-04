@@ -17,6 +17,10 @@ An open question (a red rectangle) of the current release gets no issue and no c
 release after the current one (Later when that is the row that follows), in the column of its task, as
 move_story_map.py places a story. When no row follows the current release, it stays where it is.
 
+The stories of the releases after the current one are gray (and the Later row too), like the cards in them: a
+board painted in the old colors gets one update_elements_svg that turns them gray. Red questions and the stories
+that are still pending in the current release keep their color.
+
 With --check it reads the board again, after the patch, and prints JSON for what to report: for each story of
 keys.json, "declared" when the board has the card of its key and "pending" when it does not, so a story whose
 card could not be put stays on the board as it was and the result names it. The response of a write is stale,
@@ -101,6 +105,14 @@ def open_questions(svg, release):
     return [s["id"] for s in bands[release["name"]] if s["fill"].lower() in OPEN_FILLS], after
 
 
+def to_gray(svg, release):
+    """The ids of the stories in the rows after the release whose fill is not gray or red."""
+    labels, bands = read_bands(svg)
+    names = [l["name"] for l in labels if l["name"] not in BACKBONE]
+    return [s["id"] for name in names[names.index(release["name"]) + 1:] for s in bands[name]
+            if s["fill"].lower() not in (GRAY, *OPEN_FILLS)]
+
+
 def card_patch(svg, keys, site):
     release, stories = pending_stories(svg)
     by_text = {}
@@ -124,7 +136,9 @@ def card_patch(svg, keys, site):
         replaces.append(f'<replace_svg from="{el["rect"]}" to="{el["rect"]}">\n{card_svg(key, s["x"], s["y"], site)}\n</replace_svg>')
     questions, after = open_questions(svg, release)
     moves = [move_patch(svg, questions, after)] if questions and after else []
-    return "\n".join(deletes + replaces + moves)
+    recolor = to_gray(svg, release)
+    paint = [f'<update_elements_svg ids="{",".join(recolor)}">\n<attr fill="{GRAY}"/>\n</update_elements_svg>'] if recolor else []
+    return "\n".join(deletes + replaces + moves + paint)
 
 
 if __name__ == "__main__":
