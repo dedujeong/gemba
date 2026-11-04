@@ -323,6 +323,25 @@ class OpenQuestions(unittest.TestCase):
         self.assertIn("Cobros", str(caught.exception))
 
 
+class OwnSystemsStayOutOfContext(unittest.TestCase):
+    """A system the team operates shows up only as a container: its parts are never external systems of the context."""
+
+    def test_a_container_listed_as_an_external_of_the_context_is_rejected(self):
+        spec = with_containers()
+        spec["context"]["externals"].append({"name": "Postgres"})
+        spec["context"]["relations"].append({"from": "Periplo", "to": "Postgres", "label": "Guarda los datos"})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        message = str(caught.exception)
+        self.assertIn("Postgres", message)
+        self.assertIn("Containers", message)
+
+    def test_a_system_somebody_else_runs_stays_an_external_of_the_context(self):
+        root = build(with_containers())
+        gray = [r for r in tags(root, "rect") if r.get("fill") == EXTERNAL and r.get("id", "").startswith("ctx-")]
+        self.assertEqual(len(gray), 1)
+
+
 class CapitalizedLabels(unittest.TestCase):
     """The label of an arrow says only its intention, and starts with a capital."""
 

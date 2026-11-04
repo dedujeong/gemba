@@ -288,6 +288,12 @@ def context_diagram(spec, top):
     actors = context.get("actors", [])
     externals = context.get("externals", [])
 
+    own = {piece["name"] for piece in deployable_pieces(spec)}
+    for external in externals:
+        if external["name"] in own:
+            raise ValueError(f'context: "{external["name"]}" is a piece the team operates, not an external system: '
+                             'it only appears in Containers, so take it out of the context externals')
+
     d = Diagram("ctx")
     out = [heading("heading-context", "Context", context.get("description", ""), top + HEADING_DY)]
     for i, actor in enumerate(actors):

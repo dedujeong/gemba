@@ -25,7 +25,7 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 | A role that uses the product | A 124x124 rectangle, fill `#cfe1fd`, with its name as free text underneath | `data-shape="user"` renders square, so a person is a plain rectangle with a label |
 | The product, or one of its pieces | A 220x160 `process` shape, fill `#cfe1fd`, stroke `#1558bc` | |
 | A store | The same, with `data-shape="database"` | |
-| A system somebody else runs | The same, fill `#f0f1f2`, stroke `#7d818a` | Gray says the team does not operate it |
+| A system somebody else runs | The same, fill `#f0f1f2`, stroke `#7d818a` | Gray says the team does not operate it. What the team operates is never gray and never an external of the Context: it only appears in Containers |
 | An entity of the data model | The same 220x160 `process` shape, with its name followed by its main fields in one run of text | The fields come from what the stories name; an entity with no fields is not drawn |
 | A state of an entity | The same `process` shape, with only its name | |
 | The start of a state diagram | A 40x40 gray rectangle, with an arrow to the first state labelled with the event that creates the entity | |
