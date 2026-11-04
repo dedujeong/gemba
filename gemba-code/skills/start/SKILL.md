@@ -58,6 +58,20 @@ Use the template of the work type in `assets/`: `epic.md`, `story.md`, `task.md`
 | Dado el cliente «Juan» | Dado un cliente |
 | Entonces se calcula en el servidor y se muestra en un modal | Entonces se ve el total |
 
+### Check the edge cases of a Story
+
+Only for a Story, and not for one handed over by version-start. Once the happy-path criteria are written and before showing them, read `references/criteria-heuristics.md` and pass every criterion through every heuristic of its table. Each heuristic that applies to a criterion ends in one of three places:
+
+- A criterion more, only when the Product Brief, the Story Map or the card decides the case.
+- A line of Out of scope, only when the brief or the Story Map leave it out, in their words.
+- A question to the maintainer, for everything else. Never infer a criterion to close a gap.
+
+Ask all the questions of the Story in one single round, in the project's `Language`, each one starting with both labels, with no exception: «Criterio: <the criterion it comes from>. Heurística: <the heuristic that found it>. ¿...?» (for example: «Criterio: el dueño aplica un descuento. Heurística: límite. ¿...?»). A question that cannot name a criterion and a heuristic is not asked. Do not ask them one by one. While a question has no answer, do not create the Story: say that nothing was created and which question is missing. The criteria already decided may be shown as a draft that waits for the answers.
+
+When a rule depends on two or more conditions, build its decision table inside, with the method of `references/criteria-heuristics.md`, with every combination, and write one criterion per distinct result: every combination with the same result is one single criterion, even when its combinations differ in more than one condition, and that criterion names them all. The table is a working tool and never goes in the issue.
+
+An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows only the resulting criteria, rules and Out of scope: it never mentions the heuristics, the decision table or the questions.
+
 ## 5. Show it, then create it
 
 Show the declaration in one compact block: work type, summary, priority, component, fix version, original estimate, due date, blockers and the description. The maintainer can change any of them, the estimate included, before it is created. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.

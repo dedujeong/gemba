@@ -14,3 +14,5 @@ Como <actor>, quiero <acción>, para <resultado>.
 ```
 
 Business rules and Out of scope are omitted when there is nothing to put in them.
+
+Every criterion passes through `references/criteria-heuristics.md` before the Story is shown; a Story with a question left undecided is not declared.
