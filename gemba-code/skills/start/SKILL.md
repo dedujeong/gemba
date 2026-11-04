@@ -66,6 +66,8 @@ Only for a Story, and not for one handed over by version-start. Once the happy-p
 - A line of Out of scope, only when the brief or the Story Map leave it out, in their words.
 - A question to the maintainer, for everything else. Never infer a criterion to close a gap.
 
+Ask all the questions of the Story in one single round, in the project's `Language`, each one starting with both labels, with no exception: «Criterio: <the criterion it comes from>. Heurística: <the heuristic that found it>. ¿...?» (for example: «Criterio: el dueño aplica un descuento. Heurística: límite. ¿...?»). A question that cannot name a criterion and a heuristic is not asked. Do not ask them one by one. While a question has no answer, do not create the Story: say that nothing was created and which question is missing. The criteria already decided may be shown as a draft that waits for the answers.
+
 An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows only the resulting criteria, rules and Out of scope: it never mentions the heuristics, the decision table or the questions.
 
 ## 5. Show it, then create it
