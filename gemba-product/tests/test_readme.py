@@ -42,5 +42,19 @@ class Skills(unittest.TestCase):
         self.assertEqual(set(skills_section()), installed)
 
 
+def requirements_section():
+    with open(README, encoding="utf-8") as readme:
+        body = readme.read()
+    section = re.search(r"^## Requirements\n(.*?)(?=^## |\Z)", body, re.M | re.S)
+    return section.group(1) if section else ""
+
+
+class Requirements(unittest.TestCase):
+    def test_names_gemba_code_as_the_requirement_of_version_start(self):
+        text = requirements_section()
+        self.assertIn("Gemba Code", text)
+        self.assertIn("version-start", text)
+
+
 if __name__ == "__main__":
     unittest.main()

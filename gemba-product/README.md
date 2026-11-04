@@ -14,7 +14,8 @@ You tell the idea in your own words. Claude asks one round of questions about wh
 ## Requirements
 
 - Claude or Claude Code.
-- The Atlassian connector, with access to the product's Confluence space.
+- The Atlassian connector, with access to the product's Confluence space and, for `version-start`, its Jira project.
+- Gemba Code, only for `version-start`: it declares each issue through Gemba Code's `start` skill and stops, creating nothing, when it is not installed.
 
 ## Skills
 
