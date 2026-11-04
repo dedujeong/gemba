@@ -21,7 +21,7 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first green one that is not delivered: green is the release about to be declared and gray the ones after it. It returns that release's `release` name, its `description` (the value it delivers), how many of its stories are `declared` (already the card of an issue) and `pending` (still a rectangle or a sticky), and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first green one that is not delivered: green is the release about to be declared and gray the ones after it. It returns that release's `release` name, its `description` (the value it delivers), how many of its stories are `declared` (already the card of an issue) and `pending` (still a rectangle or a sticky), and its `stories` by activity and task, each with its `key` when it is already the card of an issue, with the red stickies apart in `open_questions`: see step 4. A story with a `key` is already declared, usually because it was postponed from an earlier version (step 10): it is not a story to declare.
 
 If `release` comes back empty, no release is green: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
@@ -35,7 +35,7 @@ When `open_questions` is empty, go on to step 5.
 
 Before showing anything, ask the maintainer once, in a single message, for what their request did not give: the start date and the delivery date of the version, and the hours of work per day. Wait for the answer. The hours per day are asked for every version and are never written to the `CLAUDE.md` or anywhere else; the dates are the ones step 6 uses. If the request already confirms the release and gives the Epics' due dates, do not ask: go on to steps 6 and 7.
 
-Each Story Map card of the release is an activity with its stories in this release. Show every card once, in board order:
+Each Story Map card of the release is an activity with its stories in this release. A story that is already declared is shown apart, with its key and its state in Jira, and you never declare it again: only the stories with no key are declared. Show every card once, in board order:
 
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
@@ -67,6 +67,8 @@ Without a connection to Jira, write the call you would make and say that nothing
 ## 7. Declare the cards
 
 Right after the fix version, hand `gemba-code:start` all the confirmed cards in one request, so it checks the Stories of the whole version before creating any issue, and declare them through `gemba-code:start` in that fix version, in board order: a card with one story as a Story with no Epic, a card with two or more as an Epic with one Story per story as its children. Hand `gemba-code:start` the card, its fields as the maintainer confirmed them and the Story Map link for an Epic's Source. The maintainer already confirmed the whole version in step 5: once `gemba-code:start` has no open edge-case question, it creates each issue without asking again, and you do not ask either: do not offer a last chance to change something before creating. While `gemba-code:start`'s round has a question without an answer, no issue of the version is created or drafted as ready: report which questions are missing and stop. If the maintainer already confirmed the release in their request, do not show it again; go on to steps 6 and 7. Then report the keys, one line per card.
+
+A story that is already declared (it has a `key`) never creates another issue. Read it with `getJiraIssue`: when its fix version is empty, because it was postponed, edit it through `gemba-code:start` so its fix version is the one created in step 6 (it edits only an issue in Backlog); when it has another fix version, leave it as it is and name it in the result with its key and that version, so the maintainer decides. Report the key of each one with the others.
 
 ## 8. Declare the release Task
 

@@ -147,6 +147,33 @@ class VersionStartPostpones(unittest.TestCase):
         self.assertRegex(text, r"(?i)never recolor")
 
 
+class VersionStartTakesBackThePostponedIssues(unittest.TestCase):
+    def step(self, number):
+        return skill().split(f"## {number}.")[1].split("\n## ")[0]
+
+    def test_the_reading_tells_a_card_that_is_already_an_issue_from_a_story_to_declare(self):
+        text = self.step(3)
+        self.assertIn("key", text)
+        self.assertIn("already the card of an issue", text)
+
+    def test_the_release_shows_the_declared_cards_apart_and_declares_only_the_rest(self):
+        text = self.step(5)
+        self.assertIn("already declared", text)
+        self.assertIn("never declare it again", text)
+
+    def test_a_declared_card_without_a_fix_version_takes_the_one_of_the_version_through_start(self):
+        text = self.step(7)
+        self.assertIn("already declared", text)
+        self.assertIn("gemba-code:start", text)
+        self.assertIn("fix version is empty", text)
+        self.assertIn("never creates another issue", text)
+
+    def test_a_declared_card_with_another_fix_version_is_left_and_named_in_the_result(self):
+        text = self.step(7)
+        self.assertIn("another fix version", text)
+        self.assertIn("name it", text)
+
+
 class VersionStartLeavesTheKeysToTheCards(unittest.TestCase):
     def test_the_product_plugin_keeps_no_copy_of_the_old_readers(self):
         for script in ("read_release.py", "write_keys.py"):
