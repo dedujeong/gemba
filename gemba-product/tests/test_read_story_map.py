@@ -42,6 +42,64 @@ def with_story_rectangles(svg, only=None):
     return re.sub(r"<rect\b[^>]*>", swap, svg)
 
 
+URL = "https://deducoder.atlassian.net/browse/"
+
+
+def with_issue_cards(svg, keys):
+    """The same board with the stories whose text is in `keys` drawn as the card of their issue, as Confluence returns
+    it: a rectangle of the card size with data-type="issue" and the link of the issue, and no text of its own."""
+    texts = {m.group(1): m.group(2) for m in re.finditer(r'belongs-to="([^"]+)"[^>]*>[\s\d]*<tspan[^>]*>([^<]*)</tspan>', svg)}
+    cards = {sid: keys[text] for sid, text in texts.items() if text in keys}
+
+    def swap(m):
+        tag = m.group(0)
+        sid = re.search(r' id="([^"]*)"', tag).group(1)
+        if sid not in cards:
+            return tag
+        tag = re.sub(r' data-type="[^"]*"', "", tag).replace("></rect>", ">").replace("/>", ">")
+        tag = re.sub(r'width="[\d.]+" height="[\d.]+"', 'width="345" height="136.91"', tag)
+        return (tag.rstrip(">").rstrip("/") + f' data-type="issue" data-smartlink-kind="block" data-smartlink-url="{URL}{cards[sid]}"'
+                ' data-smartlink-supported-views="block" data-smartlink-supports-preview="false"></rect>')
+
+    svg = re.sub(r"<rect\b[^>]*>(?:</rect>)?", swap, svg)
+    for sid in cards:
+        svg = re.sub(r'<text\b[^>]*belongs-to="' + re.escape(sid) + r'"[^>]*>.*?</text>', "", svg, flags=re.S)
+    return svg
+
+
+class IssueCards(unittest.TestCase):
+    """A story drawn as the card of its Jira issue: it has no text, only the link of the issue."""
+    KEYS = {"Save a date per customer": "GEMBA-1", "Send a WhatsApp reminder": "GEMBA-2",
+            "Import dates from the notebook": "GEMBA-3"}
+
+    def cards(self):
+        return read_story_map.parse(with_issue_cards(board(), self.KEYS))
+
+    def test_each_card_gives_its_key_and_the_release_it_sits_in(self):
+        releases = {r["name"]: r for r in self.cards()["releases"]}
+        keys = lambda release: [s["key"] for t in release["tasks"] for s in t["stories"] if not s["open"]]
+        self.assertEqual(keys(releases["MVP"]), ["GEMBA-1", "GEMBA-2"])
+        self.assertEqual(keys(releases["Release 2"]), ["GEMBA-3"])
+
+    def test_a_card_counts_as_a_story_and_is_never_left_unplaced(self):
+        data = self.cards()
+        self.assertEqual(data["unplaced"], [])
+        self.assertEqual([r["count"] for r in data["releases"]], [2, 1])
+
+    def test_a_card_is_listed_by_its_key_where_a_story_is_listed_by_its_text(self):
+        mvp = read_story_map.for_development(self.cards())
+        self.assertEqual([st for a in mvp["stories"] for t in a["tasks"] for st in t["stories"]], ["GEMBA-1", "GEMBA-2"])
+
+    def test_a_red_card_among_issue_cards_is_an_open_question_not_a_story(self):
+        data = self.cards()
+        self.assertEqual(data["releases"][0]["open"], 1)
+        self.assertEqual([q["text"] for q in read_story_map.open_questions(data)], ["Who sends it when the owner is away?"])
+
+    def test_a_sticky_or_a_rectangle_has_no_key(self):
+        story = read_story_map.parse(board())["releases"][0]["tasks"][0]["stories"][0]
+        self.assertIsNone(story["key"])
+
+
 class StoryRectangles(unittest.TestCase):
     """A story drawn as a rectangle of the Jira card counts exactly like a sticky."""
 

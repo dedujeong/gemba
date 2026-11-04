@@ -3,7 +3,9 @@
 Usage: python3 read_story_map.py board.svg [--json] [--mvp [--json]] [--gaps] [--previous N]
 
 Accepts the SVG exactly as getConfluenceContent returns it, including the line-number
-prefixes. Works on boards edited by hand, as long as:
+prefixes. A story is a sticky, a rectangle or the card of its Jira issue (data-type="issue"):
+the card has no text, so the story is listed by its key, read from the link of the issue.
+Works on boards edited by hand, as long as:
 - the board header, if any, sits above the "User persona" label;
 - each row has a label: a text whose bold 27px line is "User persona", "Activities",
   "Tasks", or a release name ("MVP", "Release 2", ...), placed at or above its row;
@@ -41,6 +43,7 @@ from build_story_map import CARD_H, CARD_W, RELEASED
 BACKBONE = {"User persona": "personas", "Activities": "activities", "Tasks": "tasks"}
 # Reds of the sticky palette: the open-question fill and the light red Confluence snaps near-reds to.
 OPEN_FILLS = ("#ffd5d2", "#ffeceb")
+ISSUE_KEY = re.compile(r"/browse/([A-Z][A-Z0-9]*-\d+)")
 
 
 def attrs(tag):
@@ -53,10 +56,12 @@ def read_bands(svg):
     stickies = {}
     for m in re.finditer(r"<rect\b[^>]*>", svg):
         a = attrs(m.group(0))
-        if a.get("data-type") in ("sticky", "rectangle"):
-            # A story is a sticky or a rectangle of the Jira card size: its height comes from the element itself.
+        if a.get("data-type") in ("sticky", "rectangle", "issue"):
+            # A story is a sticky, a rectangle of the Jira card size or the card of its issue: its height comes from the
+            # element itself. A card has no text, only the link of the issue, so its key stands for its text.
+            key = ISSUE_KEY.search(a.get("data-smartlink-url", "")) if a["data-type"] == "issue" else None
             stickies[a["id"]] = {"id": a["id"], "x": float(a["x"]), "y": float(a["y"]), "h": float(a.get("height", CARD_H)),
-                                 "fill": a.get("fill", ""), "text": ""}
+                                 "fill": a.get("fill", ""), "text": key.group(1) if key else "", "key": key.group(1) if key else None}
     labels = []
     for m in re.finditer(r"(<text\b[^>]*>)(.*?)</text>", svg, re.S):
         a, body = attrs(m.group(1)), m.group(2)
@@ -116,7 +121,7 @@ def parse(svg):
             if c is None:
                 result["unplaced"].append({"release": l["name"], "id": s["id"], "text": s["text"]})
             else:
-                columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS})
+                columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS, "key": s["key"]})
         fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
         result["releases"].append({
             "name": l["name"],
