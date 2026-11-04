@@ -2,16 +2,25 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SCRIPT = os.path.join(ROOT, "skills", "version-start", "scripts", "read_release.py")
-# A board as getConfluenceContent returns it: MVP delivered (gray), Release 2 current with an open question, Release 3 later.
-BOARD = os.path.join(ROOT, "tests", "fixtures", "story-map.svg")
+FIXTURES = os.path.join(ROOT, "tests", "fixtures")
+# A board as getConfluenceContent returns it: MVP delivered (gray), Release 2 current, Release 3 later.
+BOARD = os.path.join(FIXTURES, "story-map-decided.svg")
+# The same board with a red sticky in Release 2: an open question.
+BOARD_WITH_RED = os.path.join(FIXTURES, "story-map.svg")
+
+
+def run(board, *args):
+    return subprocess.run([sys.executable, SCRIPT, board, *args], capture_output=True, text=True)
 
 
 def read(*args):
-    result = subprocess.run([sys.executable, SCRIPT, BOARD, *args], capture_output=True, text=True, check=True)
+    result = run(BOARD, *args)
+    result.check_returncode()
     return result.stdout
 
 
@@ -41,19 +50,39 @@ class CurrentRelease(unittest.TestCase):
         for elsewhere in ("Save name and phone", "Today's list", "Weekly summary", "Automatic sending"):
             self.assertNotIn(elsewhere, stories)
 
-    def test_reports_red_stickies_as_open_questions_not_stories(self):
-        self.assertEqual(self.release["open_questions"], ["Who sends it when the owner is away?"])
-        stories = [s for a in self.release["stories"] for t in a["tasks"] for s in t["stories"]]
-        self.assertNotIn("Who sends it when the owner is away?", stories)
+
+
+class RedStickies(unittest.TestCase):
+    def test_fails_naming_the_red_sticky_and_prints_no_release(self):
+        result = run(BOARD_WITH_RED)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Release 2", result.stderr)
+        self.assertIn("Who sends it when the owner is away?", result.stderr)
+
+    def test_names_every_red_sticky(self):
+        svg = open(BOARD_WITH_RED, encoding="utf-8").read()
+        second = (
+            '<rect width="240.05" height="144.03" id="s99" data-type="sticky" fill="#ffd5d2" x="1228.5" y="1135"/>\n'
+            '<text x="1348.53" y="1207" width="216" text-anchor="middle" font-size="15.47px" fill="#172b4d" id="s99-text" belongs-to="s99">\n'
+            '<tspan font-size="15.47px">Do we charge per message?</tspan>\n</text>\n'
+        )
+        board = os.path.join(tempfile.mkdtemp(), "two-reds.svg")
+        with open(board, "w", encoding="utf-8") as f:
+            f.write(svg.replace("</svg>", second + "</svg>"))
+        result = run(board, "--json")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(result.stdout, "")
+        self.assertIn("Who sends it when the owner is away?", result.stderr)
+        self.assertIn("Do we charge per message?", result.stderr)
 
 
 class Markdown(unittest.TestCase):
-    def test_prints_the_release_with_its_open_questions(self):
+    def test_prints_the_release(self):
         out = read()
         self.assertTrue(out.startswith("## Release 2"))
         self.assertIn("What the shop owner gets next.", out)
         self.assertIn("### Remind\n- **Send the reminder**\n  - Remind the day before", out)
-        self.assertIn("### Open questions\n- Who sends it when the owner is away?", out)
 
 
 if __name__ == "__main__":

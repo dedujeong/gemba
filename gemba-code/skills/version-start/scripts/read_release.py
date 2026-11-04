@@ -82,7 +82,7 @@ def current_row(labels, bands):
 
 
 def current_release(svg):
-    """The first release not delivered, with its stories by activity and task and its open questions apart."""
+    """The first release not delivered, with its stories by activity and task and its open questions apart (the command line refuses a release that has any)."""
     labels, bands = read_bands(svg)
     tasks = sorted(bands.get("Tasks", []), key=lambda s: s["x"])
     activities = sorted(bands.get("Activities", []), key=lambda s: s["x"])
@@ -126,12 +126,15 @@ def to_markdown(release):
         for t in a["tasks"]:
             lines.append(f'- **{t["task"]}**')
             lines += [f"  - {text}" for text in t["stories"]]
-    if release["open_questions"]:
-        lines.append("\n### Open questions")
-        lines += [f"- {q}" for q in release["open_questions"]]
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     release = current_release(open(sys.argv[1], encoding="utf-8").read())
+    if release["open_questions"]:
+        print(f'{release["release"]} has open questions (red stickies); decide them on the Story Map before opening it:', file=sys.stderr)
+        for question in release["open_questions"]:
+            print(f"- {question}", file=sys.stderr)
+        sys.exit(1)
+    del release["open_questions"]
     print(json.dumps(release, ensure_ascii=False, indent=2) if "--json" in sys.argv else to_markdown(release))
