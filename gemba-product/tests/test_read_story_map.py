@@ -95,6 +95,19 @@ class IssueCards(unittest.TestCase):
         self.assertEqual(data["releases"][0]["open"], 1)
         self.assertEqual([q["text"] for q in read_story_map.open_questions(data)], ["Who sends it when the owner is away?"])
 
+    def test_a_card_is_a_declared_story_and_a_sticky_or_rectangle_that_remains_is_pending(self):
+        data = read_story_map.parse(with_issue_cards(board(), {"Save a date per customer": "GEMBA-1"}))
+        self.assertEqual([(r["name"], r["declared"], r["pending"]) for r in data["releases"]],
+                         [("MVP", 1, 1), ("Release 2", 0, 1)])
+
+    def test_an_open_question_is_neither_declared_nor_pending(self):
+        data = read_story_map.parse(with_issue_cards(board(), IssueCards.KEYS))
+        self.assertEqual([(r["declared"], r["pending"]) for r in data["releases"]], [(2, 0), (1, 0)])
+
+    def test_the_current_release_reports_its_declared_and_pending_stories(self):
+        mvp = read_story_map.for_development(read_story_map.parse(with_issue_cards(board(), {"Save a date per customer": "GEMBA-1"})))
+        self.assertEqual((mvp["declared"], mvp["pending"]), (1, 1))
+
     def test_a_sticky_or_a_rectangle_has_no_key(self):
         story = read_story_map.parse(board())["releases"][0]["tasks"][0]["stories"][0]
         self.assertIsNone(story["key"])
@@ -525,7 +538,7 @@ class ReleaseDescription(unittest.TestCase):
 
     def test_mvp_json_gives_the_current_release_with_its_description_and_open_questions(self):
         mvp = json.loads(self.run_mvp("--json"))
-        self.assertEqual(sorted(mvp), ["description", "open_questions", "release", "stories"])
+        self.assertEqual(sorted(mvp), ["declared", "description", "open_questions", "pending", "release", "stories"])
         self.assertEqual(mvp["release"], "MVP")
         self.assertEqual(mvp["description"], self.FIRST)
         self.assertEqual(mvp["open_questions"], ["Who sends it when the owner is away?"])

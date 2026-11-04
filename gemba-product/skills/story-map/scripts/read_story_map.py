@@ -23,7 +23,8 @@ open question. Each release reports its "state":
 A board in the old colors has no green release, so it has no current release.
 
 A release's "count" is its stories; red stickies (open questions) are not stories and
-are counted apart in "open". --previous N is the number of stories the current release
+are counted apart in "open". A story is "declared" when it is the card of its issue (it has
+a key) and "pending" while it is still a sticky or a rectangle: version-start swaps one for the other. --previous N is the number of stories the current release
 had when it was last reported; the script then says how much it grew, shrank or stayed.
 
 --gaps walks the current release left to right and prints the tasks with no story: the
@@ -140,6 +141,8 @@ def parse(svg, statuses=None):
             "description": l["description"],
             "delivered": bool(cards) and all(st["cancelled"] or (st["status"] or "").lower() == "done" for st in cards),
             "count": sum(1 for c in columns for st in c if not st["open"]),
+            "declared": len(cards),
+            "pending": sum(1 for c in columns for st in c if not st["open"] and not st["key"]),
             "open": sum(1 for c in columns for st in c if st["open"]),
             "cancelled": sum(1 for c in columns for st in c if st["cancelled"]),
             "tasks": [
@@ -219,6 +222,7 @@ def for_development(r):
             stories.append({"activity": task["activity"], "tasks": []})
         stories[-1]["tasks"].append({"task": task["task"], "stories": done})
     return {"release": release["name"] if release else "", "description": release["description"] if release else "",
+            "declared": release["declared"] if release else 0, "pending": release["pending"] if release else 0,
             "stories": stories, "open_questions": open_questions}
 
 
