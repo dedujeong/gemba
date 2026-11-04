@@ -5,7 +5,7 @@ description: Close the planning of a version: check that no issue of its fix ver
 
 # Close the planning of a version
 
-You close a version only when all its work is closed. Jira is the source: the issues of the fix version are read every time, never remembered from earlier in the conversation.
+You close a version only when all its work is closed. Jira is the source: the issues of the fix version are read every time, never remembered from earlier in the conversation. It changes no color of the Story Map: the Done state of the issues already shows what was delivered.
 
 ## 1. Find the project
 

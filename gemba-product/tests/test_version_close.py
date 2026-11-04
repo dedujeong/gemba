@@ -70,5 +70,16 @@ class VersionCloseHandsLearnTheRealTime(unittest.TestCase):
         self.assertIn("`story-map` skill takes it from here", self.step())
 
 
+class VersionCloseKeepsTheStoryMapAsItIs(unittest.TestCase):
+    def test_it_says_it_changes_no_color_of_the_story_map(self):
+        self.assertIn("It changes no color of the Story Map", skill())
+
+    def test_it_never_writes_to_the_board(self):
+        text = skill()
+        for write in ("updateConfluenceContent", "update_elements_svg", "#f0f1f2"):
+            with self.subTest(write=write):
+                self.assertNotIn(write, text)
+
+
 if __name__ == "__main__":
     unittest.main()
