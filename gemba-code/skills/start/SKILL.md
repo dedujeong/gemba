@@ -15,7 +15,7 @@ Read the Product Brief in the Confluence space for its actors and business rules
 
 ## 2. Choose the work type
 
-Declare one issue per request. The exception is a Story Map card with two or more stories: the Epic and one Story per story are declared together, as one request. A card with one story is a Story with no Epic.
+Declare one issue per request. The exceptions are the whole release that version-start hands over in one request, and a Story Map card with two or more stories: the Epic and one Story per story are declared together, as one request. A card with one story is a Story with no Epic.
 
 | Work type | Use it when |
 | --- | --- |
@@ -60,7 +60,7 @@ Use the template of the work type in `assets/`: `epic.md`, `story.md`, `task.md`
 
 ### Check the edge cases of a Story
 
-Only for a Story, and not for one handed over by version-start. Once the happy-path criteria are written and before showing them, read `references/criteria-heuristics.md` and pass every criterion through every heuristic of its table. Each heuristic that applies to a criterion ends in one of three places:
+Only for a Story. Once the happy-path criteria are written and before showing them, read `references/criteria-heuristics.md` and pass every criterion through every heuristic of its table. Each heuristic that applies to a criterion ends in one of three places:
 
 - A criterion more, only when the Product Brief, the Story Map or the card decides the case.
 - A line of Out of scope, only when the brief or the Story Map leave it out, in their words.
@@ -71,6 +71,10 @@ Ask all the questions of the Story in one single round, in the project's `Langua
 When a rule depends on two or more conditions, build its decision table inside, with the method of `references/criteria-heuristics.md`, with every combination, and write one criterion per distinct result: every combination with the same result is one single criterion, even when its combinations differ in more than one condition, and that criterion names them all. The table is a working tool and never goes in the issue.
 
 An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows only the resulting criteria, rules and Out of scope: it never mentions the heuristics, the decision table or the questions.
+
+### Check the edge cases of a whole version
+
+When version-start hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. Until the round is answered, create no issue of the version: say that nothing was created.
 
 ## 5. Show it, then create it
 
