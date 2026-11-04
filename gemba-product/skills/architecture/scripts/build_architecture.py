@@ -14,8 +14,11 @@ Spec (see ../assets/architecture-template.json):
 }
 
 "data_model" is optional: {"description", "entities": [{"name", "fields": [...]}],
-"relations": [{"from", "to", "label"}]}. It draws one box per entity with its main fields and
-an arrow per relation, below the other diagrams; with no entities it is not drawn.
+"relations": [{"from", "to", "label", "cardinality"}]}. It draws one box per entity with its main
+fields and an arrow per relation, below the other diagrams; with no entities it is not drawn.
+A relation whose cardinality is "1:N" carries 1 next to its origin, N next to its destination and
+the verb in the middle; one whose cardinality is not decided leaves "cardinality" out and carries
+only the verb.
 
 "states" is optional, one item per entity that changes state: {"entity", "description",
 "initial": {"state", "event"}, "states": [...], "transitions": [{"from", "to", "event"}]}. The
@@ -149,7 +152,7 @@ class Diagram:
         )
         self._put(name, eid, x, y, BOX_W, BOX_H)
 
-    def arrow(self, source, target, label):
+    def arrow(self, source, target, label, cardinality=None):
         (sid, sx, sy, sw, sh), (tid, tx, ty, tw, th) = self.box_of[source], self.box_of[target]
         horizontal = abs((tx + tw / 2) - (sx + sw / 2)) >= abs((ty + th / 2) - (sy + sh / 2))
         if horizontal:
@@ -174,11 +177,17 @@ class Diagram:
             f'start-anchor="{start}" start-proportion="0.5" end-anchor="{end}" end-proportion="0.5" '
             f'line-type="angled" marker-end="url(#{MARKER_ID})"/>'
         )
-        self.out.append(
-            f'<text x="{lx}" y="{ly}" text-anchor="middle" font-size="{FS}" font-scale="1" fill="{INK}" '
-            f'id="{cid}-label" data-type="pathLabel" belongs-to="{cid}" data-proportion="0.5">'
-            f'<tspan font-size="{FS}">{escape(label)}</tspan></text>'
-        )
+        parts = [(label, 0.5, lx, ly)]
+        if cardinality:
+            # One to many: 1 near the origin and N near the destination, with the verb in the middle.
+            parts = [("1", 0.08, round(x1 + (lx - x1) * 0.16, 2), round(y1 + (ly - y1) * 0.16, 2))] + parts \
+                + [("N", 0.92, round(x2 + (lx - x2) * 0.16, 2), round(y2 + (ly - y2) * 0.16, 2))]
+        for n, (text, proportion, x, y) in enumerate(parts):
+            self.out.append(
+                f'<text x="{x}" y="{y}" text-anchor="middle" font-size="{FS}" font-scale="1" fill="{INK}" '
+                f'id="{cid}-label{n if cardinality else ""}" data-type="pathLabel" belongs-to="{cid}" '
+                f'data-proportion="{proportion}"><tspan font-size="{FS}">{escape(text)}</tspan></text>'
+            )
 
     def bottom(self):
         return max([y + h for _, _, y, _, h in self.box_of.values()] + [self.floor], default=0.0)
@@ -205,7 +214,10 @@ def draw_relations(diagram, relations, where):
             raise ValueError(f'{where}: the arrow from "{source}" to "{target}" says nothing: give it a label')
         if label[0].islower():
             raise ValueError(f'{where}: the label of the arrow from "{source}" to "{target}" must start with a capital: "{label}"')
-        diagram.arrow(source, target, label)
+        cardinality = relation.get("cardinality")
+        if cardinality not in (None, "1:N"):
+            raise ValueError(f'{where}: the cardinality "{cardinality}" is not drawn: use "1:N", or leave it out when it is not decided')
+        diagram.arrow(source, target, label, cardinality)
 
 
 def context_diagram(spec, top):

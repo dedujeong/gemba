@@ -38,7 +38,7 @@
       {"name": "<Entity named by a story>", "fields": ["<main field>", "<another field>"]}
     ],
     "relations": [
-      {"from": "<Entity>", "to": "<Other entity>", "label": "<how they relate, with its cardinality>"}
+      {"from": "<Entity>", "to": "<Other entity>", "label": "<Verb>", "cardinality": "1:N"}
     ]
   },
   "states": [

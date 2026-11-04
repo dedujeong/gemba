@@ -221,6 +221,30 @@ class NoLegendOrNotes(unittest.TestCase):
             self.assertTrue(heading or actor_name or box or arrow, "".join(text.itertext()))
 
 
+class Cardinality(unittest.TestCase):
+    """A one-to-many relation of the data model carries 1 at its origin, N at its destination and the verb in the middle."""
+
+    def labels_of(self, root, connector):
+        found = [t for t in tags(root, "text") if t.get("belongs-to") == connector.get("id")]
+        found.sort(key=lambda t: float(t.get("data-proportion")))
+        return [("".join(t.itertext()).strip(), float(t.get("data-proportion"))) for t in found]
+
+    def test_a_one_to_many_relation_draws_1_the_verb_and_n_along_its_arrow(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["cardinality"] = "1:N"
+        root = build(spec)
+        first = [p for p in of(root, "dat-", "polyline")][0]
+        verb = spec["data_model"]["relations"][0]["label"]
+        self.assertEqual(self.labels_of(root, first), [("1", 0.08), (verb, 0.5), ("N", 0.92)])
+
+    def test_a_cardinality_that_is_not_one_to_many_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["cardinality"] = "N:N"
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("1:N", str(caught.exception))
+
+
 class CapitalizedLabels(unittest.TestCase):
     """The label of an arrow says only its intention, and starts with a capital."""
 
