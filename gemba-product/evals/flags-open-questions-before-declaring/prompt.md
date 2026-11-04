@@ -1,6 +1,6 @@
 ---
 name: flags-open-questions-before-declaring
-description: A red open question inside the current release is pointed out before anything is declared.
+description: A red open question inside the current release is set aside, to move to the next release, and the version goes on without it.
 allowed_tools: [Read, Glob, Grep, Skill, Bash, Write]
 max_turns: 10
 ---

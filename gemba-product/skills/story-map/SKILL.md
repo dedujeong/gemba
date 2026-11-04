@@ -106,6 +106,16 @@ When the person asks to update a board to the current colors, change only the fi
 4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
 5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
 
+### Replace the stories with the cards of their issues
+
+`version-start` does this once it has declared the issues of a release: each story of the current release stops being a rectangle or a sticky and becomes the card of its issue, in the same place.
+
+1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
+2. Write a `keys.json` with the key of each story, by its text: `{"Save a date per customer": "GEMBA-1"}`.
+3. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site>`. It prints one `delete_svg` for the text of each story and one `replace_svg` for its rectangle, which becomes an issue card. A red rectangle (an open question) gets no issue and no card: the patch moves it, still red, to the release after the current one (Later when that is the row that follows), and leaves it where it is when no row follows. On a board in the old colors it also turns the stories of the next releases gray (cards are always gray).
+4. Apply it with `updateConfluenceContent`, with the SVG you read as `context.content`, then read the board again: the response of the patch says nothing about what happened. `read_story_map.py` counts each card as a declared story and each rectangle or sticky left as a pending one.
+5. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site> --check` on that second reading: it lists each story as `declared` (its card is on the board) or `pending` (it stayed as it was). Name every pending story in the result. A story with no key in `keys.json` is named on stderr when the patch is written and is left as it is.
+
 ## 6. Check the release before closing it
 
 When the person asks to close a release, the MVP or a later one, check it before closing it and name every gap the passes below find. This step only names gaps: what to do with each one is the person's decision, taken in section 7, and nothing is written to the board or the brief here.

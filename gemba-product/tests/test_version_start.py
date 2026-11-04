@@ -90,10 +90,33 @@ class VersionStartReadsTheMapWithTheSingleReader(unittest.TestCase):
     def test_it_keeps_no_reader_of_its_own(self):
         self.assertNotIn("read_release", skill())
 
-    def test_it_stops_on_the_open_questions_the_reader_returns_apart(self):
+    def test_it_sets_the_open_questions_aside_and_goes_on_without_them(self):
         text = self.step(4)
         self.assertIn("`open_questions`", text)
-        self.assertIn("nothing of the version is declared", text)
+        self.assertIn("does not enter this version", text)
+        self.assertIn("still red", text)
+        self.assertIn("release after the current one", text)
+        self.assertNotIn("nothing of the version is declared", text)
+
+
+class VersionStartPutsTheCardsOnTheMap(unittest.TestCase):
+    def step9(self):
+        return skill().split("## 9.")[1].split("\n## ")[0]
+
+    def test_it_replaces_the_stories_with_the_cards_through_the_card_script(self):
+        text = self.step9()
+        self.assertIn("python3 ../story-map/scripts/card_story_map.py", text)
+        self.assertIn("--site", text)
+        self.assertIn("--check", text)
+
+    def test_it_reports_from_a_new_reading_and_names_the_story_whose_card_could_not_be_put(self):
+        text = self.step9()
+        self.assertIn("Read the board again", text)
+        self.assertIn("stays on the board as it was", text)
+        self.assertIn("name it in the result", text)
+
+    def test_it_runs_after_the_issues_and_the_release_task_are_declared(self):
+        self.assertLess(skill().index("## 8."), skill().index("## 9."))
 
 
 class VersionStartLeavesTheKeysToTheCards(unittest.TestCase):
