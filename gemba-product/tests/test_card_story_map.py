@@ -12,7 +12,7 @@ sys.path.insert(0, SCRIPTS)
 
 import card_story_map  # noqa: E402
 import read_story_map  # noqa: E402
-from test_build_story_map import GRAY  # noqa: E402
+from test_build_story_map import GRAY, OPEN  # noqa: E402
 from test_move_story_map import SPEC_3, board, sticky  # noqa: E402
 
 SITE = "https://deducoder.atlassian.net"
@@ -25,8 +25,9 @@ def numbered(svg):
 
 
 def apply(svg, patch):
-    """Do what updateConfluenceContent does with delete_svg and replace_svg: remove the lines of the deletes, and put
-    what a replace carries where its lines were. The result is the board without line numbers."""
+    """Do what updateConfluenceContent does with delete_svg, replace_svg and the moves of update_elements_svg: remove the
+    lines of the deletes, put what a replace carries where its lines were, and set the x and y of the elements moved.
+    The result is the board with line numbers."""
     lines = numbered(svg)
     for m in re.finditer(r'<delete_svg from="(\d+)" to="(\d+)"\s*/>', patch):
         for n in range(int(m.group(1)), int(m.group(2)) + 1):
@@ -36,6 +37,10 @@ def apply(svg, patch):
         for n in range(first, last + 1):
             lines.pop(n, None)
         lines[first] = m.group(3)
+    for m in re.finditer(r'<update_elements_svg ids="([^"]+)">\s*<attr x="([-\d.]+)" y="([-\d.]+)"\s*/>', patch):
+        for n, body in lines.items():
+            if f'id="{m.group(1)}"' in body and "<rect" in body:
+                lines[n] = re.sub(r' x="[-\d.]+" y="[-\d.]+"', f' x="{m.group(2)}" y="{m.group(3)}"', body)
     return "\n".join(f"{n}  {lines[n]}" for n in sorted(lines))
 
 
@@ -119,6 +124,41 @@ class Stickies(unittest.TestCase):
             self.assertNotIn(f">{text}<", after)
         mvp = read_story_map.parse(after)["releases"][0]
         self.assertEqual((mvp["declared"], mvp["pending"]), (2, 0))
+
+
+QUESTION = "Who sends it when the owner is away?"
+
+
+class OpenQuestions(unittest.TestCase):
+    """A red rectangle is a question nobody decided: it gets no issue, so it does not go with the release being declared."""
+    def setUp(self):
+        self.svg = board(SPEC_3)
+        self.patch = card_story_map.card_patch(self.svg, KEYS, SITE)
+        self.after = apply(self.svg, self.patch)
+
+    def test_an_open_question_of_the_current_release_moves_to_the_release_after_it(self):
+        releases = {r["name"]: r for r in read_story_map.parse(self.after)["releases"]}
+        self.assertEqual((releases["MVP"]["open"], releases["Release 2"]["open"], releases["Later"]["open"]), (0, 1, 0))
+
+    def test_the_question_keeps_its_column_stays_red_and_gets_no_card(self):
+        before, after = sticky(self.svg, QUESTION), sticky(self.after, QUESTION)
+        self.assertEqual(after["x"], before["x"])
+        self.assertGreater(after["y"], before["y"])
+        self.assertEqual(after["fill"], OPEN)
+        self.assertEqual(sorted(cards(self.after)), ["GEMBA-1", "GEMBA-2"])
+
+    def test_the_question_goes_to_later_when_that_is_the_row_after_the_current_release(self):
+        spec = {**SPEC_3, "releases": [SPEC_3["releases"][0], SPEC_3["releases"][2]]}
+        svg = board(spec)
+        after = apply(svg, card_story_map.card_patch(svg, KEYS, SITE))
+        self.assertEqual([(r["name"], r["open"]) for r in read_story_map.parse(after)["releases"]], [("MVP", 0), ("Later", 1)])
+
+    def test_a_question_stays_where_it_is_when_no_row_follows_the_current_release(self):
+        spec = {**SPEC_3, "releases": SPEC_3["releases"][:1]}
+        svg = board(spec)
+        patch = card_story_map.card_patch(svg, KEYS, SITE)
+        self.assertNotIn("update_elements_svg", patch)
+        self.assertEqual(read_story_map.parse(apply(svg, patch))["releases"][0]["open"], 1)
 
 
 class MissingCards(unittest.TestCase):

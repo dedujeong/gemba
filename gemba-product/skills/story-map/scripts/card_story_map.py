@@ -13,6 +13,10 @@ per story, built against the line numbers of the SVG it was given, so it is appl
 never to a later reading. A key for a text that is not a story of the current release stops everything and
 prints nothing. A story of the current release without a key in keys.json is left as it is and named on stderr.
 
+An open question (a red rectangle) of the current release gets no issue and no card: it moves, still red, to the
+release after the current one (Later when that is the row that follows), in the column of its task, as
+move_story_map.py places a story. When no row follows the current release, it stays where it is.
+
 With --check it reads the board again, after the patch, and prints JSON for what to report: for each story of
 keys.json, "declared" when the board has the card of its key and "pending" when it does not, so a story whose
 card could not be put stays on the board as it was and the result names it. The response of a write is stale,
@@ -34,7 +38,8 @@ from html import escape
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
 
 from build_story_map import GRAY, STORY_H, STORY_W
-from read_story_map import OPEN_FILLS, attrs, current, parse, read_bands
+from move_story_map import move_patch
+from read_story_map import BACKBONE, OPEN_FILLS, attrs, current, parse, read_bands
 
 
 def elements(svg):
@@ -88,6 +93,14 @@ def check(svg, keys):
     return result
 
 
+def open_questions(svg, release):
+    """The ids of the red rectangles of the release, and the label of the row that follows it (None when none does)."""
+    labels, bands = read_bands(svg)
+    names = [l["name"] for l in labels if l["name"] not in BACKBONE]
+    after = names[names.index(release["name"]) + 1] if names.index(release["name"]) + 1 < len(names) else None
+    return [s["id"] for s in bands[release["name"]] if s["fill"].lower() in OPEN_FILLS], after
+
+
 def card_patch(svg, keys, site):
     release, stories = pending_stories(svg)
     by_text = {}
@@ -109,7 +122,9 @@ def card_patch(svg, keys, site):
         if "from" in el:
             deletes.append(f'<delete_svg from="{el["from"]}" to="{el["to"]}"/>')
         replaces.append(f'<replace_svg from="{el["rect"]}" to="{el["rect"]}">\n{card_svg(key, s["x"], s["y"], site)}\n</replace_svg>')
-    return "\n".join(deletes + replaces)
+    questions, after = open_questions(svg, release)
+    moves = [move_patch(svg, questions, after)] if questions and after else []
+    return "\n".join(deletes + replaces + moves)
 
 
 if __name__ == "__main__":

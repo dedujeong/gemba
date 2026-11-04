@@ -112,7 +112,7 @@ When the person asks to update a board to the current colors, change only the fi
 
 1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
 2. Write a `keys.json` with the key of each story, by its text: `{"Save a date per customer": "GEMBA-1"}`.
-3. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site>`. It prints one `delete_svg` for the text of each story and one `replace_svg` for its rectangle, which becomes an issue card.
+3. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site>`. It prints one `delete_svg` for the text of each story and one `replace_svg` for its rectangle, which becomes an issue card. A red rectangle (an open question) gets no issue and no card: the patch moves it, still red, to the release after the current one (Later when that is the row that follows), and leaves it where it is when no row follows.
 4. Apply it with `updateConfluenceContent`, with the SVG you read as `context.content`, then read the board again: the response of the patch says nothing about what happened. `read_story_map.py` counts each card as a declared story and each rectangle or sticky left as a pending one.
 5. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site> --check` on that second reading: it lists each story as `declared` (its card is on the board) or `pending` (it stayed as it was). Name every pending story in the result. A story with no key in `keys.json` is named on stderr when the patch is written and is left as it is.
 
