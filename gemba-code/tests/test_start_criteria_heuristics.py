@@ -43,5 +43,12 @@ class CriteriaHeuristics(unittest.TestCase):
         self.assertIsNone(re.search(r"[¿¡áéíóúñÁÉÍÓÚÑ]", self.text))
 
 
+class StoryTemplate(unittest.TestCase):
+    def test_points_at_the_heuristics_and_holds_an_undecided_story(self):
+        text = read(os.path.join(ROOT, "skills", "start", "assets", "story.md"))
+        self.assertIn("references/criteria-heuristics.md", text)
+        self.assertIn("is not declared", text)
+
+
 if __name__ == "__main__":
     unittest.main()
