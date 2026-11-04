@@ -20,7 +20,7 @@
     "actors": ["<Role that reaches a piece directly>"],
     "boundaries": [
       {
-        "name": "<Where these pieces run, with its plan>",
+        "name": "<Platform where these pieces run>",
         "containers": [
           {"name": "<Piece>"},
           {"name": "<Store>", "shape": "database"}

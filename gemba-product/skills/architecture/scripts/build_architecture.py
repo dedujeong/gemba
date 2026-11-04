@@ -135,7 +135,7 @@ class Diagram:
         self._put("Start", eid, x, y, START_SIDE, START_SIDE)
 
     def section(self, title, x, y, height):
-        """A deployment boundary: the pieces that run in the same place, with the plan in its title."""
+        """A deployment boundary: the pieces that run in the same place, with the platform in its title."""
         sid = f"{self.prefix}-s{self.sections}"
         self.sections += 1
         self.obstacles.append((x, y, SECTION_W, height))

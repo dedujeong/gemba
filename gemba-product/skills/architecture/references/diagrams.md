@@ -29,7 +29,7 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 | An entity of the data model | The same 220x160 `process` shape, with its name followed by its main fields in one run of text | The fields come from what the stories name; an entity with no fields is not drawn |
 | A state of an entity | The same `process` shape, with only its name | |
 | The start of a state diagram | A 40x40 gray rectangle, with an arrow to the first state labelled with the event that creates the entity | |
-| A deployment boundary | A `section` rect with `data-title`, its pieces carrying `belongs-to` | The title names the plan it runs on |
+| A deployment boundary | A `section` rect with `data-title`, its pieces carrying `belongs-to` | The title names only the platform it runs on, never its plan |
 | An arrow | A `polyline` with `data-type="connector"`, `begins-at`, `ends-at`, the two anchors at proportion `0.5`, `line-type="angled"` and `marker-end` | |
 | What flows along an arrow | A `pathLabel` text bound to the connector with `belongs-to` | |
 
