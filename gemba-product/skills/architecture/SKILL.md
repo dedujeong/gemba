@@ -92,6 +92,7 @@ When the ADRs are written, create the `Architecture` page of the product's space
 
 1. Write the spec of the diagrams as `assets/architecture-template.json` defines, from the decisions already taken: the actors from the Story Map and the brief, the systems the ADRs name, and one relation per arrow saying what flows along it.
    A box of Context and Containers carries only the name of the person, the system or the container: no description, no technology, no legend.
+   The `description` of a diagram is the one short line under its heading that says what the diagram shows (`Quién usa el producto y con qué sistemas habla.`); it never describes the boxes or names their technology or plan, because that would be a legend.
    The label of an arrow says only the intention (`Arma su carta`, `Abre el chat`) and starts with a capital: the script rejects one that does not.
    A doubt nobody has answered about a diagram goes in its `questions` as the open question of one element, never in a label, a note or a box: the board draws it as a red sticky beside that element. Leave `questions` out when there is none.
    A system the team operates (a piece it deploys or runs) is drawn only in Containers; the Context externals are the systems somebody else runs, and the script rejects one that is also a container.

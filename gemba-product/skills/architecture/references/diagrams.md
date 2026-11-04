@@ -35,7 +35,7 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 
 A box of the Context and Containers diagrams says only its name: no description, no technology. Several `tspan` inside one shape read as a single line, so an entity of the data model, which does carry its fields, writes them in one run of text after its name, not stacked.
 
-A diagram has no legend and no notes beside it: the heading, the boxes and the arrows say everything, and a doubt goes in as a red sticky, never as a note.
+The line under a heading says what the diagram shows, in a few words, and never lists its boxes or their technology. A diagram has no legend and no notes beside it: the heading, the boxes and the arrows say everything, and a doubt goes in as a red sticky, never as a note.
 
 ## What the connector does to a board
 
