@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, set its open questions aside, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared replace each story of the Story Map with the card of its issue. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, set its open questions aside, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, once declared replace each story of the Story Map with the card of its issue, and postpone a declared issue to the next release. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -21,7 +21,7 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first green one that is not delivered: green is the release about to be declared and gray the ones after it. It returns that release's `release` name, its `description` (the value it delivers), how many of its stories are `declared` (already the card of an issue) and `pending` (still a rectangle or a sticky), and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first green one that is not delivered: green is the release about to be declared and gray the ones after it. It returns that release's `release` name, its `description` (the value it delivers), how many of its stories are `declared` (already the card of an issue) and `pending` (still a rectangle or a sticky), and its `stories` by activity and task, each with its `key` when it is already the card of an issue, with the red stickies apart in `open_questions`: see step 4. A story with a `key` is already declared, usually because it was postponed from an earlier version (step 10): it is not a story to declare.
 
 If `release` comes back empty, no release is green: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
@@ -35,7 +35,7 @@ When `open_questions` is empty, go on to step 5.
 
 Before showing anything, ask the maintainer once, in a single message, for what their request did not give: the start date and the delivery date of the version, and the hours of work per day. Wait for the answer. The hours per day are asked for every version and are never written to the `CLAUDE.md` or anywhere else; the dates are the ones step 6 uses. If the request already confirms the release and gives the Epics' due dates, do not ask: go on to steps 6 and 7.
 
-Each Story Map card of the release is an activity with its stories in this release. Show every card once, in board order:
+Each Story Map card of the release is an activity with its stories in this release. A story that is already declared is shown apart, with its key and its state in Jira, and you never declare it again: only the stories with no key are declared. Show every card once, in board order:
 
 - the activity;
 - how it will be declared: a card with one story is a Story; a card with two or more is an Epic with one Story per story;
@@ -68,6 +68,8 @@ Without a connection to Jira, write the call you would make and say that nothing
 
 Right after the fix version, hand `gemba-code:start` all the confirmed cards in one request, so it checks the Stories of the whole version before creating any issue, and declare them through `gemba-code:start` in that fix version, in board order: a card with one story as a Story with no Epic, a card with two or more as an Epic with one Story per story as its children. Hand `gemba-code:start` the card, its fields as the maintainer confirmed them and the Story Map link for an Epic's Source. The maintainer already confirmed the whole version in step 5: once `gemba-code:start` has no open edge-case question, it creates each issue without asking again, and you do not ask either: do not offer a last chance to change something before creating. While `gemba-code:start`'s round has a question without an answer, no issue of the version is created or drafted as ready: report which questions are missing and stop. If the maintainer already confirmed the release in their request, do not show it again; go on to steps 6 and 7. Then report the keys, one line per card.
 
+A story that is already declared (it has a `key`) never creates another issue. Read it with `getJiraIssue`: when its fix version is empty, because it was postponed, edit it through `gemba-code:start` so its fix version is the one created in step 6 (it edits only an issue in Backlog); when it has another fix version, leave it as it is and name it in the result with its key and that version, so the maintainer decides. Report the key of each one with the others.
+
 ## 8. Declare the release Task
 
 When all the cards are declared, declare the version's release through `gemba-code:start`, as a Task in the same fix version: summary `Release <Product> vX.Y.Z`, the component confirmed in step 5 (when the maintainer confirmed the release in their request, the one chosen by the rule of step 5: it is not a pending question and you do not offer to change it), with no blocking links. It is the last issue to close, because it waits for every other issue of the version to be Done or Cancelled, so publishing is part of the plan. Its Done when lists, in the project's `Language`:
@@ -91,6 +93,17 @@ When every issue is declared, replace the stories of the release on the board wi
 5. Read the board again and run the same script with `--check` on that second reading, then delete the temporary files. Report from that reading, never from the response: how many stories are now cards (the cards are always gray) and each story whose card could not be put. A story whose card could not be put stays on the board as it was: name it in the result with its key, so the maintainer can place it by hand.
 
 Without a connection to Confluence, write the patch you would apply and say that the board was not changed.
+
+## 10. Postpone a declared issue
+
+When the maintainer says that an issue already declared does not go in this version, move it to the next release; nothing else about the issue changes. Read the issue first with `getJiraIssue`: only an issue in Backlog is postponed, because `gemba-code:start` edits an issue only while it is in Backlog. An issue outside Backlog is not postponed: say its state, leave its card where it is and stop. Its state in Jira decides what the card shows, and a cancellation changes nothing on the board.
+
+1. Read the Story Map with `getConfluenceContent` (`content_format: svg`) and save the SVG to a temporary file outside the repository (`mktemp`). Find the card of the issue with `python3 ../story-map/scripts/read_story_map.py <file> --json`: it carries its key and its `id`.
+2. Run `python3 ../story-map/scripts/move_story_map.py <file> --story <id> --to "<release after the current one>"`. The card keeps its column and its issue. Apply the patch with `updateConfluenceContent`, with the SVG you read as `context.content`, and delete the temporary file. Never recolor it: a card is always gray, and it waits in that release until its version is declared.
+3. Through `gemba-code:start`, edit the issue so its fix version is empty. It is not given the version of the next release, because that version does not exist until the release opens: step 7 gives it when the release is declared.
+4. Read the board again and report from that reading, never from the response of the patch: the release the card is in now, and the issue with its fix version empty.
+
+Without a connection to Confluence or Jira, write the patch or the edit you would make and say that nothing was changed.
 
 ## Without a connection
 

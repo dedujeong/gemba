@@ -107,5 +107,6 @@ Writing a card, tested on `14680139`:
 - The fill is ignored: a card sent green (`#baf3db`) came back gray (`#f0f1f2`), and so did one inserted gray. An `update_elements_svg` with `fill` on a card returns `ok: true` and changes nothing. A declared release therefore has no green story: the green is for the release about to be declared.
 - Restoring the rectangle took a `delete_svg` of the card and an `insert_svg` of the rectangle with its text; the rectangle came back with a new id.
 - Not tested: replacing a story sticky (240 x 144) by a card, which is the same `replace_svg` and `delete_svg` pair.
+- Moving a card, tested on `14680139`: an `update_elements_svg` with `x` and `y` on the card (a partial context with its numbered line is enough) moves it and keeps its id, its link and its gray. The card has no text to follow.
 
 Not tested: a patch with a stale read, and deleting stickies.
