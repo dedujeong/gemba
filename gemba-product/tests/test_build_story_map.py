@@ -14,7 +14,7 @@ sys.path.insert(0, SCRIPTS)
 import build_story_map  # noqa: E402
 
 PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
-CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
+CURRENT, GRAY, OPEN = "#baf3db", "#f0f1f2", "#ffd5d2"
 
 # The closed sticky palette of Confluence: a fill outside it is snapped to the nearest one.
 PALETTE = {
@@ -136,7 +136,7 @@ class StoryRectangles(unittest.TestCase):
     def test_a_story_rectangle_has_the_color_of_its_release(self):
         rects = dict(shapes(self.svg, "rectangle"))
         self.assertEqual(rects["Save a date per customer"].get("fill"), CURRENT)
-        self.assertEqual(rects["Import dates from the notebook"].get("fill"), NEXT)
+        self.assertEqual(rects["Import dates from the notebook"].get("fill"), GRAY)
 
     def test_the_text_is_centered_on_its_rectangle(self):
         root = ET.fromstring(self.svg)
@@ -196,9 +196,9 @@ class FixedColors(unittest.TestCase):
         self.assertEqual(texts["Record a service"], ACTIVITY)
         self.assertEqual(texts["Save the next service date"], TASK)
         self.assertEqual(texts["Save a date per customer"], CURRENT)
-        self.assertEqual(texts["Import dates from the notebook"], NEXT)
+        self.assertEqual(texts["Import dates from the notebook"], GRAY)
 
-    def test_releases_are_current_next_then_later_by_position(self):
+    def test_only_the_current_release_is_green_and_the_ones_after_it_are_gray(self):
         spec = copy.deepcopy(SPEC)
         spec["releases"] += [
             {"name": "Release 3", "stories": [["Third story"], []]},
@@ -207,22 +207,22 @@ class FixedColors(unittest.TestCase):
         texts = stickies(build_story_map.build(spec))
         self.assertEqual(
             [texts[t] for t in ["Save a date per customer", "Import dates from the notebook", "Third story", "Fourth story"]],
-            [CURRENT, NEXT, LATER, LATER],
+            [CURRENT, GRAY, GRAY, GRAY],
         )
 
-    def test_the_later_row_is_always_later_never_next_or_current(self):
+    def test_the_later_row_is_gray_never_current_whichever_releases_shipped(self):
         spec = copy.deepcopy(SPEC)
         spec["releases"].append({"name": "Later", "stories": [[{"text": "Some day", "traces": "Problem"}], []]})
         texts = stickies(build_story_map.build(spec))
-        self.assertEqual(texts["Some day"], LATER)
-        self.assertEqual(texts["Import dates from the notebook"], NEXT)
+        self.assertEqual(texts["Some day"], GRAY)
+        self.assertEqual(texts["Import dates from the notebook"], GRAY)
         spec["releases"][0]["released"] = spec["releases"][1]["released"] = True
         texts = stickies(build_story_map.build(spec))
-        self.assertEqual(texts["Some day"], LATER)
+        self.assertEqual(texts["Some day"], GRAY)
 
     def test_a_delivered_release_is_gray_and_the_rest_shift_up(self):
         texts = stickies(build_story_map.build(delivered_first(SPEC)))
-        self.assertEqual(texts["Delivered story"], RELEASED)
+        self.assertEqual(texts["Delivered story"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
 
     def test_open_question_is_red_in_any_release(self):
@@ -238,7 +238,7 @@ class FixedColors(unittest.TestCase):
                              {"name": "Release 4", "stories": [["Fourth story"], []]}]
         fills = set(stickies(build_story_map.build(spec)).values())
         self.assertEqual(fills - PALETTE, set())
-        self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, RELEASED, CURRENT, NEXT, LATER})
+        self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, GRAY, CURRENT})
 
 
 class LabelAlignment(unittest.TestCase):

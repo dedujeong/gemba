@@ -14,7 +14,7 @@ sys.path.insert(0, SCRIPTS)
 import add_story_map  # noqa: E402
 import build_story_map  # noqa: E402
 import read_story_map  # noqa: E402
-from test_build_story_map import CURRENT, LATER, NEXT, OPEN, SPEC, delivered_first  # noqa: E402
+from test_build_story_map import CURRENT, GRAY, OPEN, SPEC, delivered_first  # noqa: E402
 from test_move_story_map import SPEC_3, board, first_top, label_tops, moves, sticky  # noqa: E402
 from test_read_story_map import with_issue_cards  # noqa: E402
 
@@ -60,7 +60,7 @@ class StoryRectangle(unittest.TestCase):
         patch = add_story_map.add_patch(board(), "Release 2", "Send the reminder", "Editable message templates")
         rect = inserted_rect(patch)
         self.assertEqual((rect["data-type"], rect["width"], rect["height"]), ("rectangle", "345", "136.91"))
-        self.assertEqual(rect["fill"], NEXT)
+        self.assertEqual(rect["fill"], GRAY)
 
     def test_an_open_question_is_added_as_a_red_rectangle(self):
         patch = add_story_map.add_patch(board(), "Release 2", "Send the reminder", "Who pays for the messages?", is_open=True)
@@ -90,14 +90,22 @@ class Placement(unittest.TestCase):
             "Later": add_story_map.add_patch(svg, "Later", "Send the reminder", "Reminders by email"),
         }
         self.assertEqual({name: inserted(patch)["fill"] for name, patch in fills.items()},
-                         {"MVP": CURRENT, "Release 2": NEXT, "Later": LATER})
+                         {"MVP": CURRENT, "Release 2": GRAY, "Later": GRAY})
 
     def test_the_color_follows_the_board_once_a_release_shipped(self):
         svg, statuses = mvp_delivered()
-        svg = svg.replace(NEXT, CURRENT)  # Release 2 is the green one now
         patch = add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Editable message templates", traces="Problem",
                                         statuses=statuses)
         self.assertEqual(inserted(patch)["fill"], CURRENT)
+
+    def test_a_story_in_a_new_row_is_gray_and_no_other_row_changes_color(self):
+        spec = copy.deepcopy(SPEC_3)
+        spec["releases"].insert(2, {"name": "Release 3", "description": "Not started.", "stories": [[], []]})
+        svg = board(spec)
+        patch = add_story_map.add_patch(svg, "Release 3", "Send the reminder", "Reminders by email")
+        self.assertEqual(inserted(patch)["fill"], GRAY)
+        outside = re.sub(r"<insert_svg.*?</insert_svg>", "", patch, flags=re.S)
+        self.assertNotIn("fill", outside)
 
     def test_stacks_under_the_stories_already_in_that_column(self):
         svg = board()

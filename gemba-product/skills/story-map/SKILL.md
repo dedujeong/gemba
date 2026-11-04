@@ -39,12 +39,10 @@ Colors follow the Jira work items and always carry the same meaning, on every bo
 | Purple | Activities |
 | Blue | Tasks |
 | Green | Stories in the current release (the MVP until it ships) |
-| Orange | Stories in the next release |
-| Light orange | Stories in later releases, and always the Later row |
-| Gray | Stories in releases already delivered |
+| Gray | Stories in every other release: the next ones, the delivered ones and the Later row |
 | Red | Unresolved question that blocks a story |
 
-When the MVP ships, mark it `"released": true` in the spec: it turns gray, the next release becomes the current one and turns green, and the rest move up one place.
+When the MVP ships, mark it `"released": true` in the spec: the next release becomes the current one and turns green, and the delivered one stays gray.
 
 ## 3. Build the whiteboard
 
@@ -102,7 +100,7 @@ When the scope of a release changes, its label changes with it. The script chang
 
 When the person asks to update a board to the current colors, change only the fill of each sticky, so no text or position moves:
 
-1. Ask which releases are already delivered. The old gray cannot tell them from later releases, so never guess.
+1. Ask which releases are already delivered. Gray cannot tell a delivered release from a next one, so never guess.
 2. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG and run `python3 scripts/read_story_map.py board.svg` to note the count per release.
 3. Run `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"` (repeat the option for each one). It prints, per color, the ids of the stickies that change.
 4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
@@ -191,7 +189,7 @@ When a release has shipped and the person asks to review it, the facts of what w
 3. **What was not delivered.** For each such Story, read its description and propose the sticky it matches (same task, same release). If no sticky is clear, say so; never guess. Ask the person where each one goes: the next release or Later. Nothing moves before they answer.
 4. **Apply what the person decides,** reading the board again before each patch and sending each patch with `updateConfluenceContent` and that read as `context.content`, whole:
    - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it.
-   - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest move up (section 5, Recolor).
+   - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest stay gray (section 5, Recolor).
    - If the scope of a release changed, update its label (section 5, Change or add a row label).
 5. **Recount** from the board with `read_story_map.py` before citing any number (section 4), and tell the person which release is now the current one and how many stories it has.
 

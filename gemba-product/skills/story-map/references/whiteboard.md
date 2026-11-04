@@ -26,10 +26,8 @@ Colors used by `build_story_map.py` (meanings in `SKILL.md`). The sticky palette
 | Activities | `#eed7fc` (purple) |
 | Tasks | `#cfe1fd` (blue) |
 | Current release stories | `#baf3db` (green) |
-| Next release stories | `#fce4a6` (orange) |
-| Later releases (third and after) | `#fff5db` (light orange) |
-| The Later row | `#fff5db` (light orange), always: it is not a release, so it takes no position and is never current or next |
-| Delivered releases | `#f0f1f2` (gray) |
+| Every other release stories: the next ones, the delivered ones | `#f0f1f2` (gray) |
+| The Later row | `#f0f1f2` (gray), always: it is not a release, so it is never current |
 | Open decision | `#ffd5d2` (red) |
 
 The palette, light / medium / strong:
