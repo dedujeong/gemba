@@ -1,13 +1,13 @@
 {
   "product": {
-    "name": "<Product name, as the Product Brief writes it>",
-    "description": "<What it is, in a few words: 'web app for ...'>"
+    "name": "<Product name, as the Product Brief writes it>"
   },
   "context": {
     "description": "<Who uses the product and which systems it talks to>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "actors": ["<Role that uses it>", "<Another role>"],
     "externals": [
-      {"name": "<System somebody else runs>", "description": "<What it gives the product>"}
+      {"name": "<System somebody else runs>"}
     ],
     "relations": [
       {"from": "<Role>", "to": "<Product name>", "label": "<what that role does there>"},
@@ -16,18 +16,19 @@
   },
   "containers": {
     "description": "<What runs where and what each part is in charge of>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "actors": ["<Role that reaches a piece directly>"],
     "boundaries": [
       {
-        "name": "<Where these pieces run, with its plan>",
+        "name": "<Platform where these pieces run>",
         "containers": [
-          {"name": "<Piece>", "description": "<What it is in charge of>"},
-          {"name": "<Store>", "description": "<What it keeps>", "shape": "database"}
+          {"name": "<Piece>"},
+          {"name": "<Store>", "shape": "database"}
         ]
       }
     ],
     "externals": [
-      {"name": "<System somebody else runs>", "description": "<What it gives the product>"}
+      {"name": "<System somebody else runs>"}
     ],
     "relations": [
       {"from": "<Piece>", "to": "<Store>", "label": "<what flows between them>"}
@@ -35,17 +36,19 @@
   },
   "data_model": {
     "description": "<What the product keeps and how it relates>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "entities": [
       {"name": "<Entity named by a story>", "fields": ["<main field>", "<another field>"]}
     ],
     "relations": [
-      {"from": "<Entity>", "to": "<Other entity>", "label": "<how they relate, with its cardinality>"}
+      {"from": "<Entity>", "to": "<Other entity>", "label": "<Verb>", "cardinality": "1:N"}
     ]
   },
   "states": [
     {
       "entity": "<Entity of the data model that changes state>",
       "description": "<How it changes>",
+      "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
       "initial": {"state": "<First state>", "event": "<What creates it>"},
       "states": ["<First state>", "<Another state>"],
       "transitions": [

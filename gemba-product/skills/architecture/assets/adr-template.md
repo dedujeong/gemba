@@ -4,15 +4,15 @@ One live doc per decision, in the `Decisions` folder of the product's space. Hea
 
 ## Title
 
-`ADR-000N <Decision>`: the number is four digits, one more than the highest `ADR-` already in the folder (`ADR-0001` when it is empty), and the decision is a short noun phrase (`ADR-0004 Cloudflare Pages`). The number is never reused or renumbered.
+`ADR-000N <Decision>`: the number is four digits, one more than the highest `ADR-` already in the folder (`ADR-0001` when it is empty), and the decision is a short noun phrase (`ADR-0004 Static hosting`). The number is never reused or renumbered.
 
 ## Writing
 
 The ADR is about the decision, not about who made it. A fact that comes from what a person said names their role (`the owner`, `the operator`, `the team`) and its source label (Interview, Secondhand or Assumption), never the person's name.
 
-Every path, file, folder, column, domain and command the decision names is written as code (`db/migrations`, `starts_at`, `supabase db push`) each time it appears in the body. The title is plain text.
+Every path, file, folder, column, domain and command the decision names is written as code (`db/migrations`, `due_date`, `<tool> migrate`) each time it appears in the body. The title is plain text.
 
-The name of a product, a provider or a tool (Supabase, Cloudflare Pages, Postgres) is plain text, never code: only the command that runs it (`supabase db push`) is.
+The name of a product, a provider or a tool (the hosting provider, the database engine) is plain text, never code: only the command that runs it (`<tool> migrate`) is.
 
 ## Sections
 
