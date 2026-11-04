@@ -198,11 +198,10 @@ class NamesOnly(unittest.TestCase):
         names = {SPEC["product"]["name"]} | {e["name"] for e in SPEC["context"]["externals"]}
         names |= {c["name"] for b in CONTAINERS["boundaries"] for c in b["containers"]}
         names |= {e["name"] for e in CONTAINERS["externals"]}
+        names |= set(SPEC["context"]["actors"]) | set(CONTAINERS.get("actors", []))
         boxes = {r.get("id") for r in shapes(root)}
         said = ["".join(t.itertext()).strip() for t in tags(root, "text") if t.get("belongs-to") in boxes]
-        self.assertEqual(len(said), len(names))
-        for text in said:
-            self.assertIn(text, names)
+        self.assertEqual(set(said), names)
 
 
 class NoLegendOrNotes(unittest.TestCase):
@@ -215,10 +214,9 @@ class NoLegendOrNotes(unittest.TestCase):
         shape_ids = {e.get("id") for e in tags(root, "rect")}
         for text in tags(root, "text"):
             heading = text.get("data-type") == "text" and list(text) and list(text)[0].get("font-weight") == "bold"
-            actor_name = text.get("data-type") == "text" and text.get("id", "").endswith("-name")
             box = text.get("belongs-to") in shape_ids
             arrow = text.get("data-type") == "pathLabel"
-            self.assertTrue(heading or actor_name or box or arrow, "".join(text.itertext()))
+            self.assertTrue(heading or box or arrow, "".join(text.itertext()))
 
 
 class Cardinality(unittest.TestCase):
@@ -340,6 +338,100 @@ class OwnSystemsStayOutOfContext(unittest.TestCase):
         root = build(with_containers())
         gray = [r for r in tags(root, "rect") if r.get("fill") == EXTERNAL and r.get("id", "").startswith("ctx-")]
         self.assertEqual(len(gray), 1)
+
+
+def centre_y(rect):
+    return float(rect.get("y")) + float(rect.get("height")) / 2
+
+
+def crossings(root, prefix):
+    """The connectors of a diagram that pass through a box which is neither their start nor their end."""
+    boxes = [r for r in tags(root, "rect") if r.get("data-type") in ("shape", "rectangle") and r.get("id", "").startswith(prefix)]
+    bad = []
+    for connector in [p for p in tags(root, "polyline") if p.get("id", "").startswith(prefix)]:
+        points = [tuple(float(v) for v in pair.split(",")) for pair in connector.get("points").split()]
+        for box in boxes:
+            if box.get("id") in (connector.get("begins-at"), connector.get("ends-at")):
+                continue
+            x, y, w, h = (float(box.get(k)) for k in ("x", "y", "width", "height"))
+            for (ax, ay), (bx, by) in zip(points, points[1:]):
+                if min(ax, bx) < x + w - 1 and max(ax, bx) > x + 1 and min(ay, by) < y + h - 1 and max(ay, by) > y + 1:
+                    bad.append((connector.get("id"), box.get("id")))
+    return bad
+
+
+class ActorLabels(unittest.TestCase):
+    """The name of a person is written inside its box, so it can never float away from it."""
+
+    def test_the_name_of_an_actor_is_the_text_of_its_box(self):
+        root = build(SPEC)
+        actors = [r for r in tags(root, "rect") if r.get("data-type") == "rectangle"]
+        self.assertTrue(actors)
+        for actor in actors:
+            texts = [t for t in tags(root, "text") if t.get("belongs-to") == actor.get("id")]
+            self.assertEqual(len(texts), 1)
+            self.assertTrue("".join(texts[0].itertext()).strip())
+            self.assertGreater(float(texts[0].get("y")), float(actor.get("y")))
+            self.assertLess(float(texts[0].get("y")), float(actor.get("y")) + float(actor.get("height")))
+
+
+class ExternalsDoNotCrossBoxes(unittest.TestCase):
+    """An external system sits where its arrow reaches it without going through another piece."""
+
+    STACKED = [
+        {"name": "Edge", "containers": [{"name": "Web app"}, {"name": "Files", "shape": "database"}]},
+        {"name": "Backend", "containers": [{"name": "Postgres", "shape": "database"}, {"name": "Auth"}]},
+    ]
+
+    def spec(self, source):
+        spec = with_containers(boundaries=copy.deepcopy(self.STACKED))
+        spec["containers"]["externals"] = [{"name": "Sentry"}]
+        spec["containers"]["relations"] = [
+            {"from": "Web app", "to": "Postgres", "label": "Lee y escribe"},
+            {"from": "Web app", "to": "Files", "label": "Guarda archivos"},
+            {"from": source, "to": "Sentry", "label": "Reporta errores"},
+        ]
+        return spec
+
+    def test_an_external_reached_from_the_first_boundary_does_not_cross_the_piece_below_its_source(self):
+        root = build(self.spec("Web app"))
+        self.assertEqual(crossings(root, "con-"), [])
+
+    def test_an_external_reached_from_the_last_boundary_does_not_cross_anything(self):
+        root = build(self.spec("Auth"))
+        self.assertEqual(crossings(root, "con-"), [])
+
+
+class StraightMainFlow(unittest.TestCase):
+    """The main flow is one straight row, and between two neighbouring sections there is room for the labels that cross."""
+
+    def test_the_context_product_and_its_first_external_share_a_row(self):
+        root = build(SPEC)
+        product = [r for r in shapes(root, shape="process") if r.get("fill") == INTERNAL][0]
+        external = shapes(root, fill=EXTERNAL, shape="process")[0]
+        self.assertEqual(centre_y(product), centre_y(external))
+
+    def test_the_first_actor_and_the_first_piece_of_every_boundary_share_a_row(self):
+        spec = with_containers()
+        spec["containers"]["actors"] = ["Administrador"]
+        root = build(spec)
+        actor = [r for r in of(root, "con-", "rect") if r.get("data-type") == "rectangle"][0]
+        firsts = []
+        for section in [r for r in tags(root, "rect") if r.get("data-type") == "section"]:
+            inside = [r for r in tags(root, "rect") if r.get("belongs-to") == section.get("id")]
+            firsts.append(min(inside, key=lambda r: float(r.get("y"))))
+        self.assertEqual(len(firsts), 2)
+        for first in firsts:
+            self.assertEqual(centre_y(first), centre_y(actor))
+
+    def test_the_gap_between_two_sections_fits_the_longest_label_that_crosses_them(self):
+        label = "Lee y escribe los datos de la agencia"
+        spec = with_containers()
+        spec["containers"]["relations"][0]["label"] = label
+        root = build(spec)
+        first, second = [r for r in tags(root, "rect") if r.get("data-type") == "section"]
+        room = float(second.get("x")) - (float(first.get("x")) + float(first.get("width")))
+        self.assertGreaterEqual(room, 9 * len(label))
 
 
 class CapitalizedLabels(unittest.TestCase):

@@ -52,7 +52,7 @@ INK, ARROW = "#172b4d", "#758195"
 INTERNAL, EXTERNAL = "#cfe1fd", "#f0f1f2"
 STROKE_INTERNAL, STROKE_EXTERNAL = "#1558bc", "#7d818a"
 
-ACTOR_SIDE, ACTOR_LABEL_DY = 124, 168
+ACTOR_SIDE = 124
 BOX_W, BOX_H = 220, 160
 
 X_ACTOR, X_PRODUCT, X_EXTERNAL = -1117.0, -540.0, 97.0
@@ -62,7 +62,7 @@ ACTOR_STEP, BOX_STEP = 242.0, 242.0
 # A boundary is a section around the pieces that run in the same place, stacked inside it.
 PAD_X, PAD_TOP, PAD_BOTTOM, GAP_IN = 28.8, 70.0, 40.0, 90.0
 SECTION_W = BOX_W + 2 * PAD_X
-X_BOUNDARY, BOUNDARY_STEP = -668.8, SECTION_W + 80.0
+X_BOUNDARY, SECTION_GAP, LABEL_CHAR = -668.8, 80.0, 9.0
 BLOCK_GAP, EXTERNAL_GAP, EXTERNAL_STEP = 300.0, 120.0, BOX_W + 80.0
 SECTION_FILL = "#e9f2fe"
 
@@ -106,6 +106,7 @@ class Diagram:
         self.floor = 0.0
         self.obstacles = []
         self.stickies = []
+        self.sideways = set()
 
     def _put(self, name, eid, x, y, w, h):
         self.box_of[name] = (eid, x, y, w, h)
@@ -116,9 +117,10 @@ class Diagram:
             f'<rect width="{ACTOR_SIDE}" height="{ACTOR_SIDE}" fill="{INTERNAL}" x="{x}" y="{y}" '
             f'stroke="{STROKE_EXTERNAL}" stroke-width="0.5" id="{eid}" data-type="rectangle"/>'
         )
+        # The name is the text of the box itself, so it stays inside it wherever the box is moved.
         self.out.append(
-            f'<text x="{round(x + ACTOR_SIDE / 2, 2)}" y="{round(y + ACTOR_LABEL_DY, 2)}" text-anchor="middle" '
-            f'font-size="{FS}" fill="{INK}" id="{eid}-name" data-type="text">'
+            f'<text x="{round(x + ACTOR_SIDE / 2, 2)}" y="{round(y + ACTOR_SIDE / 2, 2)}" width="99.2" text-anchor="middle" '
+            f'font-size="{FS}" font-scale="1" fill="{INK}" id="{eid}-text" belongs-to="{eid}">'
             f'<tspan font-size="{FS}">{escape(name)}</tspan></text>'
         )
         self._put(name, eid, x, y, ACTOR_SIDE, ACTOR_SIDE)
@@ -163,7 +165,8 @@ class Diagram:
 
     def arrow(self, source, target, label, cardinality=None):
         (sid, sx, sy, sw, sh), (tid, tx, ty, tw, th) = self.box_of[source], self.box_of[target]
-        horizontal = abs((tx + tw / 2) - (sx + sw / 2)) >= abs((ty + th / 2) - (sy + sh / 2))
+        horizontal = abs((tx + tw / 2) - (sx + sw / 2)) >= abs((ty + th / 2) - (sy + sh / 2)) \
+            or source in self.sideways or target in self.sideways
         if horizontal:
             start, end = ("right", "left") if tx >= sx else ("left", "right")
         else:
@@ -300,11 +303,12 @@ def context_diagram(spec, top):
         d.actor(actor, X_ACTOR, round(top + i * ACTOR_STEP, 2))
 
     column_height = max(len(actors) - 1, 0) * ACTOR_STEP + ACTOR_SIDE
-    d.box(product["name"], "", X_PRODUCT,
-          round(top + (column_height - BOX_H) / 2, 2))
+    product_y = round(top + (column_height - BOX_H) / 2, 2)
+    d.box(product["name"], "", X_PRODUCT, product_y)
+    # The main flow is one straight row: the first external sits on the row of the product.
     for i, external in enumerate(externals):
         d.box(external["name"], "", X_EXTERNAL,
-              round(top + i * BOX_STEP, 2), external=True)
+              round(product_y + i * BOX_STEP, 2), external=True)
 
     draw_relations(d, context.get("relations", []), "context")
     draw_questions(d, context.get("questions", []), "context")
@@ -317,31 +321,61 @@ def deployable_pieces(spec):
     return [piece for boundary in boundaries for piece in boundary.get("containers", [])]
 
 
+def boundary_starts(containers):
+    """The x of each boundary: between two neighbours there is room for the longest label that crosses them."""
+    side = {}
+    for i, boundary in enumerate(containers["boundaries"]):
+        for piece in boundary.get("containers", []):
+            side[piece["name"]] = i
+    xs = [X_BOUNDARY]
+    for i in range(1, len(containers["boundaries"])):
+        longest = max([len((r.get("label") or "").strip()) for r in containers.get("relations", [])
+                       if r.get("from") in side and r.get("to") in side
+                       and min(side[r["from"]], side[r["to"]]) < i <= max(side[r["from"]], side[r["to"]])], default=0)
+        xs.append(xs[-1] + SECTION_W + max(SECTION_GAP, LABEL_CHAR * longest + SECTION_GAP))
+    return xs
+
+
 def containers_diagram(spec, top):
     """What runs where and what each part is in charge of. Only for a product with more than one piece."""
     containers = spec["containers"]
     d = Diagram("con")
     out = [heading("heading-containers", "Containers", containers.get("description", ""), top + HEADING_DY)]
 
+    # The main flow is one straight row: the first actor and the first piece of every boundary share it.
+    row_centre = top + PAD_TOP + BOX_H / 2
     for i, actor in enumerate(containers.get("actors", [])):
-        d.actor(actor, X_ACTOR, round(top + PAD_TOP + i * ACTOR_STEP, 2))
+        d.actor(actor, X_ACTOR, round(row_centre - ACTOR_SIDE / 2 + i * ACTOR_STEP, 2))
 
+    starts = boundary_starts(containers)
     tallest = 0.0
     for i, boundary in enumerate(containers["boundaries"]):
         pieces = boundary.get("containers", [])
         height = PAD_TOP + len(pieces) * BOX_H + max(len(pieces) - 1, 0) * GAP_IN + PAD_BOTTOM
         tallest = max(tallest, height)
-        x = round(X_BOUNDARY + i * BOUNDARY_STEP, 2)
+        x = round(starts[i], 2)
         sid = d.section(boundary["name"], x, top, height)
         for j, piece in enumerate(pieces):
             d.box(piece["name"], "", round(x + PAD_X, 2),
                   round(top + PAD_TOP + j * (BOX_H + GAP_IN), 2),
                   shape=piece.get("shape", "process"), parent=sid)
 
+    # An external sits below the boundaries, one lane to the right of the boundary of the piece it talks to,
+    # so its arrow leaves sideways into the gap and comes down without going through another piece.
     y_external = round(top + tallest + EXTERNAL_GAP, 2)
-    for i, external in enumerate(containers.get("externals", [])):
-        d.box(external["name"], "",
-              round(X_BOUNDARY + i * EXTERNAL_STEP, 2), y_external, external=True)
+    side = {piece["name"]: i for i, b in enumerate(containers["boundaries"]) for piece in b.get("containers", [])}
+    stacked = {}
+    for external in containers.get("externals", []):
+        peers = [r["to"] if r.get("from") == external["name"] else r["from"] for r in containers.get("relations", [])
+                 if external["name"] in (r.get("from"), r.get("to"))]
+        column = next((side[p] for p in peers if p in side), len(containers["boundaries"]) - 1)
+        row = stacked.get(column, 0)
+        stacked[column] = row + 1
+        piece_right = starts[column] + PAD_X + BOX_W
+        lane = starts[column] + SECTION_W + SECTION_GAP / 2
+        d.box(external["name"], "", round(2 * lane - piece_right, 2),
+              round(y_external + row * (BOX_H + GAP_IN / 2), 2), external=True)
+        d.sideways.add(external["name"])
 
     d.floor = top + tallest
     draw_relations(d, containers.get("relations", []), "containers")
