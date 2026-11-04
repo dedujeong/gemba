@@ -23,6 +23,18 @@ class VersionStartIsInTheProductPlugin(unittest.TestCase):
                 self.assertTrue(os.path.isfile(os.path.join(SKILL_DIR, "scripts", script)))
 
 
+class VersionStartDeclaresThroughGembaCode(unittest.TestCase):
+    def test_every_mention_of_start_names_the_gemba_code_skill(self):
+        self.assertEqual(re.findall(r"(?<!gemba-code:)`start`", skill()), [])
+
+    def test_the_cards_and_the_release_task_are_declared_with_it(self):
+        text = skill()
+        cards = text.split("## 7. Declare the cards")[1].split("## 8.")[0]
+        release = text.split("## 8. Declare the release Task")[1].split("## 9.")[0]
+        self.assertIn("`gemba-code:start`", cards)
+        self.assertIn("`gemba-code:start`", release)
+
+
 class VersionStartProposesTheNumber(unittest.TestCase):
     def test_the_skill_runs_the_script_to_propose_the_number(self):
         text = skill()
