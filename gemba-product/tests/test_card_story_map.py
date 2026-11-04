@@ -11,6 +11,7 @@ SCRIPTS = os.path.join(ROOT, "skills", "story-map", "scripts")
 sys.path.insert(0, SCRIPTS)
 
 import card_story_map  # noqa: E402
+import move_story_map  # noqa: E402
 import read_story_map  # noqa: E402
 from test_build_story_map import GRAY, OPEN  # noqa: E402
 from test_move_story_map import SPEC_3, board, sticky  # noqa: E402
@@ -214,6 +215,59 @@ class MissingCards(unittest.TestCase):
         after = apply(self.svg, card_story_map.card_patch(self.svg, KEYS, SITE))
         self.assertEqual([d["key"] for d in card_story_map.check(after, KEYS)["declared"]], ["GEMBA-1", "GEMBA-2"])
         self.assertEqual(card_story_map.check(after, KEYS)["pending"], [])
+
+
+class MovingCards(unittest.TestCase):
+    """A card moves to another column (another task) of its release and keeps its issue."""
+    def setUp(self):
+        svg = board(SPEC_3)
+        self.svg = apply(svg, card_story_map.card_patch(svg, KEYS, SITE))
+        _, bands = read_story_map.read_bands(self.svg)
+        self.mvp = {s["key"]: s for s in bands["MVP"]}
+        self.tasks = {s["text"]: s for s in bands["Tasks"]}
+
+    def test_a_card_moves_to_the_column_of_another_task_in_its_release_below_what_is_there(self):
+        first, second = self.mvp["GEMBA-1"], self.mvp["GEMBA-2"]
+        patch = move_story_map.move_patch(self.svg, [first["id"]], "MVP", task="Send the reminder")
+        self.assertEqual(moves(patch),
+                         {first["id"]: (self.tasks["Send the reminder"]["x"], round(second["y"] + move_story_map.ROW_STEP, 2))})
+
+    def test_the_card_keeps_its_issue_because_the_patch_only_changes_its_place(self):
+        first = self.mvp["GEMBA-1"]
+        patch = move_story_map.move_patch(self.svg, [first["id"]], "MVP", task="Send the reminder")
+        self.assertNotIn("replace_svg", patch)
+        self.assertNotIn("delete_svg", patch)
+        self.assertNotIn("insert_svg", patch)
+        after = apply(self.svg, patch)
+        self.assertEqual(cards(after)["GEMBA-1"][2:4], ("345", "136.91"))
+        self.assertIn(f'data-smartlink-url="{SITE}/browse/GEMBA-1"', after)
+
+    def test_the_board_reads_the_moved_card_in_the_column_of_the_task(self):
+        first = self.mvp["GEMBA-1"]
+        after = apply(self.svg, move_story_map.move_patch(self.svg, [first["id"]], "MVP", task="Send the reminder"))
+        mvp = read_story_map.parse(after)["releases"][0]
+        column = next(t for t in mvp["tasks"] if t["task"] == "Send the reminder")
+        self.assertEqual([s["key"] for s in column["stories"]], ["GEMBA-2", "GEMBA-1"])
+
+    def test_without_a_task_a_story_still_cannot_move_to_the_release_it_is_in(self):
+        with self.assertRaises(ValueError):
+            move_story_map.move_patch(self.svg, [self.mvp["GEMBA-1"]["id"]], "MVP")
+
+    def test_an_unknown_task_is_an_error_naming_the_real_ones(self):
+        with self.assertRaises(ValueError) as ctx:
+            move_story_map.move_patch(self.svg, [self.mvp["GEMBA-1"]["id"]], "MVP", task="Nope")
+        self.assertIn("Send the reminder", str(ctx.exception))
+
+    def test_a_card_moves_to_a_task_of_another_release_too(self):
+        first = self.mvp["GEMBA-1"]
+        patch = move_story_map.move_patch(self.svg, [first["id"]], "Release 2", task="Send the reminder")
+        x, _ = moves(patch)[first["id"]]
+        self.assertEqual(x, self.tasks["Send the reminder"]["x"])
+
+
+def moves(patch):
+    return {m.group(1): (float(m.group(2)), float(m.group(3)))
+            for m in re.finditer(r'<update_elements_svg ids="([^"]+)">\s*<attr x="([-\d.]+)" y="([-\d.]+)"\s*/>', patch)}
 
 
 class CommandLine(unittest.TestCase):
