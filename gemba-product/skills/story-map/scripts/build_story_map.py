@@ -18,10 +18,10 @@ Spec (see ../assets/story-map-template.json):
 }
 "releases[i].stories" has one list per task column, top to bottom.
 Colors follow the Jira work items and always mean the same thing: persona yellow,
-activities purple, tasks blue. Releases are colored by position among the ones not
-delivered: the first (usually the MVP) is the current release, green; the second is
-the next one, orange; the rest are later, light orange. "released": true marks a
-delivered release and turns its row gray. "open": true makes a red rectangle for an
+activities purple, tasks blue. Releases have two colors: the first one not delivered
+(usually the MVP) is the current release, green, and every other release is gray, the
+next ones, the Later row and the delivered ones. "released": true marks a delivered
+release, so the one after it is the current one. "open": true makes a red rectangle for an
 unresolved question. A story is a rectangle of 345 x 136.91, the size of its Jira card;
 persona, activities and tasks are stickies.
 
@@ -56,7 +56,7 @@ ROW_STEP, RELEASE_GAP = round(STORY_H + 40, 2), 245.6  # a story card and the ga
 # Fills are values of the closed sticky palette of Confluence: any other hex is
 # snapped to the nearest one and the stored color differs from the requested one.
 PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
-CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
+CURRENT, GRAY, OPEN = "#baf3db", "#f0f1f2", "#ffd5d2"
 FS = "15.47px"
 
 # Desired tops relative to the persona row, measured on a reference board. A release label is level with the first row of its stickies.
@@ -71,17 +71,13 @@ def label_height(description, chars=LABEL_CHARS):
 
 
 def release_fills(releases):
-    """The story fill of each release: gray if delivered, else current, next and later by position.
-    The row named Later is not a release: it is always later, and it does not take a position."""
-    fills, position = [], 0
+    """The story fill of each release: green for the first one not delivered, gray for all the others.
+    The row named Later is not a release: it is always gray and is never the current one."""
+    fills, chosen = [], False
     for release in releases:
-        if release.get("name") == "Later":
-            fills.append(LATER)
-        elif release.get("released"):
-            fills.append(RELEASED)
-        else:
-            fills.append((CURRENT, NEXT)[position] if position < 2 else LATER)
-            position += 1
+        current = not chosen and not release.get("released") and release.get("name") != "Later"
+        fills.append(CURRENT if current else GRAY)
+        chosen = chosen or current
     return fills
 
 

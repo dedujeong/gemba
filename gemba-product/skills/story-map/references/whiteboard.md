@@ -9,6 +9,7 @@ What the Atlassian connector accepts and returns for whiteboards, learned by pro
 ## Elements
 
 - **Story rectangle:** `<rect data-type="rectangle" id width="345" height="136.91" x y fill>` plus a `<text belongs-to="ID">` centered on it (text at `x + 172.5`, `y + 68.45`, `width="276"`). It is the size of the Jira card, so declaring a story puts its card where the rectangle was. Stories are drawn this way; the columns are 408.28 apart and the rows of a cell 176.91. The readers, move, add, label and recolor treat it as a story, exactly like a sticky; boards drawn with story stickies still read the same.
+- **Issue card:** the Jira card of a story, as Confluence returns it when the issue is dropped on the board: `<rect data-type="issue" id width="345" height="136.91" x y fill data-smartlink-kind="block" data-smartlink-url="https://<site>/browse/KEY" data-smartlink-supported-views data-smartlink-supports-preview="false">`, with no `<text>`. The key lives only in the link; the status the card shows is drawn by Jira and is not in the SVG, so the readers take it from Jira. A card is always gray (`#f0f1f2`): see Writing a card.
 - **Sticky (persona, activities, tasks, and the stories of older boards):** `<rect data-type="sticky" id width="240.05" height="144.03" x y fill>` plus a `<text belongs-to="ID">` with one `<tspan>` holding the text. Confluence normalizes fills to its palette (for example `#ffefae` becomes `#fce4a6`; see Colors).
 - **Free text:** `<text data-type="text" x y width font-scale>` with tspans. Row labels use a blank tspan, a bold 27px title tspan, and a 15.47px description tspan; a reader finds the rows by that bold 27px title.
 - **Mentions:** a `<tspan data-mention-id>` sent through the API is stored as plain text, with or without `data-access-level`. Only mentions made in the UI work, so the generated board names no people.
@@ -25,10 +26,8 @@ Colors used by `build_story_map.py` (meanings in `SKILL.md`). The sticky palette
 | Activities | `#eed7fc` (purple) |
 | Tasks | `#cfe1fd` (blue) |
 | Current release stories | `#baf3db` (green) |
-| Next release stories | `#fce4a6` (orange) |
-| Later releases (third and after) | `#fff5db` (light orange) |
-| The Later row | `#fff5db` (light orange), always: it is not a release, so it takes no position and is never current or next |
-| Delivered releases | `#f0f1f2` (gray) |
+| Every other release stories: the next ones, the delivered ones | `#f0f1f2` (gray) |
+| The Later row | `#f0f1f2` (gray), always: it is not a release, so it is never current |
 | Open decision | `#ffd5d2` (red) |
 
 The palette, light / medium / strong:
@@ -101,5 +100,13 @@ The answer to a patch cannot be trusted to say what happened:
 - Report the result by reading the board again after the patch: the fills and positions come from that read, never from the answer.
 
 Story rectangles, tested on `14680139` (a private board in a personal space): creating the board keeps each `data-type="rectangle"` with its 345 x 136.91 size and fill, and rewrites the `belongs-to` of its text to the new id; `update_elements_svg` with `x` and `y` moves the rectangle and its text follows (the text keeps its offset, `y + 68.45`); `insert_svg` with a `rect` and its `<text belongs-to>` keeps the link, the fill and the position, and gives the rect a new id. An `insert_svg` needs the whole numbered board as `context.content`: with only the last lines Confluence rejects it as "outside body.context.content". `read_story_map.py`, `move_story_map.py` and `add_story_map.py` read the stored board without changes.
+
+Writing a card, tested on `14680139`:
+
+- `replace_svg` of a story rectangle by `<rect data-type="issue" ... data-smartlink-url="https://<site>/browse/KEY" data-smartlink-kind="block" data-smartlink-supported-views="block" data-smartlink-supports-preview="false">` is accepted, together with a `delete_svg` of the `<text belongs-to>` of the rectangle: the card keeps the `x`, `y`, 345 x 136.91 and the link, takes a new id and goes to the end of the z order. An `insert_svg` of a card works the same way. A card needs no `<text>`.
+- The fill is ignored: a card sent green (`#baf3db`) came back gray (`#f0f1f2`), and so did one inserted gray. An `update_elements_svg` with `fill` on a card returns `ok: true` and changes nothing. A declared release therefore has no green story: the green is for the release about to be declared.
+- Restoring the rectangle took a `delete_svg` of the card and an `insert_svg` of the rectangle with its text; the rectangle came back with a new id.
+- Not tested: replacing a story sticky (240 x 144) by a card, which is the same `replace_svg` and `delete_svg` pair.
+- Moving a card, tested on `14680139`: an `update_elements_svg` with `x` and `y` on the card (a partial context with its numbered line is enough) moves it and keeps its id, its link and its gray. The card has no text to follow.
 
 Not tested: a patch with a stale read, and deleting stickies.

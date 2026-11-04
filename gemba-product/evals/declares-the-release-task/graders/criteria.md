@@ -1,0 +1,7 @@
+---
+type: llm
+---
+The maintainer confirmed the whole release and asked to create the fix version `Taller v0.2.0` and declare the cards. The release has an Epic "Record a service" with two Stories and a Story "Remind the day before". The release goes in the component `platform`.
+
+PASS if, after the cards, the response drafts a Task named `Release Taller v0.2.0` in the fix version `Taller v0.2.0`, with the component `platform`, with no blocking links at all (it waits for the other issues to be Done or Cancelled instead of being linked to them), and a "Done when" that lists the version bump, the merge to main, the tag, the GitHub release and the fix version released in Jira.
+FAIL if there is no release Task, if it is in another fix version, if it is declared with blocking links to other issues of the version, or if its Done when lacks any of the five steps.

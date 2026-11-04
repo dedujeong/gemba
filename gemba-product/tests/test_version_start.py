@@ -1,0 +1,190 @@
+import os
+import re
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SKILL_DIR = os.path.join(ROOT, "skills", "version-start")
+
+
+def skill():
+    with open(os.path.join(SKILL_DIR, "SKILL.md"), encoding="utf-8") as f:
+        return f.read()
+
+
+class VersionStartIsInTheProductPlugin(unittest.TestCase):
+    def test_the_skill_is_named_version_start(self):
+        self.assertRegex(skill(), r"(?m)^name: version-start$")
+
+    def test_every_script_the_skill_runs_exists_where_it_says(self):
+        scripts = set(re.findall(r"((?:\.\./[\w-]+/)?scripts/\w+\.py)", skill()))
+        self.assertTrue(scripts, "the skill runs no script")
+        for script in scripts:
+            with self.subTest(script=script):
+                self.assertTrue(os.path.isfile(os.path.join(SKILL_DIR, script)))
+
+
+class VersionStartDeclaresThroughGembaCode(unittest.TestCase):
+    def test_every_mention_of_start_names_the_gemba_code_skill(self):
+        self.assertEqual(re.findall(r"(?<!gemba-code:)`start`", skill()), [])
+
+    def test_the_cards_and_the_release_task_are_declared_with_it(self):
+        text = skill()
+        cards = text.split("## 7. Declare the cards")[1].split("## 8.")[0]
+        release = text.split("## 8. Declare the release Task")[1].split("## 9.")[0]
+        self.assertIn("`gemba-code:start`", cards)
+        self.assertIn("`gemba-code:start`", release)
+
+
+class VersionStartNeedsGembaCode(unittest.TestCase):
+    def first_step(self):
+        return skill().split("## 1.")[1].split("## 2.")[0]
+
+    def test_it_checks_for_the_gemba_code_skill_before_anything_else(self):
+        self.assertIn("`gemba-code:start`", self.first_step())
+        self.assertIn("available skills", self.first_step())
+
+    def test_it_says_gemba_code_is_required_when_the_skill_is_missing(self):
+        self.assertIn("Gemba Code is required", self.first_step())
+
+    def test_it_creates_nothing_when_the_skill_is_missing(self):
+        self.assertIn("create no fix version", self.first_step())
+        self.assertIn("declare nothing", self.first_step())
+
+
+class VersionStartProposesTheNumber(unittest.TestCase):
+    def test_the_skill_runs_the_script_to_propose_the_number(self):
+        text = skill()
+        self.assertIn("scripts/next_version.py", text)
+        self.assertIn("--fix", text)
+
+    def test_the_skill_no_longer_forbids_computing_the_number(self):
+        text = skill()
+        self.assertNotIn("never compute it yourself", text)
+        self.assertNotIn("Ask for the number", text)
+
+
+class VersionStartUnifiesTheComponents(unittest.TestCase):
+    def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
+        text = skill()
+        self.assertIn("same part of the product", text)
+        self.assertIn("same component", text)
+
+    def test_the_release_task_has_a_component_in_a_project_without_components(self):
+        text = skill()
+        self.assertIn("no components yet", text)
+        self.assertNotIn("never name a new one", text)
+
+    def test_the_component_the_maintainer_names_for_the_release_task_wins(self):
+        self.assertIn("A component the maintainer names for the Task is the one used", skill())
+
+
+class VersionStartReadsTheMapWithTheSingleReader(unittest.TestCase):
+    def step(self, number):
+        return skill().split(f"## {number}.")[1].split("\n## ")[0]
+
+    def test_it_reads_the_current_release_with_the_reader_of_story_map(self):
+        text = self.step(3)
+        self.assertIn("python3 ../story-map/scripts/read_story_map.py", text)
+        self.assertIn("--mvp --json", text)
+
+    def test_it_keeps_no_reader_of_its_own(self):
+        self.assertNotIn("read_release", skill())
+
+    def test_it_sets_the_open_questions_aside_and_goes_on_without_them(self):
+        text = self.step(4)
+        self.assertIn("`open_questions`", text)
+        self.assertIn("does not enter this version", text)
+        self.assertIn("still red", text)
+        self.assertIn("release after the current one", text)
+        self.assertNotIn("nothing of the version is declared", text)
+
+
+class VersionStartPutsTheCardsOnTheMap(unittest.TestCase):
+    def step9(self):
+        return skill().split("## 9.")[1].split("\n## ")[0]
+
+    def test_it_replaces_the_stories_with_the_cards_through_the_card_script(self):
+        text = self.step9()
+        self.assertIn("python3 ../story-map/scripts/card_story_map.py", text)
+        self.assertIn("--site", text)
+        self.assertIn("--check", text)
+
+    def test_it_reports_from_a_new_reading_and_names_the_story_whose_card_could_not_be_put(self):
+        text = self.step9()
+        self.assertIn("Read the board again", text)
+        self.assertIn("stays on the board as it was", text)
+        self.assertIn("name it in the result", text)
+
+    def test_it_runs_after_the_issues_and_the_release_task_are_declared(self):
+        self.assertLess(skill().index("## 8."), skill().index("## 9."))
+
+
+class VersionStartPostpones(unittest.TestCase):
+    def section(self):
+        return skill().split("## 10.")[1].split("\n## ")[0]
+
+    def test_it_has_a_section_after_the_cards_for_postponing_a_declared_issue(self):
+        self.assertLess(skill().index("## 9."), skill().index("## 10. Postpone"))
+
+    def test_it_moves_the_card_to_the_release_after_the_current_one_with_the_move_script(self):
+        text = self.section()
+        self.assertIn("python3 ../story-map/scripts/move_story_map.py", text)
+        self.assertIn("release after the current one", text)
+
+    def test_it_empties_the_fix_version_through_gemba_code_start_and_only_in_backlog(self):
+        text = self.section()
+        self.assertIn("Backlog", text)
+        self.assertIn("gemba-code:start", text)
+        self.assertIn("fix version", text)
+        self.assertIn("empty", text)
+
+    def test_an_issue_that_left_backlog_is_not_postponed(self):
+        self.assertRegex(self.section(), r"(?i)outside Backlog.*(not postponed|does not move|stays)")
+
+    def test_it_leaves_the_card_as_it_is_and_reads_the_board_again(self):
+        text = self.section()
+        self.assertIn("Read the board again", text)
+        self.assertRegex(text, r"(?i)never recolor")
+
+
+class VersionStartTakesBackThePostponedIssues(unittest.TestCase):
+    def step(self, number):
+        return skill().split(f"## {number}.")[1].split("\n## ")[0]
+
+    def test_the_reading_tells_a_card_that_is_already_an_issue_from_a_story_to_declare(self):
+        text = self.step(3)
+        self.assertIn("key", text)
+        self.assertIn("already the card of an issue", text)
+
+    def test_the_release_shows_the_declared_cards_apart_and_declares_only_the_rest(self):
+        text = self.step(5)
+        self.assertIn("already declared", text)
+        self.assertIn("never declare it again", text)
+
+    def test_a_declared_card_without_a_fix_version_takes_the_one_of_the_version_through_start(self):
+        text = self.step(7)
+        self.assertIn("already declared", text)
+        self.assertIn("gemba-code:start", text)
+        self.assertIn("fix version is empty", text)
+        self.assertIn("never creates another issue", text)
+
+    def test_a_declared_card_with_another_fix_version_is_left_and_named_in_the_result(self):
+        text = self.step(7)
+        self.assertIn("another fix version", text)
+        self.assertIn("name it", text)
+
+
+class VersionStartLeavesTheKeysToTheCards(unittest.TestCase):
+    def test_the_product_plugin_keeps_no_copy_of_the_old_readers(self):
+        for script in ("read_release.py", "write_keys.py"):
+            with self.subTest(script=script):
+                self.assertFalse(os.path.exists(os.path.join(SKILL_DIR, "scripts", script)))
+
+    def test_the_skill_no_longer_writes_keys_on_the_stickies(self):
+        text = skill()
+        self.assertNotIn("write_keys", text)
+        self.assertNotIn("Put the keys on the Story Map", text)
+
+
+if __name__ == "__main__":
+    unittest.main()

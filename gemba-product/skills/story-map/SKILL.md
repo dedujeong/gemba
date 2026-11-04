@@ -39,12 +39,10 @@ Colors follow the Jira work items and always carry the same meaning, on every bo
 | Purple | Activities |
 | Blue | Tasks |
 | Green | Stories in the current release (the MVP until it ships) |
-| Orange | Stories in the next release |
-| Light orange | Stories in later releases, and always the Later row |
-| Gray | Stories in releases already delivered |
+| Gray | Stories in every other release: the next ones, the delivered ones and the Later row |
 | Red | Unresolved question that blocks a story |
 
-When the MVP ships, mark it `"released": true` in the spec: it turns gray, the next release becomes the current one and turns green, and the rest move up one place.
+When the MVP ships, mark it `"released": true` in the spec: the next release becomes the current one and turns green, and the delivered one stays gray.
 
 ## 3. Build the whiteboard
 
@@ -74,7 +72,7 @@ Before citing any number, recount from the board at that moment, never from memo
 python3 scripts/read_story_map.py board.svg --previous <stories the current release had when last reported>
 ```
 
-It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. A gray release is read as delivered and is not part of the current release's scope; the current release is the first one that is not delivered (the MVP until it ships). An open question (red rectangle) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
+It prints the stories and open questions per release, the stories of each task, and whether the current release grew, shrank or stayed the same. Green is the release about to be declared and gray the ones after it; the current release is the first green one that is not delivered (the MVP until it ships), and Later is never the current release. A release is delivered only when its issue cards are all Done or Cancelled, which the board does not say: pass the statuses with `--statuses statuses.json`, a file `{"KEY": "Status"}` that you fill with `searchJiraIssuesUsingJql` from the keys `--json` lists (`key` on each card). An open question (red rectangle) is not a story. `--json` gives the personas and, per release, each task with its activity and stories.
 
 When the MVP grew, say by how much and recommend which stories move to the next release, naming them. Start with the ones that trace to no Quality bar condition and that a manual step covers. The person decides.
 
@@ -102,11 +100,21 @@ When the scope of a release changes, its label changes with it. The script chang
 
 When the person asks to update a board to the current colors, change only the fill of each sticky, so no text or position moves:
 
-1. Ask which releases are already delivered. The old gray cannot tell them from later releases, so never guess.
+1. Ask which releases are already delivered. Gray cannot tell a delivered release from a next one, so never guess.
 2. Read the board with `getConfluenceContent` (`content_format: svg`), save the SVG and run `python3 scripts/read_story_map.py board.svg` to note the count per release.
 3. Run `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"` (repeat the option for each one). It prints, per color, the ids of the stickies that change.
 4. Apply one `update_elements_svg` per color with `updateConfluenceContent`: `ids="<ids>"` and `<attr fill="<color>"/>`.
 5. Read the board again and run `read_story_map.py` once more: the count per release must be the same as in step 2.
+
+### Replace the stories with the cards of their issues
+
+`version-start` does this once it has declared the issues of a release: each story of the current release stops being a rectangle or a sticky and becomes the card of its issue, in the same place.
+
+1. Read the board with `getConfluenceContent` (`content_format: svg`) and save the SVG.
+2. Write a `keys.json` with the key of each story, by its text: `{"Save a date per customer": "GEMBA-1"}`.
+3. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site>`. It prints one `delete_svg` for the text of each story and one `replace_svg` for its rectangle, which becomes an issue card. A red rectangle (an open question) gets no issue and no card: the patch moves it, still red, to the release after the current one (Later when that is the row that follows), and leaves it where it is when no row follows. On a board in the old colors it also turns the stories of the next releases gray (cards are always gray).
+4. Apply it with `updateConfluenceContent`, with the SVG you read as `context.content`, then read the board again: the response of the patch says nothing about what happened. `read_story_map.py` counts each card as a declared story and each rectangle or sticky left as a pending one.
+5. Run `python3 scripts/card_story_map.py board.svg keys.json --site https://<site> --check` on that second reading: it lists each story as `declared` (its card is on the board) or `pending` (it stayed as it was). Name every pending story in the result. A story with no key in `keys.json` is named on stderr when the patch is written and is left as it is.
 
 ## 6. Check the release before closing it
 
@@ -187,11 +195,11 @@ If there is no Confluence connection, write the item and the status in the reply
 When a release has shipped and the person asks to review it, the facts of what was delivered come from Jira, not from the board; the board is only touched for what was not delivered. The stories of the map are 1:1 with the Stories of Jira.
 
 1. **What was delivered.** Search the Stories of the release's fix version with `searchJiraIssuesUsingJql` and ask for status, original estimate and time spent. Show which Stories are Done and which are not, and the time spent against the original estimate, per Story and in total. Add the times with a tool (Bash), never from memory, and say when a Story has no estimate.
-2. **What the board says.** Read the board (section 4). A gray release is delivered: it is read as delivered and does not count in the scope of the next one. The current release is the first one that is not delivered; Later is never the current release.
+2. **What the board says.** Read the board (section 4). A release is delivered when its issues are Done or Cancelled, never because of its color (read with `--statuses`, as in section 4); a delivered release does not count in the scope of the next one. The current release is the first green one that is not delivered; Later is never the current release.
 3. **What was not delivered.** For each such Story, read its description and propose the sticky it matches (same task, same release). If no sticky is clear, say so; never guess. Ask the person where each one goes: the next release or Later. Nothing moves before they answer.
 4. **Apply what the person decides,** reading the board again before each patch and sending each patch with `updateConfluenceContent` and that read as `context.content`, whole:
-   - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it.
-   - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest move up (section 5, Recolor).
+   - Move the stories: `python3 scripts/move_story_map.py board.svg --story <sticky id> --to "<release or Later>"` (each story carries its `id` in `read_story_map.py --json`; one run per destination; only stories move, not personas, activities or tasks). If a row gets deeper, the rows below move down with it. To move a story to another column, add `--task "<task>"`: it takes the column of that task and `--to` can be its own release. A story that is already the card of its issue moves the same way and keeps its issue.
+   - Read the board again and recolor it: `python3 scripts/recolor_story_map.py board.svg --released "<delivered release>"`, naming every delivered release, the ones already gray included, and the one just reviewed once the person confirms it as delivered. Then the next release is green and the rest stay gray (section 5, Recolor).
    - If the scope of a release changed, update its label (section 5, Change or add a row label).
 5. **Recount** from the board with `read_story_map.py` before citing any number (section 4), and tell the person which release is now the current one and how many stories it has.
 

@@ -1,6 +1,6 @@
 """Write the patch that adds a story to a story map board.
 
-Usage: python3 add_story_map.py board.svg --to NAME --task TASK --text TEXT [--traces WHERE] [--open]
+Usage: python3 add_story_map.py board.svg --to NAME --task TASK --text TEXT [--traces WHERE] [--open] [--statuses FILE]
 
 Accepts the SVG exactly as getConfluenceContent returns it, like read_story_map.py, and
 finds the rows and the columns the same way. NAME is the label of the row the story goes
@@ -12,8 +12,9 @@ board as it is now, so a board arranged by hand is respected, and if the row get
 the rows below move down with their labels, as move_story_map.py does.
 
 Its color is the one of the row it lands in, read from the board: green in the current
-release, orange in the next one, light orange later and in the Later row. A delivered
-release takes no story. A story of the current release needs --traces, the part of the
+release and gray in any other, the Later row included. A delivered
+release takes no story: one whose issue cards are all Done or Cancelled, known from --statuses,
+a JSON {"KEY": "Status"} the skill fills from Jira. A story of the current release needs --traces, the part of the
 brief it serves, the same cut build_story_map.py makes.
 
 --open adds an open question instead of a story: a red rectangle in the column of its task,
@@ -26,6 +27,7 @@ its text, and an update_elements_svg per sticky that moves. Confluence gives the
 sticky a new id: read the board again afterwards to report what it says.
 """
 import argparse
+import json
 import os
 import re
 import sys
@@ -57,7 +59,7 @@ def free_id(svg):
     return sid
 
 
-def add_patch(svg, target, task, text, traces="", is_open=False):
+def add_patch(svg, target, task, text, traces="", is_open=False, statuses=None):
     labels, bands = read_bands(svg)
     names = [l["name"] for l in labels if l["name"] not in BACKBONE]
     if target not in names:
@@ -67,7 +69,7 @@ def add_patch(svg, target, task, text, traces="", is_open=False):
     if column is None:
         raise ValueError(f'No task "{task}" on the board; the tasks are: {", ".join(s["text"] for s in tasks)}')
 
-    board = parse(svg)
+    board = parse(svg, statuses)
     index = next(i for i, r in enumerate(board["releases"]) if r["name"] == target)
     if board["releases"][index]["delivered"]:
         raise ValueError(f'"{target}" is delivered: a release that shipped takes no story')
@@ -96,8 +98,10 @@ if __name__ == "__main__":
     parser.add_argument("--text", required=True, metavar="TEXT", help="the story, in one short sentence")
     parser.add_argument("--traces", default="", metavar="WHERE", help="the part of the brief it serves; required in the current release")
     parser.add_argument("--open", action="store_true", help="add an open question, a red rectangle, instead of a story")
+    parser.add_argument("--statuses", metavar="FILE", help='JSON {"KEY": "Status"} from Jira; a release whose issue cards are all Done or Cancelled is delivered')
     args = parser.parse_args()
     try:
-        print(add_patch(open(args.board, encoding="utf-8").read(), args.to, args.task, args.text, args.traces, args.open))
+        statuses = json.load(open(args.statuses, encoding="utf-8")) if args.statuses else None
+        print(add_patch(open(args.board, encoding="utf-8").read(), args.to, args.task, args.text, args.traces, args.open, statuses))
     except ValueError as error:
         parser.error(str(error))

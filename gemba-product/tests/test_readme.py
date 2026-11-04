@@ -11,6 +11,8 @@ METHODS = {
     "interview-kit": ["past facts"],
     "story-map": ["User Story Mapping", "Patton"],
     "architecture": ["ADR", "C4"],
+    "version-start": ["fix version"],
+    "version-close": ["fix version"],
 }
 
 
@@ -39,6 +41,20 @@ class Skills(unittest.TestCase):
         installed = {name for name in os.listdir(SKILLS)
                      if os.path.isfile(os.path.join(SKILLS, name, "SKILL.md"))}
         self.assertEqual(set(skills_section()), installed)
+
+
+def requirements_section():
+    with open(README, encoding="utf-8") as readme:
+        body = readme.read()
+    section = re.search(r"^## Requirements\n(.*?)(?=^## |\Z)", body, re.M | re.S)
+    return section.group(1) if section else ""
+
+
+class Requirements(unittest.TestCase):
+    def test_names_gemba_code_as_the_requirement_of_version_start(self):
+        text = requirements_section()
+        self.assertIn("Gemba Code", text)
+        self.assertIn("version-start", text)
 
 
 if __name__ == "__main__":

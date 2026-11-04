@@ -12,7 +12,7 @@ sys.path.insert(0, SCRIPTS)
 
 import build_story_map  # noqa: E402
 import recolor_story_map  # noqa: E402
-from test_build_story_map import CURRENT, LATER, NEXT, OPEN, RELEASED, SPEC, stickies  # noqa: E402
+from test_build_story_map import CURRENT, GRAY, OPEN, SPEC, delivered_first, stickies  # noqa: E402
 from test_read_story_map import as_read  # noqa: E402
 
 # The scheme before GEMBA-28, keyed by the new fill each sticky has now.
@@ -20,8 +20,6 @@ OLD_SCHEME = {
     "#f5e989": "#eed7fc",  # persona: purple
     "#eed7fc": "#baf3db",  # activities: green
     "#baf3db": "#fce4a6",  # current release: orange
-    "#fce4a6": "#f0f1f2",  # next release: gray
-    "#fff5db": "#f0f1f2",  # later releases: gray
 }
 
 SPEC_3 = copy.deepcopy(SPEC)
@@ -60,16 +58,28 @@ class Plan(unittest.TestCase):
     def test_a_delivered_release_goes_gray_and_the_next_becomes_current(self):
         old = old_scheme(build_story_map.build(SPEC_3))
         texts = stickies(apply(old, recolor_story_map.plan(as_read(old), released=["MVP"])))
-        self.assertEqual(texts["Save a date per customer"], RELEASED)
+        self.assertEqual(texts["Save a date per customer"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
-        self.assertEqual(texts["Third story"], NEXT)
+        self.assertEqual(texts["Third story"], GRAY)
         self.assertEqual(texts["Who sends it when the owner is away?"], OPEN)
 
-    def test_the_later_row_stays_later_whichever_releases_are_delivered(self):
+    def test_a_gray_release_turns_green_once_the_one_before_it_is_delivered(self):
+        new = build_story_map.build(SPEC_3)
+        texts = stickies(apply(new, recolor_story_map.plan(as_read(new), released=["MVP"])))
+        self.assertEqual((texts["Save a date per customer"], texts["Import dates from the notebook"], texts["Third story"]),
+                         (GRAY, CURRENT, GRAY))
+        texts = stickies(apply(new, recolor_story_map.plan(as_read(new), released=["MVP", "Release 2"])))
+        self.assertEqual((texts["Import dates from the notebook"], texts["Third story"]), (GRAY, CURRENT))
+
+    def test_the_rows_already_painted_do_not_change_when_nothing_new_shipped(self):
+        board = build_story_map.build(delivered_first(SPEC_3))
+        self.assertEqual(recolor_story_map.plan(as_read(board), released=["MVP"]), {})
+
+    def test_the_later_row_stays_gray_whichever_releases_are_delivered(self):
         old = old_scheme(build_story_map.build(SPEC_LATER))
         for released in ([], ["MVP"], ["MVP", "Release 2"]):
             texts = stickies(apply(old, recolor_story_map.plan(as_read(old), released=released)))
-            self.assertEqual(texts["Some day"], LATER, released)
+            self.assertEqual(texts["Some day"], GRAY, released)
 
     def test_open_questions_stay_red_and_the_light_red_is_normalized(self):
         new = build_story_map.build(SPEC_3)
@@ -108,14 +118,16 @@ class CommandLine(unittest.TestCase):
 
     def test_prints_the_ids_for_each_color(self):
         out = self.run_cli().stdout
-        for fill in ["#f5e989", "#eed7fc", "#baf3db", "#fce4a6", "#fff5db"]:
+        for fill in ["#f5e989", "#eed7fc", "#baf3db"]:
             self.assertRegex(out, rf'{fill}: ids="s\d+(,s\d+)*"')
+        for orange in ["#fce4a6", "#fff5db"]:
+            self.assertNotIn(orange, out)
 
     def test_released_option_moves_the_stickies_of_the_named_release_to_gray(self):
         old = old_scheme(build_story_map.build(SPEC_3))
         plan = {fill: ids.split(",") for fill, ids in re.findall(r'(#\w+): ids="([^"]+)"', self.run_cli("--released", "MVP").stdout)}
         texts = stickies(apply(old, plan))
-        self.assertEqual(texts["Save a date per customer"], RELEASED)
+        self.assertEqual(texts["Save a date per customer"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
 
     def test_an_unknown_release_fails_with_the_labels_instead_of_being_ignored(self):
