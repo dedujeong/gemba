@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, point out its open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared put the key of each Story on its sticky of the Story Map. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, stop if it has open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared put the key of each Story on its sticky of the Story Map. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -19,13 +19,15 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 scripts/read_release.py <file>` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's stories by activity and task, and its red stickies as open questions apart.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 scripts/read_release.py <file>` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's stories by activity and task. When the release has a red sticky, it prints each one to stderr and exits with an error instead of returning anything: see step 4.
 
 If every release is gray, say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
-## 4. Point out open questions
+## 4. Stop on open questions
 
-Before anything else, point out each open question of the release, in its own words. An open question is not a story and is never declared: while one is open, nothing of the version is declared. Ask the person to resolve it, in discovery or by telling you the decision, and wait.
+A red sticky is an open question, not a story. When `read_release.py` fails because of red stickies, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
+
+When the script returns the release, there are no open questions: go on to step 5.
 
 ## 5. Confirm the release
 
