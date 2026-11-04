@@ -22,6 +22,16 @@ Search its open issues with `searchJiraIssuesUsingJql`: `project = <Jira Project
 
 Without a connection to Jira, write the search you would make and take as its result the list the person gives you. Say that nothing was changed.
 
+## 3. Hand the facts to learn
+
+Only once no issue keeps the version open, as the search of step 2 showed. Learn is the review of a closed release in Gemba Product's `story-map` skill; you give it the facts from Jira, and you do not calibrate anything or compute a delivery date from the worklogs.
+
+1. Search the version's issues with `searchJiraIssuesUsingJql` (`project = <Jira Project> AND fixVersion = "<version>"`), asking for key, type, summary, status, original estimate and time spent. The delivered ones are those in Done; one in Cancelled was not delivered, so it is listed apart and its estimate does not enter the totals. The release Task of the version is listed apart as pending while it is not Done: it closes with the publication, so its estimate and time are in neither the table nor the totals.
+2. Hand over a table with every delivered issue, each with its original estimate and the time recorded in its worklogs, and say `none` where it has no estimate or no time. Add the estimates and the times with a tool (Bash), never from memory, and give both totals.
+3. Tell the maintainer that Gemba Product's `story-map` skill takes it from here to review the release and prepare the next one.
+
+Without a connection to Jira, write the search, take the list the person gives you as its result, and hand over the same facts.
+
 ## Style
 
 - Conversation in the project's `Language`; headings and labels in English.
