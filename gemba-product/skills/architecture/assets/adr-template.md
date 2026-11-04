@@ -10,6 +10,8 @@ One live doc per decision, in the `Decisions` folder of the product's space. Hea
 
 The ADR is about the decision, not about who made it. A fact that comes from what a person said names their role (`the owner`, `the operator`, `the team`) and its source label (Interview, Secondhand or Assumption), never the person's name.
 
+Every path, file, folder, column, domain and command the decision names is written as code (`db/migrations`, `starts_at`, `supabase db push`) each time it appears in the body. The title is plain text.
+
 ## Sections
 
 Five H2 sections, always in this order.
