@@ -12,7 +12,7 @@ board as it is now, so a board arranged by hand is respected, and if the row get
 the rows below move down with their labels, as move_story_map.py does.
 
 Its color is the one of the row it lands in, read from the board: green in the current
-release, orange in the next one, light orange later and in the Later row. A delivered
+release and gray in any other, the Later row included. A delivered
 release takes no story: one whose issue cards are all Done or Cancelled, known from --statuses,
 a JSON {"KEY": "Status"} the skill fills from Jira. A story of the current release needs --traces, the part of the
 brief it serves, the same cut build_story_map.py makes.

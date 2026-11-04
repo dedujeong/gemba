@@ -239,7 +239,7 @@ class CountsDoNotDependOnTheColorScheme(unittest.TestCase):
     def test_the_old_and_the_new_scheme_give_the_same_counts(self):
         new = board()
         # Old scheme: the MVP orange, later releases gray (green was the activities row, which holds no stories).
-        old = new.replace("#fce4a6", "#f0f1f2").replace("#baf3db", "#fce4a6")
+        old = new.replace("#baf3db", "#fce4a6")
         def counted(svg):
             return [{k: v for k, v in r.items() if k not in ("delivered", "state")} for r in read_story_map.parse(svg)["releases"]]
         self.assertEqual(counted(old), counted(new))
@@ -356,22 +356,22 @@ class ReleaseStates(unittest.TestCase):
         return spec
 
     def test_the_green_release_is_the_current_one_and_a_gray_one_comes_next(self):
-        gray = board().replace(self.ORANGE, self.GRAY)
-        self.assertEqual(self.states(gray), [("MVP", "current"), ("Release 2", "next")])
-
-    def test_any_other_color_after_the_green_release_is_next_too(self):
         self.assertEqual(self.states(board()), [("MVP", "current"), ("Release 2", "next")])
 
+    def test_any_other_color_after_the_green_release_is_next_too(self):
+        orange = board().replace(self.GRAY, self.ORANGE)
+        self.assertEqual(self.states(orange), [("MVP", "current"), ("Release 2", "next")])
+
     def test_two_green_releases_have_one_current_and_one_next(self):
-        both = board().replace(self.ORANGE, self.GREEN)
+        both = board().replace(self.GRAY, self.GREEN)
         self.assertEqual(self.states(both), [("MVP", "current"), ("Release 2", "next")])
 
     def test_the_later_row_is_never_current_even_when_it_is_green(self):
-        svg = board(self.later_row()).replace("#fff5db", self.GREEN)
+        svg = board(self.later_row()).replace(self.GRAY, self.GREEN)
         self.assertEqual(self.states(svg.replace("#baf3db", self.GRAY, 2))[-1], ("Later", "later"))
 
     def test_a_release_whose_issues_are_all_done_or_cancelled_is_delivered_and_the_next_green_one_is_current(self):
-        svg = with_issue_cards(board().replace(self.ORANGE, self.GREEN), IssueCards.KEYS)
+        svg = with_issue_cards(board().replace(self.GRAY, self.GREEN), IssueCards.KEYS)
         self.assertEqual(self.states(svg, {"GEMBA-1": "Done", "GEMBA-2": "Cancelled", "GEMBA-3": "Backlog"}),
                          [("MVP", "delivered"), ("Release 2", "current")])
 
@@ -393,7 +393,7 @@ class ReleaseStates(unittest.TestCase):
         self.assertEqual(read_story_map.for_development(data)["release"], "")
 
     def test_the_summary_marks_a_delivered_release(self):
-        svg = with_issue_cards(board().replace(self.ORANGE, self.GREEN), IssueCards.KEYS)
+        svg = with_issue_cards(board().replace(self.GRAY, self.GREEN), IssueCards.KEYS)
         out = read_story_map.summary(read_story_map.parse(svg, {"GEMBA-1": "Done", "GEMBA-2": "Done"}))
         self.assertIn("MVP: 2 stories, 1 open question (delivered)", out)
 

@@ -4,10 +4,10 @@ Usage: python3 recolor_story_map.py board.svg [--released NAME]...
 
 Accepts the SVG exactly as getConfluenceContent returns it, like read_story_map.py,
 and finds the rows the same way. Each sticky takes the color of its row: persona,
-activities and tasks by their label; each release by its position among the ones not
-delivered (current, next, later), or gray when named with --released. Open questions
-stay red. Old gray cannot tell a delivered release from a later one, so a delivered
-release is never guessed: the person names it.
+activities and tasks by their label; each release is green when it is the first one not
+delivered and gray otherwise (the next ones, the Later row and the releases named with
+--released). Open questions stay red. Gray cannot tell a delivered release from a next
+one, so a delivered release is never guessed: the person names it.
 
 Only the stickies that change are listed, grouped by color, ready for
 `update_elements_svg ids="..." <attr fill="..."/>`. Text and positions are not part
