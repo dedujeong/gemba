@@ -96,5 +96,17 @@ class VersionStartReadsTheMapWithTheSingleReader(unittest.TestCase):
         self.assertIn("nothing of the version is declared", text)
 
 
+class VersionStartLeavesTheKeysToTheCards(unittest.TestCase):
+    def test_the_product_plugin_keeps_no_copy_of_the_old_readers(self):
+        for script in ("read_release.py", "write_keys.py"):
+            with self.subTest(script=script):
+                self.assertFalse(os.path.exists(os.path.join(SKILL_DIR, "scripts", script)))
+
+    def test_the_skill_no_longer_writes_keys_on_the_stickies(self):
+        text = skill()
+        self.assertNotIn("write_keys", text)
+        self.assertNotIn("Put the keys on the Story Map", text)
+
+
 if __name__ == "__main__":
     unittest.main()

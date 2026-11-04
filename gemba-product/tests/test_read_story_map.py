@@ -240,6 +240,12 @@ class OpenQuestions(unittest.TestCase):
         spec["releases"][0]["stories"][1] = [{"text": "Send a WhatsApp reminder", "traces": "Problem"}]
         self.assertEqual(read_story_map.open_questions(read_story_map.parse(board(spec))), [])
 
+    def test_names_every_open_question_when_there_are_several(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][0]["stories"][1].append({"text": "Do we charge per message?", "open": True})
+        self.assertEqual([q["text"] for q in read_story_map.open_questions(read_story_map.parse(board(spec)))],
+                         ["Who sends it when the owner is away?", "Do we charge per message?"])
+
     def test_only_the_current_release_is_read(self):
         spec = copy.deepcopy(SPEC)
         spec["releases"][1]["stories"][1] = [{"text": "Still open in Release 2", "open": True}]
