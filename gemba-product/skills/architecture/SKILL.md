@@ -60,6 +60,9 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 - Create each ADR as a live doc (`contentType: live_doc`), like the ADRs already in the folder, never as a classic page.
 - Write Source as a block card, not as text: `<a href="URL" data-card-appearance="block"></a>` placed directly after the Source heading, with no empty paragraph between them.
 - Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
+- Write the ADR about the decision, not about who made it or who said what. A fact that comes from something a person said names their role (the owner, the operator, the team) and its source label from `../pitch/SKILL.md` section 4 (Interview, Secondhand, Assumption), never the person's name, in any section or in the title.
+- Write each technical name the decision mentions with code style, every time it appears in the body: paths, files, folders, columns, domains and commands (`db/migrations`, `due_date`, `ledger.example.com`, `<tool> migrate`). The title of the page is plain text.
+- Write the name of a product, a provider or a tool as plain text, never with code style (the hosting provider, the database engine, the code host). The command that runs a tool is code (`<tool> migrate`); the tool's own name is not.
 - Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
 
 | ADR state | Page status | Panel |
@@ -88,8 +91,13 @@ The step hands work to the version, and proposes it without declaring anything i
 When the ADRs are written, create the `Architecture` page of the product's space with the diagrams of the system, so the person sees at a glance who uses it and which systems it talks to. `references/diagrams.md` says which levels to draw and what each shape means.
 
 1. Write the spec of the diagrams as `assets/architecture-template.json` defines, from the decisions already taken: the actors from the Story Map and the brief, the systems the ADRs name, and one relation per arrow saying what flows along it.
+   A box of Context and Containers carries only the name of the person, the system or the container: no description, no technology, no legend.
+   The `description` of a diagram is the one short line under its heading that says what the diagram shows (`Quién usa el producto y con qué sistemas habla.`); it never describes the boxes or names their technology or plan, because that would be a legend.
+   The label of an arrow says only the intention (`Arma su carta`, `Abre el chat`) and starts with a capital: the script rejects one that does not.
+   A doubt nobody has answered about a diagram goes in its `questions` as the open question of one element, never in a label, a note or a box: the board draws it as a red sticky beside that element. Leave `questions` out when there is none.
+   A system the team operates (a piece it deploys or runs) is drawn only in Containers; the Context externals are the systems somebody else runs, and the script rejects one that is also a container.
    Besides Context and Containers, the spec carries what the product keeps and how it changes, taken from the stories of the current release and never inferred:
-   - `data_model`: one entity for each thing the stories name, with its main fields and a labelled relation between entities. An entity no story mentions is not drawn, and with no entities the diagram is left out.
+   - `data_model`: one entity for each thing the stories name, with its main fields and a labelled relation between entities. The label of a relation is a verb; add `"cardinality": "1:N"` only when the stories say one origin has many destinations (the board then shows `1` next to the origin and `N` next to the destination), and leave it out when it is not decided, so the arrow carries only the verb. An entity no story mentions is not drawn, and with no entities the diagram is left out.
    - `states`: one item for each entity that changes state in a story, with its states, the event that creates it (`initial`) and each event that moves it (`transitions`). An entity that never changes state gets none, and a state or an event no story states is not added.
 2. Build the board with `python3 scripts/build_architecture.py spec.json board.svg`. It rejects an arrow to an element that is not in the diagram and an arrow with no label, so read the error and fix the spec, never the script.
 3. Create the whiteboard with `createConfluenceContent` (`contentType: whiteboard`, the SVG as the body), titled `Diagrams`, in the product's space.

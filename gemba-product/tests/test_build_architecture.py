@@ -24,10 +24,10 @@ SPEC = {
         "actors": ["Administrador", "Operaciones", "Ventas"],
         "externals": [{"name": "Mapa base", "description": "proveedor por definir"}],
         "relations": [
-            {"from": "Administrador", "to": "Periplo", "label": "crea tours y tarifas"},
-            {"from": "Operaciones", "to": "Periplo", "label": "asigna salidas"},
-            {"from": "Ventas", "to": "Periplo", "label": "registra ventas"},
-            {"from": "Periplo", "to": "Mapa base", "label": "carga el mapa"},
+            {"from": "Administrador", "to": "Periplo", "label": "Crea tours y tarifas"},
+            {"from": "Operaciones", "to": "Periplo", "label": "Asigna salidas"},
+            {"from": "Ventas", "to": "Periplo", "label": "Registra ventas"},
+            {"from": "Periplo", "to": "Mapa base", "label": "Carga el mapa"},
         ],
     },
 }
@@ -88,16 +88,14 @@ class ContextDiagram(unittest.TestCase):
         product = shapes(root, shape="process")[0]
         self.assertLess(xs.pop() + 124, float(product.get("x")))
 
-    def test_the_product_is_an_internal_box_with_its_description(self):
+    def test_the_product_is_an_internal_box_with_only_its_name(self):
         root = build(SPEC)
         product = [r for r in shapes(root, shape="process") if r.get("fill") == INTERNAL]
         self.assertEqual(len(product), 1)
         self.assertEqual((product[0].get("width"), product[0].get("height")), ("220", "160"))
         label = [t for t in tags(root, "text") if t.get("belongs-to") == product[0].get("id")]
         self.assertEqual(len(label), 1)
-        said = "".join(label[0].itertext())
-        self.assertIn("Periplo", said)
-        self.assertIn("web app para tour operadoras", said)
+        self.assertEqual("".join(label[0].itertext()).strip(), "Periplo")
 
     def test_an_external_system_is_gray(self):
         root = build(SPEC)
@@ -143,7 +141,7 @@ class ContextDiagram(unittest.TestCase):
 
     def test_a_relation_to_an_element_that_is_not_there_is_rejected(self):
         spec = copy.deepcopy(SPEC)
-        spec["context"]["relations"].append({"from": "Periplo", "to": "Cobros", "label": "cobra"})
+        spec["context"]["relations"].append({"from": "Periplo", "to": "Cobros", "label": "Cobra"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Cobros", str(caught.exception))
@@ -169,9 +167,9 @@ CONTAINERS = {
     ],
     "externals": [{"name": "Sentry", "description": "alertas de errores"}],
     "relations": [
-        {"from": "Web app", "to": "Postgres", "label": "lee y escribe por HTTPS"},
-        {"from": "Web app", "to": "Auth", "label": "inicia sesión"},
-        {"from": "Web app", "to": "Sentry", "label": "reporta errores"},
+        {"from": "Web app", "to": "Postgres", "label": "Lee y escribe por HTTPS"},
+        {"from": "Web app", "to": "Auth", "label": "Inicia sesión"},
+        {"from": "Web app", "to": "Sentry", "label": "Reporta errores"},
     ],
 }
 
@@ -190,6 +188,284 @@ def headings(root):
         for t in tags(root, "text")
         if t.get("data-type") == "text" and list(t) and list(t)[0].get("font-weight") == "bold"
     }
+
+
+class NamesOnly(unittest.TestCase):
+    """A box of the Context and Containers diagrams carries its name and nothing else, even when the spec describes it."""
+
+    def test_every_box_says_only_its_name(self):
+        root = build(with_containers())
+        names = {SPEC["product"]["name"]} | {e["name"] for e in SPEC["context"]["externals"]}
+        names |= {c["name"] for b in CONTAINERS["boundaries"] for c in b["containers"]}
+        names |= {e["name"] for e in CONTAINERS["externals"]}
+        names |= set(SPEC["context"]["actors"]) | set(CONTAINERS.get("actors", []))
+        boxes = {r.get("id") for r in shapes(root)}
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text") if t.get("belongs-to") in boxes]
+        self.assertEqual(set(said), names)
+
+
+class NoLegendOrNotes(unittest.TestCase):
+    """A diagram stands on its own: besides its heading, its boxes and its arrows, nothing is written beside it."""
+
+    def test_every_text_is_a_heading_a_name_or_an_arrow_label(self):
+        spec = with_states()
+        spec["containers"] = copy.deepcopy(CONTAINERS)
+        root = build(spec)
+        shape_ids = {e.get("id") for e in tags(root, "rect")}
+        for text in tags(root, "text"):
+            heading = text.get("data-type") == "text" and list(text) and list(text)[0].get("font-weight") == "bold"
+            box = text.get("belongs-to") in shape_ids
+            arrow = text.get("data-type") == "pathLabel"
+            self.assertTrue(heading or box or arrow, "".join(text.itertext()))
+
+
+class Cardinality(unittest.TestCase):
+    """A one-to-many relation of the data model carries 1 at its origin, N at its destination and the verb in the middle."""
+
+    def labels_of(self, root, connector):
+        found = [t for t in tags(root, "text") if t.get("belongs-to") == connector.get("id")]
+        found.sort(key=lambda t: float(t.get("data-proportion")))
+        return [("".join(t.itertext()).strip(), float(t.get("data-proportion"))) for t in found]
+
+    def test_a_one_to_many_relation_draws_1_the_verb_and_n_along_its_arrow(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["cardinality"] = "1:N"
+        root = build(spec)
+        first = [p for p in of(root, "dat-", "polyline")][0]
+        verb = spec["data_model"]["relations"][0]["label"]
+        self.assertEqual(self.labels_of(root, first), [("1", 0.08), (verb, 0.5), ("N", 0.92)])
+
+    def test_a_relation_with_an_undecided_cardinality_carries_only_its_verb(self):
+        root = build(with_data_model())
+        for connector in of(root, "dat-", "polyline"):
+            said = [text for text, _ in self.labels_of(root, connector)]
+            self.assertEqual(len(said), 1)
+            self.assertNotIn(said[0], ("1", "N"))
+
+    def test_a_cardinality_that_is_not_one_to_many_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["cardinality"] = "N:N"
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("1:N", str(caught.exception))
+
+
+def box_of(root, name):
+    """The rect of the element whose text is `name`, found by its text or by its free-text label."""
+    said = lambda t: "".join(t.itertext()).strip()
+    text = [t for t in tags(root, "text") if (said(t) == name or said(t).startswith(name + " "))
+            and t.get("data-type") != "pathLabel"][0]
+    rid = text.get("belongs-to")
+    if rid is None:  # an actor: its name is free text just under its rectangle
+        rects = [r for r in tags(root, "rect") if r.get("data-type") == "rectangle"
+                 and abs(float(r.get("x")) + 62 - float(text.get("x"))) < 1 and float(r.get("y")) < float(text.get("y"))]
+        return max(rects, key=lambda r: float(r.get("y")))
+    return [r for r in tags(root, "rect") if r.get("id") == rid][0]
+
+
+def gap(a, b):
+    """The distance between two rects (0 when they touch or overlap)."""
+    ax, ay, aw, ah = (float(a.get(k)) for k in ("x", "y", "width", "height"))
+    bx, by, bw, bh = (float(b.get(k)) for k in ("x", "y", "width", "height"))
+    dx = max(bx - (ax + aw), ax - (bx + bw), 0)
+    dy = max(by - (ay + ah), ay - (by + bh), 0)
+    return (dx ** 2 + dy ** 2) ** 0.5
+
+
+def stickies(root):
+    return [r for r in tags(root, "rect") if r.get("data-type") == "sticky"]
+
+
+class OpenQuestions(unittest.TestCase):
+    """A doubt about a diagram is a red sticky beside the element it comes from, never a note or a label."""
+
+    def asked(self, spec, name, text="¿Quién la opera?"):
+        root = build(spec)
+        found = stickies(root)
+        self.assertEqual(len(found), 1)
+        sticky = found[0]
+        self.assertEqual(sticky.get("fill"), "#ffd5d2")
+        self.assertEqual((sticky.get("width"), sticky.get("height")), ("240.05", "144.03"))
+        said = [t for t in tags(root, "text") if t.get("belongs-to") == sticky.get("id")]
+        self.assertEqual("".join(said[0].itertext()).strip(), text)
+        others = [r for r in tags(root, "rect") if r.get("data-type") in ("shape", "rectangle") and r is not sticky]
+        self.assertTrue(all(gap(sticky, r) > 0 for r in others), "the sticky covers an element")
+        nearest = min(others, key=lambda r: gap(sticky, r))
+        self.assertEqual(nearest.get("id"), box_of(root, name).get("id"))
+
+    def test_a_question_about_the_product_in_the_context_diagram(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["questions"] = [{"about": "Periplo", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Periplo")
+
+    def test_a_question_about_a_container(self):
+        spec = with_containers()
+        spec["containers"]["questions"] = [{"about": "Auth", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Auth")
+
+    def test_a_question_about_an_entity_in_the_middle_of_a_row(self):
+        spec = with_data_model()
+        spec["data_model"]["questions"] = [{"about": "Reserva", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Reserva")
+
+    def test_a_question_about_a_state(self):
+        spec = with_states()
+        spec["states"][0]["questions"] = [{"about": "Cancelada", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Cancelada")
+
+    def test_a_question_about_an_element_that_is_not_there_is_rejected(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["questions"] = [{"about": "Cobros", "text": "¿Quién la opera?"}]
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Cobros", str(caught.exception))
+
+
+class OwnSystemsStayOutOfContext(unittest.TestCase):
+    """A system the team operates shows up only as a container: its parts are never external systems of the context."""
+
+    def test_a_container_listed_as_an_external_of_the_context_is_rejected(self):
+        spec = with_containers()
+        spec["context"]["externals"].append({"name": "Postgres"})
+        spec["context"]["relations"].append({"from": "Periplo", "to": "Postgres", "label": "Guarda los datos"})
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        message = str(caught.exception)
+        self.assertIn("Postgres", message)
+        self.assertIn("Containers", message)
+
+    def test_a_system_somebody_else_runs_stays_an_external_of_the_context(self):
+        root = build(with_containers())
+        gray = [r for r in tags(root, "rect") if r.get("fill") == EXTERNAL and r.get("id", "").startswith("ctx-")]
+        self.assertEqual(len(gray), 1)
+
+
+def centre_y(rect):
+    return float(rect.get("y")) + float(rect.get("height")) / 2
+
+
+def crossings(root, prefix):
+    """The connectors of a diagram that pass through a box which is neither their start nor their end."""
+    boxes = [r for r in tags(root, "rect") if r.get("data-type") in ("shape", "rectangle") and r.get("id", "").startswith(prefix)]
+    bad = []
+    for connector in [p for p in tags(root, "polyline") if p.get("id", "").startswith(prefix)]:
+        points = [tuple(float(v) for v in pair.split(",")) for pair in connector.get("points").split()]
+        for box in boxes:
+            if box.get("id") in (connector.get("begins-at"), connector.get("ends-at")):
+                continue
+            x, y, w, h = (float(box.get(k)) for k in ("x", "y", "width", "height"))
+            for (ax, ay), (bx, by) in zip(points, points[1:]):
+                if min(ax, bx) < x + w - 1 and max(ax, bx) > x + 1 and min(ay, by) < y + h - 1 and max(ay, by) > y + 1:
+                    bad.append((connector.get("id"), box.get("id")))
+    return bad
+
+
+class ActorLabels(unittest.TestCase):
+    """The name of a person is written inside its box, so it can never float away from it."""
+
+    def test_the_name_of_an_actor_is_the_text_of_its_box(self):
+        root = build(SPEC)
+        actors = [r for r in tags(root, "rect") if r.get("data-type") == "rectangle"]
+        self.assertTrue(actors)
+        for actor in actors:
+            texts = [t for t in tags(root, "text") if t.get("belongs-to") == actor.get("id")]
+            self.assertEqual(len(texts), 1)
+            self.assertTrue("".join(texts[0].itertext()).strip())
+            self.assertGreater(float(texts[0].get("y")), float(actor.get("y")))
+            self.assertLess(float(texts[0].get("y")), float(actor.get("y")) + float(actor.get("height")))
+
+
+class ExternalsDoNotCrossBoxes(unittest.TestCase):
+    """An external system sits where its arrow reaches it without going through another piece."""
+
+    STACKED = [
+        {"name": "Edge", "containers": [{"name": "Web app"}, {"name": "Files", "shape": "database"}]},
+        {"name": "Backend", "containers": [{"name": "Postgres", "shape": "database"}, {"name": "Auth"}]},
+    ]
+
+    def spec(self, source):
+        spec = with_containers(boundaries=copy.deepcopy(self.STACKED))
+        spec["containers"]["externals"] = [{"name": "Sentry"}]
+        spec["containers"]["relations"] = [
+            {"from": "Web app", "to": "Postgres", "label": "Lee y escribe"},
+            {"from": "Web app", "to": "Files", "label": "Guarda archivos"},
+            {"from": source, "to": "Sentry", "label": "Reporta errores"},
+        ]
+        return spec
+
+    def test_an_external_reached_from_the_first_boundary_does_not_cross_the_piece_below_its_source(self):
+        root = build(self.spec("Web app"))
+        self.assertEqual(crossings(root, "con-"), [])
+
+    def test_an_external_reached_from_the_last_boundary_does_not_cross_anything(self):
+        root = build(self.spec("Auth"))
+        self.assertEqual(crossings(root, "con-"), [])
+
+
+class StraightMainFlow(unittest.TestCase):
+    """The main flow is one straight row, and between two neighbouring sections there is room for the labels that cross."""
+
+    def test_the_context_product_and_its_first_external_share_a_row(self):
+        root = build(SPEC)
+        product = [r for r in shapes(root, shape="process") if r.get("fill") == INTERNAL][0]
+        external = shapes(root, fill=EXTERNAL, shape="process")[0]
+        self.assertEqual(centre_y(product), centre_y(external))
+
+    def test_the_first_actor_and_the_first_piece_of_every_boundary_share_a_row(self):
+        spec = with_containers()
+        spec["containers"]["actors"] = ["Administrador"]
+        root = build(spec)
+        actor = [r for r in of(root, "con-", "rect") if r.get("data-type") == "rectangle"][0]
+        firsts = []
+        for section in [r for r in tags(root, "rect") if r.get("data-type") == "section"]:
+            inside = [r for r in tags(root, "rect") if r.get("belongs-to") == section.get("id")]
+            firsts.append(min(inside, key=lambda r: float(r.get("y"))))
+        self.assertEqual(len(firsts), 2)
+        for first in firsts:
+            self.assertEqual(centre_y(first), centre_y(actor))
+
+    def test_the_gap_between_two_sections_fits_the_longest_label_that_crosses_them(self):
+        label = "Lee y escribe los datos de la agencia"
+        spec = with_containers()
+        spec["containers"]["relations"][0]["label"] = label
+        root = build(spec)
+        first, second = [r for r in tags(root, "rect") if r.get("data-type") == "section"]
+        room = float(second.get("x")) - (float(first.get("x")) + float(first.get("width")))
+        self.assertGreaterEqual(room, 9 * len(label))
+
+
+class CapitalizedLabels(unittest.TestCase):
+    """The label of an arrow says only its intention, and starts with a capital."""
+
+    def rejected(self, spec):
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("capital", str(caught.exception))
+
+    def test_a_lowercase_label_in_the_context_diagram_is_rejected(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["relations"][0]["label"] = "crea tours"
+        self.rejected(spec)
+
+    def test_a_lowercase_label_in_the_containers_diagram_is_rejected(self):
+        spec = with_containers()
+        spec["containers"]["relations"][0]["label"] = "lee y escribe"
+        self.rejected(spec)
+
+    def test_a_lowercase_label_in_the_data_model_is_rejected(self):
+        spec = with_data_model()
+        spec["data_model"]["relations"][0]["label"] = "tiene"
+        self.rejected(spec)
+
+    def test_a_lowercase_event_in_a_state_diagram_is_rejected(self):
+        spec = with_states()
+        spec["states"][0]["transitions"][0]["event"] = "cancela"
+        self.rejected(spec)
+
+    def test_a_lowercase_event_that_creates_the_entity_is_rejected(self):
+        spec = with_states()
+        spec["states"][0]["initial"]["event"] = "aparta"
+        self.rejected(spec)
 
 
 class ContainersDiagram(unittest.TestCase):
@@ -264,7 +540,7 @@ class ContainersDiagram(unittest.TestCase):
     def test_an_arrow_to_an_element_of_the_other_diagram_is_rejected(self):
         spec = with_containers()
         spec["containers"]["relations"].append(
-            {"from": "Web app", "to": "Administrador", "label": "le muestra el kanban"})
+            {"from": "Web app", "to": "Administrador", "label": "Le muestra el kanban"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Administrador", str(caught.exception))
@@ -278,8 +554,8 @@ DATA_MODEL = {
         {"name": "Dueña", "fields": ["id", "correo"]},
     ],
     "relations": [
-        {"from": "Reserva", "to": "Clase", "label": "muchas reservas por clase"},
-        {"from": "Dueña", "to": "Clase", "label": "administra muchas clases"},
+        {"from": "Reserva", "to": "Clase", "label": "Muchas reservas por clase"},
+        {"from": "Dueña", "to": "Clase", "label": "Administra muchas clases"},
     ],
 }
 
@@ -347,7 +623,7 @@ class DataModelDiagram(unittest.TestCase):
 
     def test_a_relation_to_an_entity_that_is_not_there_is_rejected(self):
         spec = with_data_model()
-        spec["data_model"]["relations"].append({"from": "Reserva", "to": "Pago", "label": "se paga con"})
+        spec["data_model"]["relations"].append({"from": "Reserva", "to": "Pago", "label": "Se paga con"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(spec)
         self.assertIn("Pago", str(caught.exception))
@@ -377,11 +653,11 @@ class DataModelDiagram(unittest.TestCase):
 RESERVA = {
     "entity": "Reserva",
     "description": "Cómo cambia una reserva",
-    "initial": {"state": "Apartada", "event": "la alumna aparta su lugar"},
+    "initial": {"state": "Apartada", "event": "La alumna aparta su lugar"},
     "states": ["Apartada", "Cancelada", "Asistida"],
     "transitions": [
-        {"from": "Apartada", "to": "Cancelada", "event": "la alumna cancela su lugar"},
-        {"from": "Apartada", "to": "Asistida", "event": "la dueña marca la asistencia"},
+        {"from": "Apartada", "to": "Cancelada", "event": "La alumna cancela su lugar"},
+        {"from": "Apartada", "to": "Asistida", "event": "La dueña marca la asistencia"},
     ],
 }
 
@@ -421,6 +697,16 @@ class StateDiagram(unittest.TestCase):
             self.assertIn(transition["event"], said)
         self.assertIn(RESERVA["initial"]["event"], said)
 
+    def test_each_transition_is_labelled_with_the_event_that_causes_it(self):
+        root = build(with_states())
+        boxes = {"".join(t.itertext()).strip(): t.get("belongs-to") for t in tags(root, "text") if t.get("belongs-to")}
+        labels = {t.get("belongs-to"): "".join(t.itertext()).strip() for t in tags(root, "text") if t.get("data-type") == "pathLabel"}
+        for transition in RESERVA["transitions"]:
+            joins = [c for c in of(root, "st0-", "polyline")
+                     if c.get("begins-at") == boxes[transition["from"]] and c.get("ends-at") == boxes[transition["to"]]]
+            self.assertEqual(len(joins), 1)
+            self.assertEqual(labels[joins[0].get("id")], transition["event"])
+
     def test_the_start_arrow_ends_at_the_initial_state(self):
         root = build(with_states())
         initial = next(t for t in tags(root, "text")
@@ -430,9 +716,9 @@ class StateDiagram(unittest.TestCase):
 
     def test_each_entity_with_states_gets_its_own_diagram(self):
         clase = {"entity": "Clase", "description": "Cómo cambia una clase",
-                 "initial": {"state": "Abierta", "event": "la dueña la publica"},
+                 "initial": {"state": "Abierta", "event": "La dueña la publica"},
                  "states": ["Abierta", "Llena"],
-                 "transitions": [{"from": "Abierta", "to": "Llena", "event": "se ocupa el último lugar"}]}
+                 "transitions": [{"from": "Abierta", "to": "Llena", "event": "Se ocupa el último lugar"}]}
         root = build(with_states(RESERVA, clase))
         y = headings(root)
         self.assertIn("States of Reserva", y)
@@ -467,7 +753,7 @@ class StateDiagram(unittest.TestCase):
 
     def test_a_transition_to_an_unknown_state_is_rejected(self):
         bad = copy.deepcopy(RESERVA)
-        bad["transitions"].append({"from": "Apartada", "to": "Pagada", "event": "paga"})
+        bad["transitions"].append({"from": "Apartada", "to": "Pagada", "event": "Paga"})
         with self.assertRaises(ValueError) as caught:
             build_architecture.build(with_states(bad))
         self.assertIn("Pagada", str(caught.exception))
