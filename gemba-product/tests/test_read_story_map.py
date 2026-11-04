@@ -100,6 +100,50 @@ class IssueCards(unittest.TestCase):
         self.assertIsNone(story["key"])
 
 
+class IssueStatuses(unittest.TestCase):
+    """The status a card shows is drawn by Jira, not stored in the SVG: it is handed to the reader by key."""
+    STATUSES = {"GEMBA-1": "Done", "GEMBA-2": "Implement"}
+
+    def svg(self):
+        return with_issue_cards(board(), IssueCards.KEYS)
+
+    def mvp_stories(self, data):
+        return [s for t in data["releases"][0]["tasks"] for s in t["stories"] if not s["open"]]
+
+    def run_cli(self, *extra):
+        with tempfile.TemporaryDirectory() as tmp:
+            path, statuses = os.path.join(tmp, "board.svg"), os.path.join(tmp, "statuses.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(self.svg())
+            with open(statuses, "w", encoding="utf-8") as f:
+                json.dump(self.STATUSES, f)
+            return subprocess.run(
+                [sys.executable, "-I", os.path.join(SCRIPTS, "read_story_map.py"), path, "--statuses", statuses, *extra],
+                capture_output=True, text=True, check=True).stdout
+
+    def test_each_card_gets_the_status_it_was_handed_by_key(self):
+        stories = self.mvp_stories(read_story_map.parse(self.svg(), self.STATUSES))
+        self.assertEqual([(s["key"], s["status"]) for s in stories], [("GEMBA-1", "Done"), ("GEMBA-2", "Implement")])
+
+    def test_a_card_with_no_status_handed_has_none(self):
+        stories = self.mvp_stories(read_story_map.parse(self.svg(), {"GEMBA-1": "Done"}))
+        self.assertEqual([s["status"] for s in stories], ["Done", None])
+        self.assertEqual({s["status"] for s in self.mvp_stories(read_story_map.parse(self.svg()))}, {None})
+
+    def test_a_sticky_never_has_a_status(self):
+        stories = self.mvp_stories(read_story_map.parse(board(), self.STATUSES))
+        self.assertEqual({s["status"] for s in stories}, {None})
+
+    def test_the_command_line_takes_the_statuses_and_prints_them_in_json(self):
+        mvp = json.loads(self.run_cli("--json"))["releases"][0]
+        self.assertEqual([s["status"] for t in mvp["tasks"] for s in t["stories"] if not s["open"]], ["Done", "Implement"])
+
+    def test_the_markdown_shows_the_status_next_to_the_key(self):
+        out = self.run_cli()
+        self.assertIn("  - GEMBA-1 (Done)", out)
+        self.assertIn("  - GEMBA-2 (Implement)", out)
+
+
 class StoryRectangles(unittest.TestCase):
     """A story drawn as a rectangle of the Jira card counts exactly like a sticky."""
 

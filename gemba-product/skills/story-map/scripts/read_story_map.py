@@ -1,10 +1,12 @@
 """Read a story map whiteboard SVG back into releases, activities, tasks, and stories.
 
-Usage: python3 read_story_map.py board.svg [--json] [--mvp [--json]] [--gaps] [--previous N]
+Usage: python3 read_story_map.py board.svg [--statuses statuses.json] [--json] [--mvp [--json]] [--gaps] [--previous N]
 
 Accepts the SVG exactly as getConfluenceContent returns it, including the line-number
 prefixes. A story is a sticky, a rectangle or the card of its Jira issue (data-type="issue"):
 the card has no text, so the story is listed by its key, read from the link of the issue.
+The status a card shows is drawn by Jira and is not in the SVG: --statuses takes a JSON file
+{"KEY": "Status"} that the skill fills from Jira, and each card reports its status, or null.
 Works on boards edited by hand, as long as:
 - the board header, if any, sits above the "User persona" label;
 - each row has a label: a text whose bold 27px line is "User persona", "Activities",
@@ -92,7 +94,9 @@ def read_bands(svg):
     return labels, bands
 
 
-def parse(svg):
+def parse(svg, statuses=None):
+    """`statuses` maps the key of an issue to its status in Jira: the card is drawn by Jira and the SVG does not carry it."""
+    statuses = statuses or {}
     labels, bands = read_bands(svg)
     tasks = sorted(bands.get("Tasks", []), key=lambda s: s["x"])
     activities = sorted(bands.get("Activities", []), key=lambda s: s["x"])
@@ -121,7 +125,8 @@ def parse(svg):
             if c is None:
                 result["unplaced"].append({"release": l["name"], "id": s["id"], "text": s["text"]})
             else:
-                columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS, "key": s["key"]})
+                columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS, "key": s["key"],
+                                           "status": statuses.get(s["key"]) if s["key"] else None})
         fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
         result["releases"].append({
             "name": l["name"],
@@ -242,7 +247,7 @@ def to_markdown(r):
                 lines.append(f"\n### {current}")
             lines.append(f'- **{t["task"]}**')
             for s in t["stories"]:
-                lines.append(f'  - {s["text"]}' + (" (open decision)" if s["open"] else ""))
+                lines.append(f'  - {s["text"]}' + (" (open decision)" if s["open"] else f' ({s["status"]})' if s["status"] else ""))
         lines.append("")
     if r["unplaced"]:
         lines.append("## Unplaced stickies")
@@ -251,7 +256,8 @@ def to_markdown(r):
 
 
 if __name__ == "__main__":
-    data = parse(open(sys.argv[1], encoding="utf-8").read())
+    statuses = json.load(open(sys.argv[sys.argv.index("--statuses") + 1], encoding="utf-8")) if "--statuses" in sys.argv else None
+    data = parse(open(sys.argv[1], encoding="utf-8").read(), statuses)
     if "--gaps" in sys.argv:
         print(gaps_markdown(data))
     elif "--mvp" in sys.argv:
