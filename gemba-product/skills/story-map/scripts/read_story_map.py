@@ -1,6 +1,6 @@
 """Read a story map whiteboard SVG back into releases, activities, tasks, and stories.
 
-Usage: python3 read_story_map.py board.svg [--json] [--mvp] [--gaps] [--previous N]
+Usage: python3 read_story_map.py board.svg [--json] [--mvp [--json]] [--gaps] [--previous N]
 
 Accepts the SVG exactly as getConfluenceContent returns it, including the line-number
 prefixes. Works on boards edited by hand, as long as:
@@ -23,8 +23,9 @@ had when it was last reported; the script then says how much it grew, shrank or 
 steps a user would take that the release does not cover, and then its open questions,
 the gaps nobody could decide yet. A release with one of those does not close.
 
---mvp prints only the current release, its stories grouped by activity and task, for
-whoever builds it. Nothing is copied anywhere: the board in Confluence is the only
+--mvp prints only the current release, the value it delivers (the description on its row
+label) and its stories grouped by activity and task, for whoever builds it; with --json it
+prints the same as data, with the open questions apart. version-start reads it that way. Nothing is copied anywhere: the board in Confluence is the only
 source, and this reads it each time.
 """
 import json
@@ -66,7 +67,10 @@ def read_bands(svg):
         elif a.get("data-type") == "text":
             title = re.search(r'<tspan[^>]*font-weight="bold"[^>]*font-size="27px"[^>]*>([^<]*)</tspan>', body)
             if title:
-                labels.append({"name": unescape(title.group(1)).strip(), "y": float(a["y"])})
+                name = unescape(title.group(1)).strip()
+                # The lines after the bold name describe the row: for a release, the value it delivers.
+                rest = text.split(name, 1)[1].strip() if name in text else ""
+                labels.append({"name": name, "description": rest, "y": float(a["y"])})
     labels.sort(key=lambda l: l["y"])
     # The board header (product name and vision) sits above "User persona".
     first = next((i for i, l in enumerate(labels) if l["name"] == "User persona"), 0)
@@ -116,6 +120,7 @@ def parse(svg):
         fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
         result["releases"].append({
             "name": l["name"],
+            "description": l["description"],
             "delivered": bool(fills) and all(f == RELEASED for f in fills),
             "count": sum(1 for c in columns for st in c if not st["open"]),
             "open": sum(1 for c in columns for st in c if st["open"]),
@@ -185,11 +190,14 @@ def for_development(r):
         if not stories or stories[-1]["activity"] != task["activity"]:
             stories.append({"activity": task["activity"], "tasks": []})
         stories[-1]["tasks"].append({"task": task["task"], "stories": done})
-    return {"release": release["name"] if release else "", "stories": stories, "open_questions": open_questions}
+    return {"release": release["name"] if release else "", "description": release["description"] if release else "",
+            "stories": stories, "open_questions": open_questions}
 
 
 def mvp_markdown(mvp):
     lines = [f'## {mvp["release"]}']
+    if mvp["description"]:
+        lines.append(f'\n{mvp["description"]}')
     for a in mvp["stories"]:
         lines.append(f'\n### {a["activity"]}')
         for t in a["tasks"]:
@@ -242,7 +250,8 @@ if __name__ == "__main__":
     if "--gaps" in sys.argv:
         print(gaps_markdown(data))
     elif "--mvp" in sys.argv:
-        print(mvp_markdown(for_development(data)))
+        mvp = for_development(data)
+        print(json.dumps(mvp, ensure_ascii=False, indent=2) if "--json" in sys.argv else mvp_markdown(mvp))
     elif "--json" in sys.argv:
         print(json.dumps(data, ensure_ascii=False, indent=2))
     else:
