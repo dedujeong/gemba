@@ -24,6 +24,7 @@ Each step rests on a method, named here so you know what it is based on before y
 - `interview-kit` prepares the client meeting from what the brief still does not know. Every question asks about past facts, the last time something happened, never opinions or hypotheticals.
 - `story-map` turns the brief into scope and closes the MVP. It follows Jeff Patton's User Story Mapping: activities, the tasks inside them and a release cut across the stories.
 - `architecture` decides the architecture once the MVP is closed. Each decision is recorded as an ADR, accepted or replaced but never edited, and the system is drawn as C4 diagrams.
+- `version-start` opens a version from the closed Story Map. It reads the current release, creates the fix version named after the product and its number, and hands each card to Gemba Code's `start` to be declared in Jira.
 
 ## Conventions
 

@@ -1,0 +1,54 @@
+import os
+import re
+import unittest
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SKILL_DIR = os.path.join(ROOT, "skills", "version-start")
+
+
+def skill():
+    with open(os.path.join(SKILL_DIR, "SKILL.md"), encoding="utf-8") as f:
+        return f.read()
+
+
+class VersionStartIsInTheProductPlugin(unittest.TestCase):
+    def test_the_skill_is_named_version_start(self):
+        self.assertRegex(skill(), r"(?m)^name: version-start$")
+
+    def test_every_script_the_skill_runs_is_next_to_it(self):
+        scripts = set(re.findall(r"scripts/(\w+\.py)", skill()))
+        self.assertTrue(scripts, "the skill runs no script")
+        for script in scripts:
+            with self.subTest(script=script):
+                self.assertTrue(os.path.isfile(os.path.join(SKILL_DIR, "scripts", script)))
+
+
+class VersionStartProposesTheNumber(unittest.TestCase):
+    def test_the_skill_runs_the_script_to_propose_the_number(self):
+        text = skill()
+        self.assertIn("scripts/next_version.py", text)
+        self.assertIn("--fix", text)
+
+    def test_the_skill_no_longer_forbids_computing_the_number(self):
+        text = skill()
+        self.assertNotIn("never compute it yourself", text)
+        self.assertNotIn("Ask for the number", text)
+
+
+class VersionStartUnifiesTheComponents(unittest.TestCase):
+    def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
+        text = skill()
+        self.assertIn("same part of the product", text)
+        self.assertIn("same component", text)
+
+    def test_the_release_task_has_a_component_in_a_project_without_components(self):
+        text = skill()
+        self.assertIn("no components yet", text)
+        self.assertNotIn("never name a new one", text)
+
+    def test_the_component_the_maintainer_names_for_the_release_task_wins(self):
+        self.assertIn("A component the maintainer names for the Task is the one used", skill())
+
+
+if __name__ == "__main__":
+    unittest.main()

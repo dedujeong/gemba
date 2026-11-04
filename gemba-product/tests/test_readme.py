@@ -11,6 +11,7 @@ METHODS = {
     "interview-kit": ["past facts"],
     "story-map": ["User Story Mapping", "Patton"],
     "architecture": ["ADR", "C4"],
+    "version-start": ["fix version"],
 }
 
 
