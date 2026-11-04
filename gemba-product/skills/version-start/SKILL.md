@@ -21,15 +21,15 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 scripts/read_release.py <file>` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's stories by activity and task. When the release has a red sticky, it prints each one to stderr and exits with an error instead of returning anything: see step 4.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's `release` name, its `description` (the value it delivers) and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
 
-If every release is gray, say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
+If `release` comes back empty, every release is gray: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
 ## 4. Stop on open questions
 
-A red sticky is an open question, not a story. When `read_release.py` fails because of red stickies, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
+A red sticky is an open question, not a story. When `open_questions` is not empty, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
 
-When the script returns the release, there are no open questions: go on to step 5.
+When `open_questions` is empty, there are no open questions: go on to step 5.
 
 ## 5. Confirm the release
 
@@ -58,7 +58,7 @@ Once the maintainer confirms the release, create its fix version before declarin
 
 - Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirmed in step 5, without asking for it again. If the maintainer changed it and it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
 - Start date and release date: the ones the maintainer gave in step 5. Ask only for one that is still missing.
-- Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
+- Description: only the value the version delivers, from the release's row label on the board (the reading returns it as `description`). No stories, issues, dates or numbers.
 
 First list the project's versions with `executeRead` → `getJiraProjectVersions`. If one with the same name already exists, do not create another: say so and use it. Otherwise create it with `executeDestructive` → `manageJiraProjectVersion` (`action: "create"`, `projectIdOrKey`, `name`, `startDate`, `releaseDate`, `description`), then read the versions again and report the one that is there.
 
