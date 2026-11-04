@@ -56,7 +56,7 @@ ROW_STEP, RELEASE_GAP = round(STORY_H + 40, 2), 245.6  # a story card and the ga
 # Fills are values of the closed sticky palette of Confluence: any other hex is
 # snapped to the nearest one and the stored color differs from the requested one.
 PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
-CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
+CURRENT, NEXT, LATER, GRAY, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
 FS = "15.47px"
 
 # Desired tops relative to the persona row, measured on a reference board. A release label is level with the first row of its stickies.
@@ -78,7 +78,7 @@ def release_fills(releases):
         if release.get("name") == "Later":
             fills.append(LATER)
         elif release.get("released"):
-            fills.append(RELEASED)
+            fills.append(GRAY)
         else:
             fills.append((CURRENT, NEXT)[position] if position < 2 else LATER)
             position += 1

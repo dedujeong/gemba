@@ -12,7 +12,7 @@ sys.path.insert(0, SCRIPTS)
 
 import build_story_map  # noqa: E402
 import recolor_story_map  # noqa: E402
-from test_build_story_map import CURRENT, LATER, NEXT, OPEN, RELEASED, SPEC, stickies  # noqa: E402
+from test_build_story_map import CURRENT, LATER, NEXT, OPEN, GRAY, SPEC, stickies  # noqa: E402
 from test_read_story_map import as_read  # noqa: E402
 
 # The scheme before GEMBA-28, keyed by the new fill each sticky has now.
@@ -60,7 +60,7 @@ class Plan(unittest.TestCase):
     def test_a_delivered_release_goes_gray_and_the_next_becomes_current(self):
         old = old_scheme(build_story_map.build(SPEC_3))
         texts = stickies(apply(old, recolor_story_map.plan(as_read(old), released=["MVP"])))
-        self.assertEqual(texts["Save a date per customer"], RELEASED)
+        self.assertEqual(texts["Save a date per customer"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
         self.assertEqual(texts["Third story"], NEXT)
         self.assertEqual(texts["Who sends it when the owner is away?"], OPEN)
@@ -115,7 +115,7 @@ class CommandLine(unittest.TestCase):
         old = old_scheme(build_story_map.build(SPEC_3))
         plan = {fill: ids.split(",") for fill, ids in re.findall(r'(#\w+): ids="([^"]+)"', self.run_cli("--released", "MVP").stdout)}
         texts = stickies(apply(old, plan))
-        self.assertEqual(texts["Save a date per customer"], RELEASED)
+        self.assertEqual(texts["Save a date per customer"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
 
     def test_an_unknown_release_fails_with_the_labels_instead_of_being_ignored(self):

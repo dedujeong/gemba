@@ -19,7 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
 
-from build_story_map import ACTIVITY, OPEN, PERSONA, RELEASED, TASK, release_fills
+from build_story_map import ACTIVITY, GRAY, OPEN, PERSONA, TASK, release_fills
 from read_story_map import BACKBONE, OPEN_FILLS, read_bands
 
 BACKBONE_FILLS = {"User persona": PERSONA, "Activities": ACTIVITY, "Tasks": TASK}

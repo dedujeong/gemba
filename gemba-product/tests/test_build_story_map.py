@@ -14,7 +14,7 @@ sys.path.insert(0, SCRIPTS)
 import build_story_map  # noqa: E402
 
 PERSONA, ACTIVITY, TASK = "#f5e989", "#eed7fc", "#cfe1fd"
-CURRENT, NEXT, LATER, RELEASED, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
+CURRENT, NEXT, LATER, GRAY, OPEN = "#baf3db", "#fce4a6", "#fff5db", "#f0f1f2", "#ffd5d2"
 
 # The closed sticky palette of Confluence: a fill outside it is snapped to the nearest one.
 PALETTE = {
@@ -222,7 +222,7 @@ class FixedColors(unittest.TestCase):
 
     def test_a_delivered_release_is_gray_and_the_rest_shift_up(self):
         texts = stickies(build_story_map.build(delivered_first(SPEC)))
-        self.assertEqual(texts["Delivered story"], RELEASED)
+        self.assertEqual(texts["Delivered story"], GRAY)
         self.assertEqual(texts["Import dates from the notebook"], CURRENT)
 
     def test_open_question_is_red_in_any_release(self):
@@ -238,7 +238,7 @@ class FixedColors(unittest.TestCase):
                              {"name": "Release 4", "stories": [["Fourth story"], []]}]
         fills = set(stickies(build_story_map.build(spec)).values())
         self.assertEqual(fills - PALETTE, set())
-        self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, RELEASED, CURRENT, NEXT, LATER})
+        self.assertEqual(fills, {PERSONA, ACTIVITY, TASK, GRAY, CURRENT, NEXT, LATER})
 
 
 class LabelAlignment(unittest.TestCase):
