@@ -4,11 +4,11 @@ Usage: python3 build_architecture.py spec.json out.svg
 
 Spec (see ../assets/architecture-template.json):
 {
-  "product": {"name": "<Product>", "description": "<What it is, in a few words>"},
+  "product": {"name": "<Product>"},
   "context": {
     "description": "<Who uses it and which systems it talks to>",
     "actors": ["<Role 1>", "<Role 2>"],
-    "externals": [{"name": "<System>", "description": "<What it gives>"}],
+    "externals": [{"name": "<System>"}],
     "relations": [{"from": "<Role 1>", "to": "<Product>", "label": "<what it does there>"}]
   }
 }
@@ -220,10 +220,10 @@ def context_diagram(spec, top):
         d.actor(actor, X_ACTOR, round(top + i * ACTOR_STEP, 2))
 
     column_height = max(len(actors) - 1, 0) * ACTOR_STEP + ACTOR_SIDE
-    d.box(product["name"], product.get("description", ""), X_PRODUCT,
+    d.box(product["name"], "", X_PRODUCT,
           round(top + (column_height - BOX_H) / 2, 2))
     for i, external in enumerate(externals):
-        d.box(external["name"], external.get("description", ""), X_EXTERNAL,
+        d.box(external["name"], "", X_EXTERNAL,
               round(top + i * BOX_STEP, 2), external=True)
 
     draw_relations(d, context.get("relations", []), "context")
@@ -253,13 +253,13 @@ def containers_diagram(spec, top):
         x = round(X_BOUNDARY + i * BOUNDARY_STEP, 2)
         sid = d.section(boundary["name"], x, top, height)
         for j, piece in enumerate(pieces):
-            d.box(piece["name"], piece.get("description", ""), round(x + PAD_X, 2),
+            d.box(piece["name"], "", round(x + PAD_X, 2),
                   round(top + PAD_TOP + j * (BOX_H + GAP_IN), 2),
                   shape=piece.get("shape", "process"), parent=sid)
 
     y_external = round(top + tallest + EXTERNAL_GAP, 2)
     for i, external in enumerate(containers.get("externals", [])):
-        d.box(external["name"], external.get("description", ""),
+        d.box(external["name"], "",
               round(X_BOUNDARY + i * EXTERNAL_STEP, 2), y_external, external=True)
 
     d.floor = top + tallest

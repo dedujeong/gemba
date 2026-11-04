@@ -91,6 +91,7 @@ The step hands work to the version, and proposes it without declaring anything i
 When the ADRs are written, create the `Architecture` page of the product's space with the diagrams of the system, so the person sees at a glance who uses it and which systems it talks to. `references/diagrams.md` says which levels to draw and what each shape means.
 
 1. Write the spec of the diagrams as `assets/architecture-template.json` defines, from the decisions already taken: the actors from the Story Map and the brief, the systems the ADRs name, and one relation per arrow saying what flows along it.
+   A box of Context and Containers carries only the name of the person, the system or the container: no description, no technology, no legend.
    Besides Context and Containers, the spec carries what the product keeps and how it changes, taken from the stories of the current release and never inferred:
    - `data_model`: one entity for each thing the stories name, with its main fields and a labelled relation between entities. An entity no story mentions is not drawn, and with no entities the diagram is left out.
    - `states`: one item for each entity that changes state in a story, with its states, the event that creates it (`initial`) and each event that moves it (`transitions`). An entity that never changes state gets none, and a state or an event no story states is not added.

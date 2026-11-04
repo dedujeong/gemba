@@ -33,7 +33,7 @@ A product with one deployable piece gets Context alone: a Containers diagram wit
 | An arrow | A `polyline` with `data-type="connector"`, `begins-at`, `ends-at`, the two anchors at proportion `0.5`, `line-type="angled"` and `marker-end` | |
 | What flows along an arrow | A `pathLabel` text bound to the connector with `belongs-to` | |
 
-Several `tspan` inside one shape read as a single line, so a name and its description go in one run of text, not stacked.
+A box of the Context and Containers diagrams says only its name: no description, no technology. Several `tspan` inside one shape read as a single line, so an entity of the data model, which does carry its fields, writes them in one run of text after its name, not stacked.
 
 ## What the connector does to a board
 

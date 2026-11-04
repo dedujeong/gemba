@@ -88,16 +88,14 @@ class ContextDiagram(unittest.TestCase):
         product = shapes(root, shape="process")[0]
         self.assertLess(xs.pop() + 124, float(product.get("x")))
 
-    def test_the_product_is_an_internal_box_with_its_description(self):
+    def test_the_product_is_an_internal_box_with_only_its_name(self):
         root = build(SPEC)
         product = [r for r in shapes(root, shape="process") if r.get("fill") == INTERNAL]
         self.assertEqual(len(product), 1)
         self.assertEqual((product[0].get("width"), product[0].get("height")), ("220", "160"))
         label = [t for t in tags(root, "text") if t.get("belongs-to") == product[0].get("id")]
         self.assertEqual(len(label), 1)
-        said = "".join(label[0].itertext())
-        self.assertIn("Periplo", said)
-        self.assertIn("web app para tour operadoras", said)
+        self.assertEqual("".join(label[0].itertext()).strip(), "Periplo")
 
     def test_an_external_system_is_gray(self):
         root = build(SPEC)
@@ -190,6 +188,21 @@ def headings(root):
         for t in tags(root, "text")
         if t.get("data-type") == "text" and list(t) and list(t)[0].get("font-weight") == "bold"
     }
+
+
+class NamesOnly(unittest.TestCase):
+    """A box of the Context and Containers diagrams carries its name and nothing else, even when the spec describes it."""
+
+    def test_every_box_says_only_its_name(self):
+        root = build(with_containers())
+        names = {SPEC["product"]["name"]} | {e["name"] for e in SPEC["context"]["externals"]}
+        names |= {c["name"] for b in CONTAINERS["boundaries"] for c in b["containers"]}
+        names |= {e["name"] for e in CONTAINERS["externals"]}
+        boxes = {r.get("id") for r in shapes(root)}
+        said = ["".join(t.itertext()).strip() for t in tags(root, "text") if t.get("belongs-to") in boxes]
+        self.assertEqual(len(said), len(names))
+        for text in said:
+            self.assertIn(text, names)
 
 
 class ContainersDiagram(unittest.TestCase):
