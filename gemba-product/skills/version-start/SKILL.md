@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, stop if it has open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, set its open questions aside, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared replace each story of the Story Map with the card of its issue. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -21,15 +21,15 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's `release` name, its `description` (the value it delivers) and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first green one that is not delivered: green is the release about to be declared and gray the ones after it. It returns that release's `release` name, its `description` (the value it delivers), how many of its stories are `declared` (already the card of an issue) and `pending` (still a rectangle or a sticky), and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
 
-If `release` comes back empty, every release is gray: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
+If `release` comes back empty, no release is green: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
-## 4. Stop on open questions
+## 4. Set the open questions aside
 
-A red sticky is an open question, not a story. When `open_questions` is not empty, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
+A red sticky is an open question, not a story: it gets no issue. When `open_questions` is not empty, name each one in the person's `Language`, in its own words, and say that it does not enter this version: step 9 moves it, still red, to the release after the current one, where discovery decides it before that release opens. The version goes on without it: do not ask for the decision here, do not hold the version for it and do not turn it into a story.
 
-When `open_questions` is empty, there are no open questions: go on to step 5.
+When `open_questions` is empty, go on to step 5.
 
 ## 5. Confirm the release
 
@@ -79,6 +79,18 @@ When all the cards are declared, declare the version's release through `gemba-co
 - the fix version released in Jira.
 
 Like the cards, it is created without asking again. Report its key with the others.
+
+## 9. Put the cards on the Story Map
+
+When every issue is declared, replace the stories of the release on the board with the cards of their issues, so the map shows the real state of each story without copying keys by hand. Read the board again, because the earlier reading is stale after the declaration:
+
+1. Read the Story Map with `getConfluenceContent` (`content_format: svg`) and save the SVG to a temporary file outside the repository (`mktemp`).
+2. Write a `keys.json` in another temporary file: the key of each Story `gemba-code:start` created, by the text of its story on the board (`{"Save a date per customer": "GEMBA-1"}`). An Epic has no card of its own: only its Stories go in, and the rows of persona, activities and tasks are never touched.
+3. Run `python3 ../story-map/scripts/card_story_map.py <board> <keys> --site <url of the Jira site>`, with the `url` that `getAccessibleAtlassianResources` gave. It prints the patch: the card of each story in the same place, the open questions moved to the next release and, on a board in the old colors, the next releases in gray. A story without a key in `keys.json` is named on stderr and left as it is.
+4. Apply the patch with `updateConfluenceContent`, with the SVG you read as `context.content`. The response of the patch says nothing about what happened.
+5. Read the board again and run the same script with `--check` on that second reading, then delete the temporary files. Report from that reading, never from the response: how many stories are now cards (the cards are always gray) and each story whose card could not be put. A story whose card could not be put stays on the board as it was: name it in the result with its key, so the maintainer can place it by hand.
+
+Without a connection to Confluence, write the patch you would apply and say that the board was not changed.
 
 ## Without a connection
 
