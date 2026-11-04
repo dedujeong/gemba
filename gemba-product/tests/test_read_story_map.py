@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import re
 import subprocess
@@ -239,6 +240,12 @@ class OpenQuestions(unittest.TestCase):
         spec["releases"][0]["stories"][1] = [{"text": "Send a WhatsApp reminder", "traces": "Problem"}]
         self.assertEqual(read_story_map.open_questions(read_story_map.parse(board(spec))), [])
 
+    def test_names_every_open_question_when_there_are_several(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][0]["stories"][1].append({"text": "Do we charge per message?", "open": True})
+        self.assertEqual([q["text"] for q in read_story_map.open_questions(read_story_map.parse(board(spec)))],
+                         ["Who sends it when the owner is away?", "Do we charge per message?"])
+
     def test_only_the_current_release_is_read(self):
         spec = copy.deepcopy(SPEC)
         spec["releases"][1]["stories"][1] = [{"text": "Still open in Release 2", "open": True}]
@@ -305,6 +312,39 @@ class CommandLine(unittest.TestCase):
         out = self.run_cli("--gaps")
         self.assertIn("MVP: 1 open question with no decision", out)
         self.assertIn("- Remind: Send the reminder: Who sends it when the owner is away?", out)
+
+
+class ReleaseDescription(unittest.TestCase):
+    """The value a release delivers, written on its row label: what version-start puts on the fix version."""
+    FIRST = "What the first release achieves for the shop owner."
+
+    def run_mvp(self, *extra):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = os.path.join(tmp, "board.svg")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(board())
+            return subprocess.run(
+                [sys.executable, "-I", os.path.join(SCRIPTS, "read_story_map.py"), path, "--mvp", *extra],
+                capture_output=True, text=True, check=True).stdout
+
+    def test_every_release_carries_the_description_of_its_row_label(self):
+        releases = read_story_map.parse(board())["releases"]
+        self.assertEqual(releases[0]["description"], self.FIRST)
+        self.assertEqual(releases[1]["description"], "What does not enter the first release.")
+
+    def test_the_current_release_for_development_carries_it(self):
+        mvp = read_story_map.for_development(read_story_map.parse(board()))
+        self.assertEqual(mvp["description"], self.FIRST)
+
+    def test_mvp_json_gives_the_current_release_with_its_description_and_open_questions(self):
+        mvp = json.loads(self.run_mvp("--json"))
+        self.assertEqual(sorted(mvp), ["description", "open_questions", "release", "stories"])
+        self.assertEqual(mvp["release"], "MVP")
+        self.assertEqual(mvp["description"], self.FIRST)
+        self.assertEqual(mvp["open_questions"], ["Who sends it when the owner is away?"])
+
+    def test_mvp_markdown_prints_the_description_under_the_release(self):
+        self.assertIn("## MVP\n\n" + self.FIRST, self.run_mvp())
 
 
 if __name__ == "__main__":

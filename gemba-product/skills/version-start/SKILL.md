@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, stop if it has open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared put the key of each Story on its sticky of the Story Map. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, stop if it has open questions, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -21,15 +21,15 @@ Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Prod
 
 Find the whiteboard with `searchConfluence` (`space = "<Confluence Space>" AND type = whiteboard AND title ~ "Story Map"`), the one of the same product as the brief. Read it with `getConfluenceContent` (`content_format: svg`).
 
-Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 scripts/read_release.py <file>` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's stories by activity and task. When the release has a red sticky, it prints each one to stderr and exits with an error instead of returning anything: see step 4.
+Save the SVG to a temporary file outside the repository (`mktemp`), run `python3 ../story-map/scripts/read_story_map.py <file> --mvp --json` and delete the file. The script takes the current release, the first one not gray: a gray release was already delivered and does not count. It returns that release's `release` name, its `description` (the value it delivers) and its `stories` by activity and task, with the red stickies apart in `open_questions`: see step 4.
 
-If every release is gray, say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
+If `release` comes back empty, every release is gray: say that the Story Map has no release left to open and that discovery has to plan the next one, and stop.
 
 ## 4. Stop on open questions
 
-A red sticky is an open question, not a story. When `read_release.py` fails because of red stickies, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
+A red sticky is an open question, not a story. When `open_questions` is not empty, name each one in the person's `Language`, in its own words, and stop: nothing of the version is declared, no fix version is created and nothing is written to Jira or to the Story Map. The questions are decided in discovery on the board, and then the release is read again (step 3). Do not ask for the decision here and do not go on with the answer: only a new reading without red stickies continues.
 
-When the script returns the release, there are no open questions: go on to step 5.
+When `open_questions` is empty, there are no open questions: go on to step 5.
 
 ## 5. Confirm the release
 
@@ -58,7 +58,7 @@ Once the maintainer confirms the release, create its fix version before declarin
 
 - Name: `<Product> vX.Y.Z`, with the product name as the brief and the board give it and the number the maintainer confirmed in step 5, without asking for it again. If the maintainer changed it and it breaks the rule (each release raises the minor number, a bug fix on a released version raises the third, the major stays at 0 until the first paying customer), say so and ask again.
 - Start date and release date: the ones the maintainer gave in step 5. Ask only for one that is still missing.
-- Description: only the value the version delivers, from the release's row label on the board (the script returns it as the release description). No stories, issues, dates or numbers.
+- Description: only the value the version delivers, from the release's row label on the board (the reading returns it as `description`). No stories, issues, dates or numbers.
 
 First list the project's versions with `executeRead` → `getJiraProjectVersions`. If one with the same name already exists, do not create another: say so and use it. Otherwise create it with `executeDestructive` → `manageJiraProjectVersion` (`action: "create"`, `projectIdOrKey`, `name`, `startDate`, `releaseDate`, `description`), then read the versions again and report the one that is there.
 
@@ -80,21 +80,9 @@ When all the cards are declared, declare the version's release through `gemba-co
 
 Like the cards, it is created without asking again. Report its key with the others.
 
-## 9. Put the keys on the Story Map
-
-When the cards and the release Task are declared, write the key of each Story on its sticky of the Story Map, so the board and Jira point to each other. Only the stickies of the stories get a key: never the Epic's, the activity's or a task's, nor an open question, and the release Task has no sticky. A Story is matched to its sticky by the story text read in step 3.
-
-1. Read the board again with `getConfluenceContent` (`content_format: svg`) and save it whole, with its line numbers, to a temporary file outside the repository (`mktemp`). The patch is built on those line numbers, so it is sent right after this reading and never after an older one.
-2. Write another temporary file with the keys, `{"<story text>": "<KEY>"}`, one entry per Story just declared: the Story of a card with one story and each child of an Epic.
-3. Run `python3 scripts/write_keys.py <board file> <keys file>`. It prints one `replace_svg` per sticky, which keeps the story text and adds the key as a last line of the sticky. If it stops naming a text that is not in the current release, that story changed on the board after step 3: say so and write nothing.
-4. Send the patch with `updateConfluenceContent`: `body.value` the patch as printed and `body.context.content` the SVG of step 1, whole.
-5. Read the board again and run `python3 scripts/write_keys.py <new board file> <keys file> --check`. The response of the write is stale and says `ok` even when nothing changed, so it is never the source: report from the check which stickies carry their key. A story whose `ok` is false is reported as not written, never as done.
-
-Delete the temporary files. Report one line per Story, with its key and whether its sticky carries it, and say what is missing if anything is.
-
 ## Without a connection
 
-If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way, and for step 9 write the patch you would send and the reading and check you would make, and say that nothing was written on the board and that no key is reported as written.
+If there is no connection to Confluence, say that the brief and the Story Map are read only from Confluence and could not be read. Do not ask for a copy in the repository. If the person pastes the board as Confluence returns it, read that the same way.
 
 ## Style
 
