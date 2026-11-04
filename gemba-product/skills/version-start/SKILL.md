@@ -11,6 +11,8 @@ You open a version from what discovery agreed. Confluence is the only source: th
 
 Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Confluence Space` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`.
 
+Then check that Gemba Code's `gemba-code:start` is among the available skills, because it declares every issue of the version. If it is not, say that Gemba Code is required to open a version and has to be installed, and stop: read nothing, create no fix version and declare nothing.
+
 ## 2. Read the Product Brief
 
 Find it with `searchConfluence` (`space = "<Confluence Space>" AND title ~ "Product Brief"`) and read it with `getConfluenceContent` (`detail: full`, `content_format: markdown`). If the space has more than one brief, ask which product the version is for. If it has none, say that discovery has to write it first and stop.

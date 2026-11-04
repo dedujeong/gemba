@@ -35,6 +35,22 @@ class VersionStartDeclaresThroughGembaCode(unittest.TestCase):
         self.assertIn("`gemba-code:start`", release)
 
 
+class VersionStartNeedsGembaCode(unittest.TestCase):
+    def first_step(self):
+        return skill().split("## 1.")[1].split("## 2.")[0]
+
+    def test_it_checks_for_the_gemba_code_skill_before_anything_else(self):
+        self.assertIn("`gemba-code:start`", self.first_step())
+        self.assertIn("available skills", self.first_step())
+
+    def test_it_says_gemba_code_is_required_when_the_skill_is_missing(self):
+        self.assertIn("Gemba Code is required", self.first_step())
+
+    def test_it_creates_nothing_when_the_skill_is_missing(self):
+        self.assertIn("create no fix version", self.first_step())
+        self.assertIn("declare nothing", self.first_step())
+
+
 class VersionStartProposesTheNumber(unittest.TestCase):
     def test_the_skill_runs_the_script_to_propose_the_number(self):
         text = skill()
