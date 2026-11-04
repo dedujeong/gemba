@@ -1,6 +1,6 @@
 ---
 name: version-start
-description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, set its open questions aside, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, and once declared replace each story of the Story Map with the card of its issue. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
+description: Open a version from the closed Story Map: read the Product Brief and the current release of the Story Map from Confluence, set its open questions aside, have the maintainer confirm each card as a Story or an Epic, create the fix version named after the product and its number (Product vX.Y.Z) with its dates before anything is declared, once declared replace each story of the Story Map with the card of its issue, and postpone a declared issue to the next release. Use when someone says "abre la versión", "arranca la versión", "inicia el release", or that discovery closed a release and development starts.
 ---
 
 # Start a version
@@ -91,6 +91,17 @@ When every issue is declared, replace the stories of the release on the board wi
 5. Read the board again and run the same script with `--check` on that second reading, then delete the temporary files. Report from that reading, never from the response: how many stories are now cards (the cards are always gray) and each story whose card could not be put. A story whose card could not be put stays on the board as it was: name it in the result with its key, so the maintainer can place it by hand.
 
 Without a connection to Confluence, write the patch you would apply and say that the board was not changed.
+
+## 10. Postpone a declared issue
+
+When the maintainer says that an issue already declared does not go in this version, move it to the next release; nothing else about the issue changes. Read the issue first with `getJiraIssue`: only an issue in Backlog is postponed, because `gemba-code:start` edits an issue only while it is in Backlog. An issue outside Backlog is not postponed: say its state, leave its card where it is and stop. Its state in Jira decides what the card shows, and a cancellation changes nothing on the board.
+
+1. Read the Story Map with `getConfluenceContent` (`content_format: svg`) and save the SVG to a temporary file outside the repository (`mktemp`). Find the card of the issue with `python3 ../story-map/scripts/read_story_map.py <file> --json`: it carries its key and its `id`.
+2. Run `python3 ../story-map/scripts/move_story_map.py <file> --story <id> --to "<release after the current one>"`. The card keeps its column and its issue. Apply the patch with `updateConfluenceContent`, with the SVG you read as `context.content`, and delete the temporary file. Never recolor it: a card is always gray, and it waits in that release until its version is declared.
+3. Through `gemba-code:start`, edit the issue so its fix version is empty. It is not given the version of the next release, because that version does not exist until the release opens: step 7 gives it when the release is declared.
+4. Read the board again and report from that reading, never from the response of the patch: the release the card is in now, and the issue with its fix version empty.
+
+Without a connection to Confluence or Jira, write the patch or the edit you would make and say that nothing was changed.
 
 ## Without a connection
 

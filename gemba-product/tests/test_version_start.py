@@ -119,6 +119,34 @@ class VersionStartPutsTheCardsOnTheMap(unittest.TestCase):
         self.assertLess(skill().index("## 8."), skill().index("## 9."))
 
 
+class VersionStartPostpones(unittest.TestCase):
+    def section(self):
+        return skill().split("## 10.")[1].split("\n## ")[0]
+
+    def test_it_has_a_section_after_the_cards_for_postponing_a_declared_issue(self):
+        self.assertLess(skill().index("## 9."), skill().index("## 10. Postpone"))
+
+    def test_it_moves_the_card_to_the_release_after_the_current_one_with_the_move_script(self):
+        text = self.section()
+        self.assertIn("python3 ../story-map/scripts/move_story_map.py", text)
+        self.assertIn("release after the current one", text)
+
+    def test_it_empties_the_fix_version_through_gemba_code_start_and_only_in_backlog(self):
+        text = self.section()
+        self.assertIn("Backlog", text)
+        self.assertIn("gemba-code:start", text)
+        self.assertIn("fix version", text)
+        self.assertIn("empty", text)
+
+    def test_an_issue_that_left_backlog_is_not_postponed(self):
+        self.assertRegex(self.section(), r"(?i)outside Backlog.*(not postponed|does not move|stays)")
+
+    def test_it_leaves_the_card_as_it_is_and_reads_the_board_again(self):
+        text = self.section()
+        self.assertIn("Read the board again", text)
+        self.assertRegex(text, r"(?i)never recolor")
+
+
 class VersionStartLeavesTheKeysToTheCards(unittest.TestCase):
     def test_the_product_plugin_keeps_no_copy_of_the_old_readers(self):
         for script in ("read_release.py", "write_keys.py"):
