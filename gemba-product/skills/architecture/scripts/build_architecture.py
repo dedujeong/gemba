@@ -25,6 +25,9 @@ only the verb.
 entity must be in the data model. It draws a box per state and an arrow per event, starting
 from a marker with the event that creates the entity; an arrow with no event is rejected.
 
+Each diagram takes "questions": [{"about": "<element>", "text": "<question>"}], one red sticky
+beside the element it is about, for a doubt nobody has answered yet.
+
 Every relation names two elements of its own diagram and says what flows between
 them: an unlabelled arrow tells the reader nothing, so it is rejected, and so is a
 label that does not start with a capital.
@@ -69,6 +72,9 @@ ENTITY_COLUMNS, ENTITY_GAP_X, ENTITY_GAP_Y = 3, 300.0, 150.0
 # The states of an entity: the same grid, with a small start marker at the left of the first row.
 START_SIDE, START_FILL, START_GAP = 40, "#b7b9be", 300.0
 
+# An open question is a red sticky of the Story Map palette, beside the element it comes from.
+STICKY_W, STICKY_H, STICKY_FILL, STICKY_GAP, STICKY_CLEAR = 240.05, 144.03, "#ffd5d2", 180.0, 20.0
+
 MARKER_ID = "arrowhead-6-rgb_117__129__149_"
 ARROWHEAD = (
     f'<defs id="defs-{MARKER_ID}"><marker markerWidth="6" markerHeight="6" refX="0" refY="3" '
@@ -98,6 +104,8 @@ class Diagram:
         self.arrows = 0
         self.sections = 0
         self.floor = 0.0
+        self.obstacles = []
+        self.stickies = []
 
     def _put(self, name, eid, x, y, w, h):
         self.box_of[name] = (eid, x, y, w, h)
@@ -128,6 +136,7 @@ class Diagram:
         """A deployment boundary: the pieces that run in the same place, with the plan in its title."""
         sid = f"{self.prefix}-s{self.sections}"
         self.sections += 1
+        self.obstacles.append((x, y, SECTION_W, height))
         self.out.append(
             f'<rect width="{round(SECTION_W, 2)}" height="{round(height, 2)}" fill="{SECTION_FILL}" '
             f'x="{round(x, 2)}" y="{round(y, 2)}" id="{sid}" data-type="section" data-title="{escape(title)}"/>'
@@ -189,8 +198,52 @@ class Diagram:
                 f'data-proportion="{proportion}"><tspan font-size="{FS}">{escape(text)}</tspan></text>'
             )
 
+    def question(self, about, text, where):
+        """An open question: a red sticky beside the element it is about, where nothing else is drawn."""
+        if about not in self.box_of:
+            raise ValueError(f'{where}: the question "{text}" is about "{about}", which is not an element of this diagram')
+        _, x, y, w, h = self.box_of[about]
+        centre_y = y + h / 2 - STICKY_H / 2
+        taken = [(bx, by, bw, bh) for _, bx, by, bw, bh in self.box_of.values()] + self.obstacles + self.stickies
+        right_most = max(bx + bw for bx, _, bw, _ in taken)
+        candidates = [
+            (x + w + STICKY_GAP, centre_y),
+            (x - STICKY_GAP - STICKY_W, centre_y),
+            (x + w / 2 - STICKY_W / 2, y + h + STICKY_GAP / 3),
+            (x + w / 2 - STICKY_W / 2, y - STICKY_GAP / 3 - STICKY_H),
+            (right_most + STICKY_GAP, centre_y),
+        ]
+        others = [(bx, by, bw, bh) for name, (_, bx, by, bw, bh) in self.box_of.items() if name != about]
+        for sx, sy in candidates:
+            clear = all(sx + STICKY_W + STICKY_CLEAR <= bx or bx + bw + STICKY_CLEAR <= sx
+                        or sy + STICKY_H + STICKY_CLEAR <= by or by + bh + STICKY_CLEAR <= sy for bx, by, bw, bh in taken)
+            # It must read as the doubt of its own element: no other element may sit nearer to it.
+            nearest = all(rect_gap((sx, sy, STICKY_W, STICKY_H), (x, y, w, h))
+                          < rect_gap((sx, sy, STICKY_W, STICKY_H), other) for other in others)
+            if clear and nearest:
+                break
+        sid = f"{self.prefix}-q{len(self.stickies)}"
+        self.stickies.append((sx, sy, STICKY_W, STICKY_H))
+        self.out.append(
+            f'<rect width="{STICKY_W}" height="{STICKY_H}" id="{sid}" data-type="sticky" fill="{STICKY_FILL}" '
+            f'x="{round(sx, 2)}" y="{round(sy, 2)}" font-scale="1"/>'
+        )
+        self.out.append(
+            f'<text x="{round(sx + STICKY_W / 2, 2)}" y="{round(sy + STICKY_H / 2, 2)}" width="216" text-anchor="middle" '
+            f'font-size="{FS}" font-scale="1" fill="{INK}" id="{sid}-text" belongs-to="{sid}">'
+            f'<tspan font-size="{FS}">{escape(text)}</tspan></text>'
+        )
+
     def bottom(self):
-        return max([y + h for _, _, y, _, h in self.box_of.values()] + [self.floor], default=0.0)
+        return max([y + h for _, _, y, _, h in self.box_of.values()] + [y + h for _, y, _, h in self.stickies]
+                   + [self.floor], default=0.0)
+
+
+def rect_gap(a, b):
+    """The distance between two (x, y, w, h) rects, 0 when they touch or overlap."""
+    dx = max(b[0] - (a[0] + a[2]), a[0] - (b[0] + b[2]), 0)
+    dy = max(b[1] - (a[1] + a[3]), a[1] - (b[1] + b[3]), 0)
+    return (dx ** 2 + dy ** 2) ** 0.5
 
 
 def anchor_point(x, y, w, h, side):
@@ -220,6 +273,12 @@ def draw_relations(diagram, relations, where):
         diagram.arrow(source, target, label, cardinality)
 
 
+def draw_questions(diagram, questions, where):
+    """Draw every open question of one diagram as a red sticky beside the element it is about."""
+    for question in questions:
+        diagram.question(question.get("about"), (question.get("text") or "").strip(), where)
+
+
 def context_diagram(spec, top):
     """Who uses the product and which systems it talks to: actors at the left, the product in the middle."""
     product = spec["product"]
@@ -242,6 +301,7 @@ def context_diagram(spec, top):
               round(top + i * BOX_STEP, 2), external=True)
 
     draw_relations(d, context.get("relations", []), "context")
+    draw_questions(d, context.get("questions", []), "context")
     return out + d.out, d.bottom()
 
 
@@ -279,6 +339,7 @@ def containers_diagram(spec, top):
 
     d.floor = top + tallest
     draw_relations(d, containers.get("relations", []), "containers")
+    draw_questions(d, containers.get("questions", []), "containers")
     return out + d.out, d.bottom()
 
 
@@ -296,6 +357,7 @@ def data_model_diagram(spec, top):
               round(X_ACTOR + col * (BOX_W + ENTITY_GAP_X), 2),
               round(top + row * (BOX_H + ENTITY_GAP_Y), 2))
     draw_relations(d, model.get("relations", []), "data model")
+    draw_questions(d, model.get("questions", []), "data model")
     return out + d.out, d.bottom()
 
 
@@ -323,6 +385,7 @@ def state_diagram(spec, diagram, index, top):
                 raise ValueError(f'{where}: "{name}" is not one of its states')
         relations.append({"from": transition["from"], "to": transition["to"], "label": transition.get("event")})
     draw_relations(d, relations, where)
+    draw_questions(d, diagram.get("questions", []), where)
     return out + d.out, d.bottom()
 
 

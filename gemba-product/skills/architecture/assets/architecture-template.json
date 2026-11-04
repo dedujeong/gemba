@@ -4,6 +4,7 @@
   },
   "context": {
     "description": "<Who uses the product and which systems it talks to>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "actors": ["<Role that uses it>", "<Another role>"],
     "externals": [
       {"name": "<System somebody else runs>"}
@@ -15,6 +16,7 @@
   },
   "containers": {
     "description": "<What runs where and what each part is in charge of>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "actors": ["<Role that reaches a piece directly>"],
     "boundaries": [
       {
@@ -34,6 +36,7 @@
   },
   "data_model": {
     "description": "<What the product keeps and how it relates>",
+    "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
     "entities": [
       {"name": "<Entity named by a story>", "fields": ["<main field>", "<another field>"]}
     ],
@@ -45,6 +48,7 @@
     {
       "entity": "<Entity of the data model that changes state>",
       "description": "<How it changes>",
+      "questions": [{"about": "<Element the doubt comes from>", "text": "<Open question nobody has answered>"}],
       "initial": {"state": "<First state>", "event": "<What creates it>"},
       "states": ["<First state>", "<Another state>"],
       "transitions": [

@@ -252,6 +252,77 @@ class Cardinality(unittest.TestCase):
         self.assertIn("1:N", str(caught.exception))
 
 
+def box_of(root, name):
+    """The rect of the element whose text is `name`, found by its text or by its free-text label."""
+    said = lambda t: "".join(t.itertext()).strip()
+    text = [t for t in tags(root, "text") if (said(t) == name or said(t).startswith(name + " "))
+            and t.get("data-type") != "pathLabel"][0]
+    rid = text.get("belongs-to")
+    if rid is None:  # an actor: its name is free text just under its rectangle
+        rects = [r for r in tags(root, "rect") if r.get("data-type") == "rectangle"
+                 and abs(float(r.get("x")) + 62 - float(text.get("x"))) < 1 and float(r.get("y")) < float(text.get("y"))]
+        return max(rects, key=lambda r: float(r.get("y")))
+    return [r for r in tags(root, "rect") if r.get("id") == rid][0]
+
+
+def gap(a, b):
+    """The distance between two rects (0 when they touch or overlap)."""
+    ax, ay, aw, ah = (float(a.get(k)) for k in ("x", "y", "width", "height"))
+    bx, by, bw, bh = (float(b.get(k)) for k in ("x", "y", "width", "height"))
+    dx = max(bx - (ax + aw), ax - (bx + bw), 0)
+    dy = max(by - (ay + ah), ay - (by + bh), 0)
+    return (dx ** 2 + dy ** 2) ** 0.5
+
+
+def stickies(root):
+    return [r for r in tags(root, "rect") if r.get("data-type") == "sticky"]
+
+
+class OpenQuestions(unittest.TestCase):
+    """A doubt about a diagram is a red sticky beside the element it comes from, never a note or a label."""
+
+    def asked(self, spec, name, text="¿Quién la opera?"):
+        root = build(spec)
+        found = stickies(root)
+        self.assertEqual(len(found), 1)
+        sticky = found[0]
+        self.assertEqual(sticky.get("fill"), "#ffd5d2")
+        self.assertEqual((sticky.get("width"), sticky.get("height")), ("240.05", "144.03"))
+        said = [t for t in tags(root, "text") if t.get("belongs-to") == sticky.get("id")]
+        self.assertEqual("".join(said[0].itertext()).strip(), text)
+        others = [r for r in tags(root, "rect") if r.get("data-type") in ("shape", "rectangle") and r is not sticky]
+        self.assertTrue(all(gap(sticky, r) > 0 for r in others), "the sticky covers an element")
+        nearest = min(others, key=lambda r: gap(sticky, r))
+        self.assertEqual(nearest.get("id"), box_of(root, name).get("id"))
+
+    def test_a_question_about_the_product_in_the_context_diagram(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["questions"] = [{"about": "Periplo", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Periplo")
+
+    def test_a_question_about_a_container(self):
+        spec = with_containers()
+        spec["containers"]["questions"] = [{"about": "Auth", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Auth")
+
+    def test_a_question_about_an_entity_in_the_middle_of_a_row(self):
+        spec = with_data_model()
+        spec["data_model"]["questions"] = [{"about": "Reserva", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Reserva")
+
+    def test_a_question_about_a_state(self):
+        spec = with_states()
+        spec["states"][0]["questions"] = [{"about": "Cancelada", "text": "¿Quién la opera?"}]
+        self.asked(spec, "Cancelada")
+
+    def test_a_question_about_an_element_that_is_not_there_is_rejected(self):
+        spec = copy.deepcopy(SPEC)
+        spec["context"]["questions"] = [{"about": "Cobros", "text": "¿Quién la opera?"}]
+        with self.assertRaises(ValueError) as caught:
+            build_architecture.build(spec)
+        self.assertIn("Cobros", str(caught.exception))
+
+
 class CapitalizedLabels(unittest.TestCase):
     """The label of an arrow says only its intention, and starts with a capital."""
 
