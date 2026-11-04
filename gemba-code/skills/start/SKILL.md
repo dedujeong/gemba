@@ -74,7 +74,7 @@ An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows onl
 
 ### Check the edge cases of a whole version
 
-When version-start hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. Until the round is answered, create no issue of the version: say that nothing was created.
+When version-start hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. While any question of the round has no answer, create no issue of the version, not even those of the Stories already answered or the release Task: say that nothing was created and name the questions still missing. When every question is answered, or the round had none, create the whole version without asking for another confirmation.
 
 ## 5. Show it, then create it
 
