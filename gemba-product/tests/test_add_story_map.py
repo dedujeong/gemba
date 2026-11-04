@@ -1,4 +1,5 @@
 import copy
+import json
 import os
 import re
 import subprocess
@@ -15,8 +16,15 @@ import build_story_map  # noqa: E402
 import read_story_map  # noqa: E402
 from test_build_story_map import CURRENT, LATER, NEXT, OPEN, SPEC, delivered_first  # noqa: E402
 from test_move_story_map import SPEC_3, board, first_top, label_tops, moves, sticky  # noqa: E402
+from test_read_story_map import with_issue_cards  # noqa: E402
 
 ROW_STEP = build_story_map.ROW_STEP
+
+
+def mvp_delivered():
+    """A board whose MVP is the cards of two issues that are Done, and the statuses Jira gives for them."""
+    svg = with_issue_cards(board(SPEC_3), {"Save a date per customer": "GEMBA-1", "Send a WhatsApp reminder": "GEMBA-2"})
+    return svg, {"GEMBA-1": "Done", "GEMBA-2": "Done"}
 
 
 def inserted(patch):
@@ -85,8 +93,10 @@ class Placement(unittest.TestCase):
                          {"MVP": CURRENT, "Release 2": NEXT, "Later": LATER})
 
     def test_the_color_follows_the_board_once_a_release_shipped(self):
-        svg = board(delivered_first(SPEC_3))
-        patch = add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Editable message templates", traces="Problem")
+        svg, statuses = mvp_delivered()
+        svg = svg.replace(NEXT, CURRENT)  # Release 2 is the green one now
+        patch = add_story_map.add_patch(svg, "Release 2", "Send the reminder", "Editable message templates", traces="Problem",
+                                        statuses=statuses)
         self.assertEqual(inserted(patch)["fill"], CURRENT)
 
     def test_stacks_under_the_stories_already_in_that_column(self):
@@ -158,8 +168,14 @@ class Checks(unittest.TestCase):
         self.assertIn("<insert_svg", add_story_map.add_patch(board(), "Release 2", "Send the reminder", "Editable message templates"))
 
     def test_a_delivered_release_takes_no_story(self):
-        message = self.message(board(delivered_first(SPEC_3)), "MVP", "Send the reminder", "Resend a failed reminder")
+        svg, statuses = mvp_delivered()
+        message = self.message(svg, "MVP", "Send the reminder", "Resend a failed reminder", statuses=statuses)
         self.assertIn("delivered", message)
+
+    def test_without_the_statuses_no_release_is_known_to_be_delivered(self):
+        svg, _ = mvp_delivered()
+        patch = add_story_map.add_patch(svg, "MVP", "Send the reminder", "Resend a failed reminder", traces="Problem")
+        self.assertIn("<insert_svg", patch)
 
 
 class OpenQuestion(unittest.TestCase):
@@ -206,6 +222,20 @@ class CommandLine(unittest.TestCase):
         self.assertNotEqual(done.returncode, 0)
         self.assertIn("Charge the service", done.stderr)
 
+
+    def test_the_statuses_option_refuses_a_delivered_release(self):
+        svg, statuses = mvp_delivered()
+        with tempfile.TemporaryDirectory() as tmp:
+            path, status_file = os.path.join(tmp, "board.svg"), os.path.join(tmp, "statuses.json")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(svg)
+            with open(status_file, "w", encoding="utf-8") as f:
+                json.dump(statuses, f)
+            done = subprocess.run([sys.executable, "-I", os.path.join(SCRIPTS, "add_story_map.py"), path, "--statuses", status_file,
+                                   "--to", "MVP", "--task", "Send the reminder", "--text", "Resend a failed reminder"],
+                                  capture_output=True, text=True)
+        self.assertNotEqual(done.returncode, 0)
+        self.assertIn("delivered", done.stderr)
 
     def test_the_open_flag_prints_a_red_sticky(self):
         done = self.run_cli("--to", "MVP", "--task", "Send the reminder", "--text", "Who confirms the visit?", "--open")

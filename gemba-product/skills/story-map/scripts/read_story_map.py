@@ -13,11 +13,14 @@ Works on boards edited by hand, as long as:
   "Tasks", or a release name ("MVP", "Release 2", ...), placed at or above its row;
 - each story sits under its task, in the same column (x within half a card).
 
-A release is delivered when its stories are gray, the color of a release that shipped.
-The release being worked on, the "current" one (the MVP until it ships), is the first
-one that is not delivered; a delivered release is not part of its scope. A board in the
-old colors has gray in every later release, so it reads wrong until it is recolored
-(recolor_story_map.py).
+Colors: green is the release about to be declared, gray the releases after it, red an
+open question. Each release reports its "state":
+- "delivered": it has issue cards and every one is Done or Cancelled (needs --statuses);
+  a color never says that a release shipped, and a sticky or a rectangle has no issue.
+- "current": the first release, never Later, with a green story that is not delivered.
+- "later": the row named Later, which is not a release.
+- "next": any other release, gray or not.
+A board in the old colors has no green release, so it has no current release.
 
 A release's "count" is its stories; red stickies (open questions) are not stories and
 are counted apart in "open". --previous N is the number of stories the current release
@@ -29,8 +32,9 @@ the gaps nobody could decide yet. A release with one of those does not close.
 
 --mvp prints only the current release, the value it delivers (the description on its row
 label) and its stories grouped by activity and task, for whoever builds it; with --json it
-prints the same as data, with the open questions apart. version-start reads it that way. Nothing is copied anywhere: the board in Confluence is the only
-source, and this reads it each time.
+prints the same as data, with the open questions apart. version-start reads it that way.
+Nothing is copied anywhere: the board in Confluence is the only source, and this reads
+it each time.
 """
 import json
 import os
@@ -40,7 +44,7 @@ from html import unescape
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
 
-from build_story_map import CARD_H, CARD_W, RELEASED
+from build_story_map import CARD_H, CARD_W, CURRENT
 
 BACKBONE = {"User persona": "personas", "Activities": "activities", "Tasks": "tasks"}
 # Reds of the sticky palette: the open-question fill and the light red Confluence snaps near-reds to.
@@ -116,6 +120,7 @@ def parse(svg, statuses=None):
         "releases": [],
         "unplaced": [],
     }
+    green = []
     for l in labels:
         if l["name"] in BACKBONE:
             continue
@@ -128,11 +133,12 @@ def parse(svg, statuses=None):
                 status = statuses.get(s["key"]) if s["key"] else None
                 columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS, "key": s["key"],
                                    "status": status, "cancelled": (status or "").lower() == "cancelled"})
-        fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
+        cards = [st for c in columns for st in c if st["key"] and not st["open"]]
+        green.append(any(s["fill"].lower() == CURRENT for s in bands[l["name"]]))
         result["releases"].append({
             "name": l["name"],
             "description": l["description"],
-            "delivered": bool(fills) and all(f == RELEASED for f in fills),
+            "delivered": bool(cards) and all(st["cancelled"] or (st["status"] or "").lower() == "done" for st in cards),
             "count": sum(1 for c in columns for st in c if not st["open"]),
             "open": sum(1 for c in columns for st in c if st["open"]),
             "cancelled": sum(1 for c in columns for st in c if st["cancelled"]),
@@ -141,12 +147,22 @@ def parse(svg, statuses=None):
                 for i, t in enumerate(tasks)
             ],
         })
+    chosen = False
+    for release, is_green in zip(result["releases"], green):
+        if release["name"] == "Later":
+            release["state"] = "later"
+        elif release["delivered"]:
+            release["state"] = "delivered"
+        elif is_green and not chosen:
+            release["state"], chosen = "current", True
+        else:
+            release["state"] = "next"
     return result
 
 
 def current(r):
-    """The release being worked on: the first one that is not delivered. Later is a parking row, never the current release."""
-    return next((release for release in r["releases"] if not release["delivered"] and release["name"] != "Later"), None)
+    """The release about to be declared: the first green one that is not delivered. Later is a parking row, never the current release."""
+    return next((release for release in r["releases"] if release["state"] == "current"), None)
 
 
 def change(r, previous):
@@ -228,7 +244,7 @@ def plural(n, one, many):
 def summary(r, previous=None):
     lines = [f'{rel["name"]}: {plural(rel["count"], "story", "stories")}, {plural(rel["open"], "open question", "open questions")}'
              + (f', {rel["cancelled"]} cancelled' if rel["cancelled"] else "")
-             + (" (delivered)" if rel["delivered"] else "") for rel in r["releases"]]
+             + (" (delivered)" if rel["state"] == "delivered" else "") for rel in r["releases"]]
     release = current(r)
     if previous is not None and release:
         delta = change(r, previous)
