@@ -12,6 +12,7 @@ METHODS = {
     "story-map": ["User Story Mapping", "Patton"],
     "architecture": ["ADR", "C4"],
     "version-start": ["fix version"],
+    "version-close": ["fix version"],
 }
 
 

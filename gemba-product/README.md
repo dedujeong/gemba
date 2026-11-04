@@ -26,6 +26,7 @@ Each step rests on a method, named here so you know what it is based on before y
 - `story-map` turns the brief into scope and closes the MVP. It follows Jeff Patton's User Story Mapping: activities, the tasks inside them and a release cut across the stories.
 - `architecture` decides the architecture once the MVP is closed. Each decision is recorded as an ADR, accepted or replaced but never edited, and the system is drawn as C4 diagrams.
 - `version-start` opens a version from the closed Story Map. It reads the current release, creates the fix version named after the product and its number, and hands each card to Gemba Code's `start` to be declared in Jira.
+- `version-close` closes the planning of a version. It checks that no issue of the fix version is outside Done or Cancelled and, when one is, names the open ones and does not close. Otherwise it hands the real time against the estimate to `story-map`. It does not publish: that stays in Gemba Code.
 
 ## Conventions
 
