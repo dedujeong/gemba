@@ -1,4 +1,5 @@
 import os
+import re
 import unittest
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -79,6 +80,28 @@ class VersionCloseKeepsTheStoryMapAsItIs(unittest.TestCase):
         for write in ("updateConfluenceContent", "update_elements_svg", "#f0f1f2"):
             with self.subTest(write=write):
                 self.assertNotIn(write, text)
+
+
+class VersionCloseLeavesPublishingToGembaCode(unittest.TestCase):
+    def test_it_says_merging_tagging_and_the_github_release_stay_in_gemba_code(self):
+        self.assertIn("Merging `develop` into `main`, tagging it and the GitHub release stay in Gemba Code's `version-close`", skill())
+
+    def test_it_runs_no_git_or_github_command(self):
+        text = skill()
+        self.assertIsNone(re.search(r"\b(git|gh) [a-z]", text))
+        self.assertNotIn("claude plugin tag", text)
+
+    def test_its_description_does_not_promise_the_publication(self):
+        description = next(line for line in skill().splitlines() if line.startswith("description:"))
+        for word in ("merge", "tag", "GitHub", "publish"):
+            with self.subTest(word=word):
+                self.assertNotIn(word, description)
+
+    def test_the_readme_says_publishing_is_gemba_codes(self):
+        with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as f:
+            bullet = next(line for line in f if line.startswith("- `version-close`"))
+        self.assertIn("Gemba Code", bullet)
+        self.assertIn("publish", bullet)
 
 
 if __name__ == "__main__":
