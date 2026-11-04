@@ -237,6 +237,13 @@ class Cardinality(unittest.TestCase):
         verb = spec["data_model"]["relations"][0]["label"]
         self.assertEqual(self.labels_of(root, first), [("1", 0.08), (verb, 0.5), ("N", 0.92)])
 
+    def test_a_relation_with_an_undecided_cardinality_carries_only_its_verb(self):
+        root = build(with_data_model())
+        for connector in of(root, "dat-", "polyline"):
+            said = [text for text, _ in self.labels_of(root, connector)]
+            self.assertEqual(len(said), 1)
+            self.assertNotIn(said[0], ("1", "N"))
+
     def test_a_cardinality_that_is_not_one_to_many_is_rejected(self):
         spec = with_data_model()
         spec["data_model"]["relations"][0]["cardinality"] = "N:N"
