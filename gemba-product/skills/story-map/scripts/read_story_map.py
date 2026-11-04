@@ -125,8 +125,9 @@ def parse(svg, statuses=None):
             if c is None:
                 result["unplaced"].append({"release": l["name"], "id": s["id"], "text": s["text"]})
             else:
+                status = statuses.get(s["key"]) if s["key"] else None
                 columns[c].append({"id": s["id"], "text": s["text"], "open": s["fill"].lower() in OPEN_FILLS, "key": s["key"],
-                                           "status": statuses.get(s["key"]) if s["key"] else None})
+                                   "status": status, "cancelled": (status or "").lower() == "cancelled"})
         fills = [s["fill"].lower() for s in bands[l["name"]] if s["fill"].lower() not in OPEN_FILLS]
         result["releases"].append({
             "name": l["name"],
@@ -134,6 +135,7 @@ def parse(svg, statuses=None):
             "delivered": bool(fills) and all(f == RELEASED for f in fills),
             "count": sum(1 for c in columns for st in c if not st["open"]),
             "open": sum(1 for c in columns for st in c if st["open"]),
+            "cancelled": sum(1 for c in columns for st in c if st["cancelled"]),
             "tasks": [
                 {"activity": activity_for(t), "task": t["text"], "stories": columns[i]}
                 for i, t in enumerate(tasks)
@@ -193,7 +195,7 @@ def for_development(r):
     release = current(r)
     stories, open_questions = [], []
     for task in (release["tasks"] if release else []):
-        done = [st["text"] for st in task["stories"] if not st["open"]]
+        done = [st["text"] for st in task["stories"] if not st["open"] and not st["cancelled"]]
         open_questions += [st["text"] for st in task["stories"] if st["open"]]
         if not done:
             continue
@@ -225,6 +227,7 @@ def plural(n, one, many):
 
 def summary(r, previous=None):
     lines = [f'{rel["name"]}: {plural(rel["count"], "story", "stories")}, {plural(rel["open"], "open question", "open questions")}'
+             + (f', {rel["cancelled"]} cancelled' if rel["cancelled"] else "")
              + (" (delivered)" if rel["delivered"] else "") for rel in r["releases"]]
     release = current(r)
     if previous is not None and release:

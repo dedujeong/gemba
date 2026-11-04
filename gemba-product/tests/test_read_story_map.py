@@ -144,6 +144,38 @@ class IssueStatuses(unittest.TestCase):
         self.assertIn("  - GEMBA-2 (Implement)", out)
 
 
+class CancelledCards(unittest.TestCase):
+    """An issue that was cancelled stays on the board: the card reads as cancelled and is no longer scope."""
+    STATUSES = {"GEMBA-1": "Done", "GEMBA-2": "Cancelled"}
+
+    def data(self, statuses=None):
+        return read_story_map.parse(with_issue_cards(board(), IssueCards.KEYS), self.STATUSES if statuses is None else statuses)
+
+    def stories(self, data):
+        return {s["key"]: s for t in data["releases"][0]["tasks"] for s in t["stories"] if s["key"]}
+
+    def test_a_card_of_a_cancelled_issue_reads_as_cancelled(self):
+        stories = self.stories(self.data())
+        self.assertEqual((stories["GEMBA-2"]["status"], stories["GEMBA-2"]["cancelled"]), ("Cancelled", True))
+        self.assertFalse(stories["GEMBA-1"]["cancelled"])
+
+    def test_the_status_is_read_whatever_its_case(self):
+        self.assertTrue(self.stories(self.data({"GEMBA-2": "cancelled"}))["GEMBA-2"]["cancelled"])
+
+    def test_a_card_with_no_status_or_a_sticky_is_not_cancelled(self):
+        self.assertFalse(self.stories(self.data({}))["GEMBA-2"]["cancelled"])
+        self.assertFalse(read_story_map.parse(board())["releases"][0]["tasks"][0]["stories"][0]["cancelled"])
+
+    def test_the_release_counts_its_cancelled_cards_apart(self):
+        self.assertEqual([r["cancelled"] for r in self.data()["releases"]], [1, 0])
+        self.assertIn("MVP: 2 stories, 1 open question, 1 cancelled", read_story_map.summary(self.data()))
+        self.assertNotIn("cancelled", read_story_map.summary(self.data({})))
+
+    def test_a_cancelled_card_is_not_scope_for_development(self):
+        mvp = read_story_map.for_development(self.data())
+        self.assertEqual([st for a in mvp["stories"] for t in a["tasks"] for st in t["stories"]], ["GEMBA-1"])
+
+
 class StoryRectangles(unittest.TestCase):
     """A story drawn as a rectangle of the Jira card counts exactly like a sticky."""
 
