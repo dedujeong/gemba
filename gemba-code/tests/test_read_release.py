@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -22,6 +23,28 @@ def read(*args):
     result = run(BOARD, *args)
     result.check_returncode()
     return result.stdout
+
+
+def with_story_rectangles(svg, only):
+    """The same board with the stories whose text is in `only` drawn as Jira-card rectangles instead of stickies."""
+    texts = {m.group(1): m.group(2) for m in re.finditer(r'belongs-to="(\w+)"[^>]*>[\s\d]*<tspan[^>]*>([^<]*)</tspan>', svg)}
+
+    def swap(m):
+        tag = m.group(0)
+        sid = re.search(r' id="([^"]*)"', tag).group(1)
+        if 'data-type="sticky"' not in tag or texts.get(sid) not in only:
+            return tag
+        tag = tag.replace('data-type="sticky"', 'data-type="rectangle"')
+        return re.sub(r'width="[\d.]+" height="[\d.]+"', 'width="345" height="136.91"', tag)
+
+    return re.sub(r"<rect\b[^>]*>", swap, svg)
+
+
+def write_board(svg):
+    board = os.path.join(tempfile.mkdtemp(), "board.svg")
+    with open(board, "w", encoding="utf-8") as f:
+        f.write(svg)
+    return board
 
 
 class CurrentRelease(unittest.TestCase):
@@ -75,6 +98,41 @@ class RedStickies(unittest.TestCase):
         self.assertEqual(result.stdout, "")
         self.assertIn("Who sends it when the owner is away?", result.stderr)
         self.assertIn("Do we charge per message?", result.stderr)
+
+
+RELEASE_2 = {"Save the vehicle", "Suggest the date by service type", "Remind the day before"}
+QUESTION = "Who sends it when the owner is away?"
+
+
+class StoryRectangles(unittest.TestCase):
+    """A story drawn as a rectangle of the Jira card counts exactly like a sticky."""
+
+    def setUp(self):
+        self.svg = open(BOARD, encoding="utf-8").read()
+        self.plain = read("--json")
+
+    def read_with(self, svg, *args):
+        return run(write_board(svg), *args)
+
+    def test_a_release_of_rectangles_reads_like_one_of_stickies(self):
+        result = self.read_with(with_story_rectangles(self.svg, RELEASE_2), "--json")
+        result.check_returncode()
+        self.assertEqual(result.stdout, self.plain)
+
+    def test_a_board_with_both_shapes_reads_whole(self):
+        mixed = with_story_rectangles(self.svg, {"Save the vehicle", "Remind the day before"})
+        result = self.read_with(mixed, "--json")
+        result.check_returncode()
+        self.assertEqual(result.stdout, self.plain)
+
+    def test_a_red_rectangle_is_an_open_question_not_a_story(self):
+        red = open(BOARD_WITH_RED, encoding="utf-8").read()
+        for fill in ("#ffd5d2", "#ffeceb"):
+            board = with_story_rectangles(red.replace("#ffd5d2", fill), RELEASE_2 | {QUESTION})
+            result = self.read_with(board, "--json")
+            self.assertNotEqual(result.returncode, 0, fill)
+            self.assertEqual(result.stdout, "")
+            self.assertIn(QUESTION, result.stderr)
 
 
 class Markdown(unittest.TestCase):
