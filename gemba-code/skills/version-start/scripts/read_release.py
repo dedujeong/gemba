@@ -6,7 +6,7 @@ Accepts the SVG exactly as getConfluenceContent returns it (content_format: svg)
 including the line-number prefixes. The board follows the Gemba Product layout:
 - each row has a label, a text whose bold 27px line is "User persona", "Activities",
   "Tasks" or a release name ("MVP", "Release 2", ...), at or above its row;
-- each story sits under its task, in the same column.
+- each story sits under its task, in the same column, drawn as a sticky or as a rectangle of the Jira card.
 
 Each release reports the description on its row label, the value it delivers.
 A release is delivered when its stories are gray, and it does not count. The current
@@ -33,13 +33,15 @@ def attrs(tag):
 
 
 def read_bands(svg):
-    """The row labels, top to bottom, and the stickies of each row, keyed by label name."""
+    """The row labels, top to bottom, and the stickies and story rectangles of each row, keyed by label name."""
     svg = re.sub(r"(?m)^\d+(?=\s*<|$)", "", svg)
     stickies = {}
     for m in re.finditer(r"<rect\b[^>]*>", svg):
         a = attrs(m.group(0))
-        if a.get("data-type") == "sticky":
-            stickies[a["id"]] = {"id": a["id"], "x": float(a["x"]), "y": float(a["y"]), "fill": a.get("fill", "").lower(), "text": ""}
+        if a.get("data-type") in ("sticky", "rectangle"):
+            # A story is a sticky or a rectangle of the Jira card size: its height comes from the element itself.
+            stickies[a["id"]] = {"id": a["id"], "x": float(a["x"]), "y": float(a["y"]), "h": float(a.get("height", CARD_H)),
+                                 "fill": a.get("fill", "").lower(), "text": ""}
     labels = []
     for m in re.finditer(r"(<text\b[^>]*>)(.*?)</text>", svg, re.S):
         a, body = attrs(m.group(1)), m.group(2)
@@ -63,7 +65,7 @@ def read_bands(svg):
 
     bands = {l["name"]: [] for l in labels}
     for s in stickies.values():
-        center = s["y"] + CARD_H / 2
+        center = s["y"] + s["h"] / 2
         above = [l for l in labels if l["y"] <= center]
         if above:
             bands[above[-1]["name"]].append(s)
@@ -82,7 +84,7 @@ def current_row(labels, bands):
 
 
 def current_release(svg):
-    """The first release not delivered, with its stories by activity and task and its open questions apart."""
+    """The first release not delivered, with its stories by activity and task and its open questions apart (the command line refuses a release that has any)."""
     labels, bands = read_bands(svg)
     tasks = sorted(bands.get("Tasks", []), key=lambda s: s["x"])
     activities = sorted(bands.get("Activities", []), key=lambda s: s["x"])
@@ -126,12 +128,15 @@ def to_markdown(release):
         for t in a["tasks"]:
             lines.append(f'- **{t["task"]}**')
             lines += [f"  - {text}" for text in t["stories"]]
-    if release["open_questions"]:
-        lines.append("\n### Open questions")
-        lines += [f"- {q}" for q in release["open_questions"]]
     return "\n".join(lines)
 
 
 if __name__ == "__main__":
     release = current_release(open(sys.argv[1], encoding="utf-8").read())
+    if release["open_questions"]:
+        print(f'{release["release"]} has open questions (red stickies); decide them on the Story Map before opening it:', file=sys.stderr)
+        for question in release["open_questions"]:
+            print(f"- {question}", file=sys.stderr)
+        sys.exit(1)
+    del release["open_questions"]
     print(json.dumps(release, ensure_ascii=False, indent=2) if "--json" in sys.argv else to_markdown(release))

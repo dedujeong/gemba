@@ -21,8 +21,9 @@ Colors follow the Jira work items and always mean the same thing: persona yellow
 activities purple, tasks blue. Releases are colored by position among the ones not
 delivered: the first (usually the MVP) is the current release, green; the second is
 the next one, orange; the rest are later, light orange. "released": true marks a
-delivered release and turns its row gray. "open": true makes a red sticky for an
-unresolved question.
+delivered release and turns its row gray. "open": true makes a red rectangle for an
+unresolved question. A story is a rectangle of 345 x 136.91, the size of its Jira card;
+persona, activities and tasks are stickies.
 
 Every story of the current release (the first one not delivered) must say where it comes from in the brief:
 "traces" names the problem, the primary job or the Quality bar condition it
@@ -44,9 +45,13 @@ from xml.sax.saxutils import escape
 
 FONT = "Atlassian Sans, ui-sans-serif, -apple-system, BlinkMacSystemFont, Segoe UI, Ubuntu, Helvetica Neue, sans-serif"
 CARD_W, CARD_H = 240.05, 144.03
-X_LABEL, X0, PITCH = -120.56, 318.51, 303.33
+# A story is drawn at the size of its Jira card, so declaring it does not move the map.
+STORY_W, STORY_H = 345, 136.91
+STORY_MID_X, STORY_MID_Y = 172.5, 68.45  # where Confluence centers the text of a card, measured on a board
+X_LABEL, X0 = -120.56, 318.51
+PITCH = round(STORY_W + 63.28, 2)  # a story card and the gap between columns
 Y_PERSONA, BACKBONE_STEP = -185.02, 250.68
-ROW_STEP, RELEASE_GAP = 184.03, 245.6
+ROW_STEP, RELEASE_GAP = round(STORY_H + 40, 2), 245.6  # a story card and the gap between rows
 
 # Fills are values of the closed sticky palette of Confluence: any other hex is
 # snapped to the nearest one and the stored color differs from the requested one.
@@ -111,6 +116,15 @@ def sticky_svg(sid, x, y, fill, text):
     ]
 
 
+def rectangle_svg(rid, x, y, fill, text):
+    """A story: a rectangle the size of its Jira card and the text that belongs to it, centered on it."""
+    return [
+        f'<rect width="{STORY_W}" height="{STORY_H}" id="{rid}" data-type="rectangle" fill="{fill}" x="{x}" y="{y}"/>',
+        f'<text x="{round(x + STORY_MID_X, 2)}" y="{round(y + STORY_MID_Y, 2)}" width="276" text-anchor="middle" '
+        f'font-size="{FS}" fill="#172b4d" id="{rid}-text" belongs-to="{rid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>',
+    ]
+
+
 class Board:
     def __init__(self):
         self.out = []
@@ -119,6 +133,10 @@ class Board:
     def sticky(self, x, y, fill, text):
         self.n += 1
         self.out += sticky_svg(f"s{self.n}", x, y, fill, text)
+
+    def story(self, x, y, fill, text):
+        self.n += 1
+        self.out += rectangle_svg(f"s{self.n}", x, y, fill, text)
 
     def row_label(self, lid, top, title, description, width=344.12, scale=1, chars=LABEL_CHARS):
         self.out.append(label_svg(lid, top, title, description, width, scale, chars))
@@ -195,7 +213,7 @@ def build(spec):
             for row, story in enumerate(column):
                 text, is_open, _ = split_story(story)
                 fill = OPEN if is_open else fills[r_index]
-                b.sticky(col_x(col), round(y + row * ROW_STEP, 2), fill, text)
+                b.story(col_x(col), round(y + row * ROW_STEP, 2), fill, text)
         y = round(y + (depth - 1) * ROW_STEP + RELEASE_GAP, 2)
 
     svg = (

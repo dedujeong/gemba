@@ -69,14 +69,25 @@ NS = {"s": "http://www.w3.org/2000/svg"}
 
 
 def stickies(svg):
-    """Return {text: fill} for every sticky on the board."""
+    """Return {text: fill} for every sticky and story rectangle on the board."""
     root = ET.fromstring(svg)
-    fills = {el.get("id"): el.get("fill") for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == "sticky"}
+    fills = {el.get("id"): el.get("fill") for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") in ("sticky", "rectangle")}
     out = {}
     for el in root.iter("{%s}text" % NS["s"]):
         owner = el.get("belongs-to")
         if owner in fills:
             out[("".join(el.itertext())).strip()] = fills[owner]
+    return out
+
+
+def shapes(svg, kind):
+    """Return [(text, rect)] for every rect of the given data-type, with its attributes as floats where numeric."""
+    root = ET.fromstring(svg)
+    rects = {el.get("id"): el for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == kind}
+    out = []
+    for el in root.iter("{%s}text" % NS["s"]):
+        if el.get("belongs-to") in rects:
+            out.append((("".join(el.itertext())).strip(), rects[el.get("belongs-to")]))
     return out
 
 
@@ -106,6 +117,75 @@ class BoardContent(unittest.TestCase):
         spec["releases"][1]["stories"].append(["one column too many"])
         with self.assertRaises(ValueError):
             build_story_map.build(spec)
+
+
+class StoryRectangles(unittest.TestCase):
+    """Each story is drawn at the size of its Jira card, so declaring it does not move the map."""
+
+    def setUp(self):
+        self.svg = build_story_map.build(SPEC)
+        self.stories = {"Save a date per customer", "Send a WhatsApp reminder",
+                        "Who sends it when the owner is away?", "Import dates from the notebook"}
+
+    def test_each_story_is_a_rectangle_of_the_jira_card_size(self):
+        rects = dict(shapes(self.svg, "rectangle"))
+        self.assertEqual(set(rects), self.stories)
+        for text, rect in rects.items():
+            self.assertEqual((rect.get("width"), rect.get("height")), ("345", "136.91"), text)
+
+    def test_a_story_rectangle_has_the_color_of_its_release(self):
+        rects = dict(shapes(self.svg, "rectangle"))
+        self.assertEqual(rects["Save a date per customer"].get("fill"), CURRENT)
+        self.assertEqual(rects["Import dates from the notebook"].get("fill"), NEXT)
+
+    def test_the_text_is_centered_on_its_rectangle(self):
+        root = ET.fromstring(self.svg)
+        rects = {el.get("id"): el for el in root.iter("{%s}rect" % NS["s"]) if el.get("data-type") == "rectangle"}
+        for el in root.iter("{%s}text" % NS["s"]):
+            rect = rects.get(el.get("belongs-to"))
+            if rect is not None:
+                self.assertEqual(float(el.get("x")), round(float(rect.get("x")) + 172.5, 2))
+                self.assertEqual(float(el.get("y")), round(float(rect.get("y")) + 68.45, 2))
+                self.assertEqual(el.get("width"), "276")
+
+    def test_persona_activities_and_tasks_stay_stickies(self):
+        stickies_ = dict(shapes(self.svg, "sticky"))
+        self.assertEqual(set(stickies_), {"Shop owner (primary)", "Customer", "Record a service", "Remind",
+                                          "Save the next service date", "Send the reminder"})
+        for rect in stickies_.values():
+            self.assertEqual((rect.get("width"), rect.get("height")), ("240.05", "144.03"))
+
+
+class Spacing(unittest.TestCase):
+    """Columns and rows are spaced for rectangles of the Jira card size: nothing on the board overlaps."""
+
+    def boxes(self, spec):
+        root = ET.fromstring(build_story_map.build(spec))
+        return [(float(r.get("x")), float(r.get("y")), float(r.get("width")), float(r.get("height")), r.get("id"))
+                for r in root.iter("{%s}rect" % NS["s"])]
+
+    def overlaps(self, boxes):
+        return [(a[4], b[4]) for i, a in enumerate(boxes) for b in boxes[i + 1:]
+                if a[0] < b[0] + b[2] and b[0] < a[0] + a[2] and a[1] < b[1] + b[3] and b[1] < a[1] + a[3]]
+
+    def test_no_two_shapes_overlap(self):
+        self.assertEqual(self.overlaps(self.boxes(SPEC)), [])
+
+    def test_stories_stacked_in_a_cell_and_in_several_columns_do_not_overlap(self):
+        spec = copy.deepcopy(SPEC)
+        spec["releases"][1]["stories"] = [["Third", "Fourth", "Fifth"], ["Sixth", "Seventh"]]
+        spec["releases"].append({"name": "Later", "stories": [["Eighth", "Ninth"], ["Tenth"]]})
+        self.assertEqual(self.overlaps(self.boxes(spec)), [])
+
+    def test_columns_leave_the_same_gap_as_before_between_cards_of_the_jira_size(self):
+        xs = sorted({round(b[0], 2) for b in self.boxes(SPEC)})
+        self.assertEqual([round(b - a, 2) for a, b in zip(xs, xs[1:])], [408.28])
+
+    def test_stories_stacked_in_a_cell_are_a_card_and_a_gap_apart(self):
+        column = [b for b in self.boxes(SPEC) if b[2] == 345 and b[0] == round(build_story_map.col_x(1), 2) and b[1] < 1400]
+        ys = sorted(b[1] for b in column)
+        self.assertEqual(len(ys), 2)
+        self.assertEqual(round(ys[1] - ys[0], 2), 176.91)
 
 
 class FixedColors(unittest.TestCase):

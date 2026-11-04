@@ -16,12 +16,12 @@ release, orange in the next one, light orange later and in the Later row. A deli
 release takes no story. A story of the current release needs --traces, the part of the
 brief it serves, the same cut build_story_map.py makes.
 
---open adds an open question instead of a story: a red sticky in the column of its task,
+--open adds an open question instead of a story: a red rectangle in the column of its task,
 whatever the row it lands in, and it needs no --traces, because a question nobody could
 decide yet is not a story. read_story_map.py counts it apart and still reads its task as
 a step with no story.
 
-The output is a replace_svg per label that moves, the insert_svg with the new sticky and
+The output is a replace_svg per label that moves, the insert_svg with the new story rectangle and
 its text, and an update_elements_svg per sticky that moves. Confluence gives the inserted
 sticky a new id: read the board again afterwards to report what it says.
 """
@@ -32,7 +32,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))  # python3 -I does not add it
 
-from build_story_map import OPEN, release_fills, sticky_svg
+from build_story_map import OPEN, rectangle_svg, release_fills
 from move_story_map import row_top, shift_patch, stack_y
 from read_story_map import BACKBONE, current, parse, read_bands
 
@@ -84,8 +84,8 @@ def add_patch(svg, target, task, text, traces="", is_open=False):
     row.append({"id": sid, "x": column["x"], "y": y})
 
     label_ops, sticky_ops = shift_patch(svg, labels, bands, target_label, max(s["y"] for s in row))
-    sticky = "\n".join(sticky_svg(sid, column["x"], y, fill, text))
-    return "\n".join(label_ops + [f'<insert_svg line="{end_line(svg)}">\n{sticky}\n</insert_svg>'] + sticky_ops)
+    story = "\n".join(rectangle_svg(sid, column["x"], y, fill, text))
+    return "\n".join(label_ops + [f'<insert_svg line="{end_line(svg)}">\n{story}\n</insert_svg>'] + sticky_ops)
 
 
 if __name__ == "__main__":
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     parser.add_argument("--task", required=True, metavar="TASK", help="the text of the task whose column it belongs to")
     parser.add_argument("--text", required=True, metavar="TEXT", help="the story, in one short sentence")
     parser.add_argument("--traces", default="", metavar="WHERE", help="the part of the brief it serves; required in the current release")
-    parser.add_argument("--open", action="store_true", help="add an open question, a red sticky, instead of a story")
+    parser.add_argument("--open", action="store_true", help="add an open question, a red rectangle, instead of a story")
     args = parser.parse_args()
     try:
         print(add_patch(open(args.board, encoding="utf-8").read(), args.to, args.task, args.text, args.traces, args.open))
