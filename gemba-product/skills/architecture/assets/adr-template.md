@@ -12,6 +12,8 @@ The ADR is about the decision, not about who made it. A fact that comes from wha
 
 Every path, file, folder, column, domain and command the decision names is written as code (`db/migrations`, `starts_at`, `supabase db push`) each time it appears in the body. The title is plain text.
 
+The name of a product, a provider or a tool (Supabase, Cloudflare Pages, Postgres) is plain text, never code: only the command that runs it (`supabase db push`) is.
+
 ## Sections
 
 Five H2 sections, always in this order.

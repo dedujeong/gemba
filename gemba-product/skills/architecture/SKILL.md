@@ -62,6 +62,7 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 - Fill the five sections. Record every alternative that was weighed, including those the person rejected in the review.
 - Write the ADR about the decision, not about who made it or who said what. A fact that comes from something a person said names their role (the owner, the operator, the team) and its source label from `../pitch/SKILL.md` section 4 (Interview, Secondhand, Assumption), never the person's name, in any section or in the title.
 - Write each technical name the decision mentions with code style, every time it appears in the body: paths, files, folders, columns, domains and commands (`db/migrations`, `starts_at`, `reservas.example.com`, `supabase db push`). The title of the page is plain text.
+- Write the name of a product, a provider or a tool as plain text, never with code style (Supabase, Cloudflare Pages, Postgres, GitHub). The command that runs a tool is code (`supabase db push`); the tool's own name is not.
 - Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
 
 | ADR state | Page status | Panel |
