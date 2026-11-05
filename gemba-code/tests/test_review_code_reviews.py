@@ -49,5 +49,26 @@ class SmallChangeOfLowRisk(unittest.TestCase):
             self.assertIn(area, text)
 
 
+class CodeReviewsLaunchedInParallel(unittest.TestCase):
+    def test_both_reviews_are_launched_in_the_same_turn(self):
+        text = code_reviews_section()
+        self.assertIn("`/code-review`", text)
+        self.assertIn("`/security-review`", text)
+        self.assertIn("in the same turn, in parallel", text)
+
+    def test_the_level_of_code_review_is_chosen_by_size_and_risk_among_four(self):
+        text = code_reviews_section()
+        for level in ("`low`", "`medium`", "`high`", "`xhigh`"):
+            self.assertIn(level, text)
+        self.assertIn("by the size and the risk", text)
+
+    def test_max_and_ultra_are_never_chosen(self):
+        text = code_reviews_section()
+        self.assertIn("never `max` or `ultra`", text)
+
+    def test_it_says_what_was_launched_and_why(self):
+        self.assertIn("Say what was launched and why", code_reviews_section())
+
+
 if __name__ == "__main__":
     unittest.main()
