@@ -38,11 +38,81 @@ class SetupGitignore(unittest.TestCase):
     def test_the_gitignore_comes_after_the_attribution_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("Turn off the Claude attribution"), text.index("scripts/write_gitignore.py"))
-        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 7. Report"))
+        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 8. Report"))
 
     def test_the_report_says_whether_the_gitignore_was_written(self):
-        report = skill().split("## 7. Report")[1]
+        report = skill().split("## 8. Report")[1]
         self.assertIn(".gitignore", report)
+
+
+class SetupReadme(unittest.TestCase):
+    def section(self):
+        return skill().split("## 7. Write the project README")[1].split("## 8. Report")[0]
+
+    def test_the_readme_comes_after_the_gitignore_and_before_the_report(self):
+        text = skill()
+        self.assertLess(text.index("## 6. Write the base .gitignore"), text.index("## 7. Write the project README"))
+        self.assertLess(text.index("## 7. Write the project README"), text.index("## 8. Report"))
+
+    def test_it_is_written_from_the_template_of_the_assets(self):
+        self.assertIn("assets/readme.md", self.section())
+
+    def test_the_name_the_description_and_what_it_is_come_from_the_product_brief(self):
+        text = self.section()
+        self.assertIn("Product Brief", text)
+        for field in ("product name", "one-line description", "What it is"):
+            self.assertIn(field, text)
+
+    def test_install_run_and_test_come_only_from_what_the_repository_states(self):
+        text = self.section()
+        self.assertIn("Install, Run and Test", text)
+        self.assertIn("only from what the repository states", text)
+        self.assertIn("stays as a field to fill", text)
+
+    def test_it_is_written_only_when_the_repository_has_no_readme(self):
+        self.assertIn("no `README.md`", self.section())
+
+    def test_the_comment_of_the_template_is_removed(self):
+        self.assertIn("Remove the comment", self.section())
+
+    def test_the_content_is_in_the_project_language_and_the_structure_in_english(self):
+        text = self.section()
+        self.assertIn("project's `Language`", text)
+        self.assertIn("section names and every field that stays to fill are kept exactly as the template has them, in English", text)
+
+    def test_a_requirement_is_a_proper_name_with_its_version_and_not_a_sentence(self):
+        text = self.section()
+        self.assertIn("canonical form with its version", text)
+        self.assertIn("never a sentence or the hint of the field", text)
+
+    def test_the_report_says_whether_the_readme_was_written(self):
+        report = skill().split("## 8. Report")[1]
+        self.assertIn("README", report)
+
+
+class SetupExistingReadme(unittest.TestCase):
+    def section(self):
+        return skill().split("## 7. Write the project README")[1].split("## 8. Report")[0]
+
+    def test_an_existing_readme_is_never_replaced_or_rewritten(self):
+        text = self.section()
+        self.assertIn("already has a `README.md`", text)
+        self.assertIn("never replace or rewrite it", text)
+
+    def test_its_headings_are_compared_with_the_four_of_the_template(self):
+        text = self.section()
+        self.assertIn("Compare its headings", text)
+        self.assertIn("counts as present", text)
+        self.assertIn('"Installation" for Install', text)
+
+    def test_only_the_missing_sections_are_proposed_and_not_written(self):
+        text = self.section()
+        self.assertIn("Propose only the sections it lacks", text)
+        self.assertIn("do not write them", text)
+
+    def test_the_report_says_which_sections_were_proposed(self):
+        report = skill().split("## 8. Report")[1]
+        self.assertIn("proposed", report)
 
 
 if __name__ == "__main__":

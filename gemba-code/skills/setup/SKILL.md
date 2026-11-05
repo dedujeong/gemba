@@ -54,9 +54,22 @@ Claude's local files and the Spikes' worktrees must never reach the repository. 
 
 Never edit the `.gitignore` by hand. If you cannot run commands, put the command in the reply and say that it was not run.
 
-## 7. Report
+## 7. Write the project README
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution and for the `.gitignore`, whether it was set, already there or not written. Nothing else.
+Every project starts from the same README. Only when the repository has no `README.md` at its root, write it from `assets/readme.md`:
+
+- The product name, the one-line description and What it is come from the Product Brief you read in step 2: the name from its title, the description from its Primary job, What it is from its Problem and its actors. If there is no brief, those fields stay as fields to fill and you say so.
+- Install, Run and Test come only from what the repository states: the commands in the project's `CLAUDE.md` and in its package or build files. When the repository states none, the field stays as a field to fill. Never invent a command, a version or a variable.
+- The content is in the project's `Language`. The section names and every field that stays to fill are kept exactly as the template has them, in English, so they can be found. A requirement is the name of the tool or dependency in its canonical form with its version (`Node.js 22`, `Supabase CLI`), never a sentence or the hint of the field.
+- Remove the comment at the top of the template.
+
+If you cannot write files, put the whole README in the reply and say that nothing was written.
+
+When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the four sections of the template (What it is, Install, Run, Test): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
+
+## 8. Report
+
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore` and for the README, whether it was set, already there or not written, and for an existing README the sections that were proposed. Nothing else.
 
 ## Style
 
