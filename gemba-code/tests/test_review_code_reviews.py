@@ -109,5 +109,11 @@ class SimplifyAndTestsAgain(unittest.TestCase):
         self.assertIn("a test fails after the code reviews", section_4)
 
 
+class FindingsInThePullRequest(unittest.TestCase):
+    def test_the_findings_and_what_was_done_go_to_the_maintainers_decision(self):
+        section = skill().split("## 5. ")[1].split("## 6. ")[0]
+        self.assertIn("the findings of the code reviews and what was done with each", section)
+
+
 if __name__ == "__main__":
     unittest.main()
