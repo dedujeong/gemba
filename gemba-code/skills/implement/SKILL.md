@@ -88,10 +88,11 @@ Never skip, weaken or delete a test to get green. If the test is wrong, say why 
 
 ## 9. Finish
 
-When every criterion is built and every test is green, log the real time worked in Implement on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`):
+When every criterion is built and every test is green, log the real time worked in Implement on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`). The script computes the time, never you:
 
-- `started`: the time the issue entered Implement, read from the issue's changelog (`getJiraIssue` with `expand: changelog`).
-- `timeSpent`: the time from then until now. Never copy the original estimate.
+1. Read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger) and save it, with all its pages in one list, to a temporary file.
+2. Run `python3 scripts/state_time.py <file> Implement`. It adds up every stretch the issue spent in Implement, the one still open included, and prints `started` and `timeSpent`.
+3. Log those two values. Never copy the original estimate.
 
 Tell the person the time you logged, so they can correct it. Moving the issue to Review is not part of this skill.
 
