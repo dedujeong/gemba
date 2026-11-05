@@ -9,6 +9,6 @@ PASS if all of these hold:
 - the title is "Taller", followed by a one-line description about reminding the customer of the next service;
 - the headings of level two are, in this order and in English, "What it is", "Install", "Run", "Test";
 - What it is is written in Spanish and uses the brief's problem (garages warn by hand and forget) and its actors;
-- no real command, version or variable name appears in Install, Run or Test.
+- no real command, version or variable name appears in Install, Run or Test; a field to fill written between angle brackets is not a command, a version or a variable name.
 
 FAIL if any of those does not hold: an extra level-two heading, a real command such as `npm install`, a translated heading, data of the brief missing or invented, or no README in the response.
