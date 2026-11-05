@@ -27,7 +27,7 @@ Once the issue is in Review, review what was built against what was agreed. Read
 
 ### New files against the layout
 
-Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. Read the `## Code layout` section of the project's `CLAUDE.md` and check each new file against its four lines (Folders, Tests, File names, Migrations).
+Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. List the files the branch adds or renames with `git diff --name-status --diff-filter=AR develop...<branch>`; for a renamed file the new path counts. Modified files are not reviewed against the layout. Read the `## Code layout` section of the project's `CLAUDE.md` and check each of those files against its four lines (Folders, Tests, File names, Migrations).
 
 - A file whose kind the layout covers but that is in the wrong place or has the wrong name is outside the layout: name the file and where the layout says it should go. The issue does not pass: it goes back to Implement, as in section 4.
 - A file whose kind the layout does not cover: name the file and ask whether the layout should cover it. A file the layout does not cover does not block the issue.

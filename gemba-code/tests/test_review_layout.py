@@ -66,5 +66,16 @@ class FileTheLayoutDoesNotCover(unittest.TestCase):
         self.assertIn("A file the layout does not cover does not block the issue", text)
 
 
+class OnlyAddedAndRenamedFiles(unittest.TestCase):
+    def test_the_files_come_from_the_diff_filtered_to_added_and_renamed(self):
+        self.assertIn("git diff --name-status --diff-filter=AR develop...<branch>", layout_section())
+
+    def test_a_renamed_file_counts_with_its_new_path(self):
+        self.assertIn("new path", layout_section())
+
+    def test_modified_files_are_not_reviewed_against_the_layout(self):
+        self.assertIn("Modified files are not reviewed against the layout", layout_section())
+
+
 if __name__ == "__main__":
     unittest.main()
