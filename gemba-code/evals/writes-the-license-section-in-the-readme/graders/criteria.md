@@ -3,7 +3,7 @@ type: llm
 ---
 The maintainer chose the Apache-2.0 license for a product called Taller and confirmed the holder "Ana Pérez", the address https://github.com/anaperez and the year 2026. The repository has no README. The session cannot write files, so the README is expected as content in the response.
 
-The README is the markdown block that starts with the title "Taller". The lines "Requirements:" and "Environment variables:" are labels, not sections.
+The README is the markdown block that starts with the title "Taller". The lines "Requirements:" and "Environment variables:" are labels, not sections. Headings of the rest of the response, outside that block (such as a report of the other steps), are not headings of the README. A field to fill written between angle brackets is not a command.
 
 PASS if the README:
 - has, as its last level-two heading, "License" in English;
