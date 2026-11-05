@@ -25,12 +25,18 @@ Once the issue is in Review, review what was built against what was agreed. Read
 - Per criterion: say whether it is met, with the evidence, the test or the code that shows it. Do it for every criterion of the issue, never only for the ones that fail.
 - Commit by commit: compare the real commits, in order, against the list of commits planned in `implement`. Name each planned commit and say whether the real one matches it, is missing or is extra. If you do not have the planned list because the plan was made in another session, ask the maintainer for it: never invent one, and say that this comparison could not be done.
 
+### New files against the layout
+
+Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. Read the `## Code layout` section of the project's `CLAUDE.md` and check each new file against its four lines (Folders, Tests, File names, Migrations).
+
+- A file whose kind the layout covers but that is in the wrong place or has the wrong name is outside the layout: name the file and where the layout says it should go. The issue does not pass: it goes back to Implement, as in section 4.
+
 ## 4. Return an unmet criterion to Implement
 
-If a criterion is not met, the review ends here. A criterion that is not met is corrected in Implement, never inside Review:
+If a criterion is not met, or a new file is outside the layout, the review ends here. What is not met is corrected in Implement, never inside Review:
 
 1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
-2. Name the criterion that is missing and say what is missing from it.
+2. Name the criterion that is missing and say what is missing from it, or the file that is outside the layout and where the layout says it should go.
 3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger), save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
