@@ -77,5 +77,11 @@ class OnlyAddedAndRenamedFiles(unittest.TestCase):
         self.assertIn("Modified files are not reviewed against the layout", layout_section())
 
 
+class LayoutInThePullRequest(unittest.TestCase):
+    def test_a_file_the_layout_does_not_cover_goes_to_the_maintainers_decision(self):
+        section = skill().split("## 5. ")[1].split("## 6. ")[0]
+        self.assertIn("a new file the layout does not cover", section)
+
+
 if __name__ == "__main__":
     unittest.main()
