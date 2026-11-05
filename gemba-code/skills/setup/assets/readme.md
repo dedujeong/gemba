@@ -31,3 +31,9 @@ Environment variables: <the variables the project needs to run, or none>
 ```bash
 <test command>
 ```
+
+## License
+
+[<License name>](LICENSE). <Only with Apache-2.0: If you redistribute <Product name> or a derivative work, keep, among other conditions, the copyright notice and the [NOTICE](NOTICE) file with the attribution to the author.>
+
+Copyright <year> [<holder>](<holder URL>).
