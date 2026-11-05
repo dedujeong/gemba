@@ -2,7 +2,7 @@
 
 Development for Claude Code: from a closed Story Map to released versions, with every issue declared in Jira and driven to done.
 
-Gemba Product ends discovery with a closed Story Map. Gemba Code picks it up there: it opens a version from the release you closed, declares its issues in Jira with their acceptance criteria and estimates, and takes each one from its branch to the merge until the version is released.
+Gemba Product ends discovery with a closed Story Map. Gemba Code picks it up there: it declares each issue of the version in Jira with its acceptance criteria and estimate, and takes each one from its branch to the merge. The version itself is opened and closed with Gemba Product's `version-start` and `version-close`; publishing the release (merging `develop` into `main`, tagging, creating the GitHub release and releasing the fix version) is done by hand for now.
 
 ## Install
 
@@ -16,6 +16,7 @@ Gemba Product ends discovery with a closed Story Map. Gemba Code picks it up the
 - Claude Code.
 - The Atlassian connector, with access to the product's Jira project and Confluence space.
 - A closed Story Map from Gemba Product in that Confluence space.
+- Gemba Product, whose `version-start` hands each card to Gemba Code's `start` and whose `version-close` checks that the version has no open issues.
 
 ## Skills
 
