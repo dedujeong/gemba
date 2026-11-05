@@ -106,37 +106,6 @@ class CloseLeavesTheMergeToTheMaintainer(unittest.TestCase):
         self.assertLess(text.index("addOrEditJiraIssueWorklog"), text.index("transitionJiraIssue"))
 
 
-class PublishingNeverMergesIntoMainInPullRequestMode(unittest.TestCase):
-    def skill(self):
-        return read("skills", "version-close", "SKILL.md")
-
-    def test_version_close_reads_the_integration_of_the_project(self):
-        self.assertIn("Integration", section(self.skill(), "1. Find the project"))
-
-    def test_the_collaborative_mode_is_no_longer_left_out(self):
-        self.assertNotIn("is not covered here", self.skill())
-
-    def test_in_merge_mode_publishing_still_merges_develop_into_main(self):
-        self.assertIn("git merge --no-ff develop", section(self.skill(), "3. Publish the release"))
-
-    def test_in_pull_request_mode_nothing_is_merged_into_main_and_a_pull_request_is_opened(self):
-        text = section(self.skill(), "3. Publish the release")
-        self.assertIn("`pull request`", text)
-        self.assertIn("Nothing is merged into `main`", text)
-        self.assertIn("gh pr create --base main --head develop", text)
-
-    def test_a_pull_request_into_main_that_is_already_open_is_reused_not_created_again(self):
-        text = section(self.skill(), "3. Publish the release")
-        check = "gh pr list --base main --head develop --state open"
-        self.assertIn(check, text)
-        self.assertLess(text.index(check), text.index("gh pr create --base main"))
-
-    def test_the_tag_and_the_release_wait_for_the_maintainer_to_merge_it(self):
-        text = section(self.skill(), "3. Publish the release")
-        self.assertIn("git merge-base --is-ancestor origin/develop origin/main", text)
-        self.assertIn("the merge into `main` is the maintainer's decision", text)
-
-
 class SessionCloseOffersTheBackup(unittest.TestCase):
     def skill(self):
         return read("skills", "session-close", "SKILL.md")

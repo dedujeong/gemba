@@ -25,20 +25,38 @@ Once the issue is in Review, review what was built against what was agreed. Read
 - Per criterion: say whether it is met, with the evidence, the test or the code that shows it. Do it for every criterion of the issue, never only for the ones that fail.
 - Commit by commit: compare the real commits, in order, against the list of commits planned in `implement`. Name each planned commit and say whether the real one matches it, is missing or is extra. If you do not have the planned list because the plan was made in another session, ask the maintainer for it: never invent one, and say that this comparison could not be done.
 
+### New files against the layout
+
+Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. List the files the branch adds or renames with `git diff --name-status --diff-filter=AR develop...<branch>`; for a renamed file the new path counts. Modified files are not reviewed against the layout. Read the `## Code layout` section of the project's `CLAUDE.md` and check each of those files against its four lines (Folders, Tests, File names, Migrations).
+
+- A file whose kind the layout covers but that is in the wrong place or has the wrong name is outside the layout: name the file and where the layout says it should go. The issue does not pass: it goes back to Implement, as in section 4.
+- A file whose kind the layout does not cover: name the file and ask whether the layout should cover it. A file the layout does not cover does not block the issue.
+- A project with no `## Code layout` section in its `CLAUDE.md`: say so and check nothing. Never invent a layout, not even a common one for the stack. The missing layout does not block the issue.
+
+### Code reviews of the change
+
+Choose which code reviews to run by the size and the risk of the change, so quality is checked without spending reviews where they add nothing. Read the files of the diff (`git diff --name-only develop...<branch>`) and its size (`git diff --shortstat develop...<branch>`).
+
+- A change that only touches docs (Markdown and documentation folders), skills (`SKILL.md` and their assets) or behavior checked by evals (the `evals` folders) launches no code review. Say that this is verified with evals or another mechanism.
+- A small code change of low risk may launch none. Small is a few lines; low risk is that it touches none of auth, permissions, money, personal data, migrations, dependencies, deploy or any other security-sensitive path. Say why no review was launched.
+- Any other code change that review decides to review launches `/code-review` and `/security-review` in the same turn, in parallel. The level of `/code-review` is chosen by the size and the risk of the change: `low`, `medium`, `high` or `xhigh`, never `max` or `ultra`, which only the person launches. Say what was launched and why.
+- Each finding is fixed or discarded with its reason. A real finding is fixed in Review, on the same branch, with its test and a one-line commit (folded into the commit it corrects if that is not pushed yet); this exception is only for findings, an unmet criterion still goes back to Implement. A fix that does not fit a small commit sends the issue back to Implement, as in section 4. A finding that is not real is discarded and its reason written down. The report lists every finding with what was done.
+- With the findings resolved, run `/simplify` and then the project's tests again. `/simplify` runs only when code reviews were launched. The issue does not pass if any test fails: it goes back to Implement, as in section 4.
+
 ## 4. Return an unmet criterion to Implement
 
-If a criterion is not met, the review ends here. A criterion that is not met is corrected in Implement, never inside Review:
+If a criterion is not met, a new file is outside the layout or a test fails after the code reviews, the review ends here. What is not met is corrected in Implement, never inside Review:
 
 1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
-2. Name the criterion that is missing and say what is missing from it.
-3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): `started` is the time the issue entered Review, read from its changelog (`getJiraIssue` with `expand: changelog`), and `timeSpent` the time from then until now. Never copy the estimate. Tell the person the time you logged, so they can correct it.
+2. Name the criterion that is missing and say what is missing from it, the file that is outside the layout and where the layout says it should go, or the test that fails.
+3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger), save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
 
 Only when `Integration` is `pull request` and every criterion is met, so the review comes out clean. In `merge` mode, go on to section 6. An unmet criterion went back to Implement in section 4 and nothing is pushed; an Epic or a Spike never opens a pull request.
 
 1. Push the branch: `git push -u origin <branch>`. If this branch already has an open pull request (`gh pr list --head <branch> --state open --json url`), the push updates it: do not open another, give its link in the report and skip the next two steps.
-2. Write the body in a temporary file outside the repository (`mktemp`) from `assets/pull-request.md`: under Criteria, the verdict and evidence of each criterion from section 3; under For the maintainer's decision, what the criteria do not cover and any commit of the comparison that is missing or extra; under Not verified, what no test shows. Remove a section that has nothing; Criteria always has content. Delete the file afterwards.
+2. Write the body in a temporary file outside the repository (`mktemp`) from `assets/pull-request.md`: under Criteria, the verdict and evidence of each criterion from section 3; under For the maintainer's decision, what the criteria do not cover, a new file the layout does not cover, the findings of the code reviews and what was done with each, and any commit of the comparison that is missing or extra; under Not verified, what no test shows. Remove a section that has nothing; Criteria always has content. Delete the file afterwards.
 3. Open the pull request: `gh pr create --base develop --head <branch> --title "<KEY> <Summary>" --body-file <file>`. The title is the issue's key and its Summary exactly as in Jira.
 
 Without the GitHub CLI or the remote, write the commands and the body you would use and say that nothing was pushed.

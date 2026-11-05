@@ -1,11 +1,11 @@
 ---
 name: start
-description: Declare one Jira issue with the template of its work type and its priority, component, fix version and blocking links, and handle every change to an existing issue, which is only edited in Backlog. Use when someone says "declara", "hay un bug", "nueva tarea", "registra un spike" or describes work to track; when someone asks to change, edit or add a criterion to an issue ("cambia la descripción de", "agrégale un criterio a"); and when version-start declares a release card.
+description: Declare one Jira issue with the template of its work type and its priority, component, fix version and blocking links, and handle every change to an existing issue, which is only edited in Backlog. Use when someone says "declara", "hay un bug", "nueva tarea", "registra un spike" or describes work to track; when someone asks to change, edit or add a criterion to an issue ("cambia la descripción de", "agrégale un criterio a"); and when Gemba Product's `version-start` declares a release card.
 ---
 
 # Start an issue
 
-You declare one unit of work in Jira so it can be built: the right work type, a description from its template, and every field filled. Declaring is the whole job; you do not implement anything. A card that version-start hands over is declared exactly the same way.
+You declare one unit of work in Jira so it can be built: the right work type, a description from its template, and every field filled. Declaring is the whole job; you do not implement anything. A card that Gemba Product's `version-start` hands over is declared exactly the same way.
 
 ## 1. Find the project
 
@@ -15,7 +15,7 @@ Read the Product Brief in the Confluence space for its actors and business rules
 
 ## 2. Choose the work type
 
-Declare one issue per request. The exceptions are the whole release that version-start hands over in one request, and a Story Map card with two or more stories: the Epic and one Story per story are declared together, as one request. A card with one story is a Story with no Epic.
+Declare one issue per request. The exceptions are the whole release that Gemba Product's `version-start` hands over in one request, and a Story Map card with two or more stories: the Epic and one Story per story are declared together, as one request. A card with one story is a Story with no Epic.
 
 | Work type | Use it when |
 | --- | --- |
@@ -32,7 +32,7 @@ Declare one issue per request. The exceptions are the whole release that version
 | Summary | English, understandable on its own, no parentheses. The branch comes from the key and the summary |
 | Priority | Highest, High, Medium or Low, by how much other work waits on it |
 | Component | The part of the repository the change touches, in lowercase; it is also the commit scope. Read the existing ones with `executeRead` → `listJiraProjectComponents` and reuse one when it fits. When none fits, propose a new one and say that it is new; naming it in the create call creates it. In a project with no components yet, take the part from the structure and stack that the Product Brief and the `CLAUDE.md` describe, or from what the issue itself names (`api`, `web`, `db`, `ci`). Prefer few broad components to one per issue. An Epic has no component |
-| Fix version | The one named by the person or by version-start. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that version-start has to create it. Never create a version here |
+| Fix version | The one named by the person or by Gemba Product's `version-start`. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that Gemba Product's `version-start` has to create it. Never create a version here |
 | Original estimate | Story, Task and Bug: the expected hours of one person working with Claude. Spike: its timebox in hours. Epic: none. Follow `references/estimation.md` |
 | Due date | Epic only, set by the maintainer. Ask for it if they did not give it |
 | Blocks / is blocked by | Ask what must exist first. Search the version's open issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find, only the direct ones: if A blocks B and B blocks C, C is blocked by B and never by A, because Jira already shows the chain. When the person names both, create the link only to the direct one and say that the other is covered through it; never create the link of the second. The release Task has none: it waits for the other issues of the version to be Done or Cancelled |
@@ -74,11 +74,11 @@ An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows onl
 
 ### Check the edge cases of a whole version
 
-When version-start hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. While any question of the round has no answer, create no issue of the version, not even those of the Stories already answered or the release Task: say that nothing was created and name the questions still missing. When every question is answered, or the round had none, create the whole version without asking for another confirmation.
+When Gemba Product's `version-start` hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. While any question of the round has no answer, create no issue of the version, not even those of the Stories already answered or the release Task: say that nothing was created and name the questions still missing. When every question is answered, or the round had none, create the whole version without asking for another confirmation.
 
 ## 5. Show it, then create it
 
-Show the declaration in one compact block: work type, summary, priority, component, fix version, original estimate, due date, blockers and the description. The maintainer can change any of them, the estimate included, before it is created. Wait for the person's OK. When version-start hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.
+Show the declaration in one compact block: work type, summary, priority, component, fix version, original estimate, due date, blockers and the description. The maintainer can change any of them, the estimate included, before it is created. Wait for the person's OK. When Gemba Product's `version-start` hands over a card, the maintainer already confirmed the whole version: create it without asking again, not even to review a part of it. Write only what the card, the brief and the Story Map support; never add criteria you infer, since they would need a review the maintainer already gave.
 
 Then:
 
