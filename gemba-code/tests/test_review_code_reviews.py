@@ -90,5 +90,24 @@ class FindingsOfTheReviews(unittest.TestCase):
         self.assertIn("lists every finding", code_reviews_section())
 
 
+class SimplifyAndTestsAgain(unittest.TestCase):
+    def test_with_the_findings_resolved_simplify_runs_and_then_the_tests_again(self):
+        text = code_reviews_section()
+        self.assertIn("With the findings resolved", text)
+        self.assertIn("`/simplify`", text)
+        self.assertLess(text.index("`/simplify`"), text.index("the project's tests again"))
+
+    def test_simplify_runs_only_when_reviews_were_launched(self):
+        self.assertIn("only when code reviews were launched", code_reviews_section())
+
+    def test_the_issue_does_not_pass_when_a_test_fails(self):
+        text = code_reviews_section()
+        self.assertIn("does not pass if any test fails", text)
+
+    def test_a_failing_test_returns_the_issue_to_implement_in_section_4(self):
+        section_4 = skill().split("## 4. ")[1].split("## 5. ")[0]
+        self.assertIn("a test fails after the code reviews", section_4)
+
+
 if __name__ == "__main__":
     unittest.main()

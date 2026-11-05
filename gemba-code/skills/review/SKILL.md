@@ -41,13 +41,14 @@ Choose which code reviews to run by the size and the risk of the change, so qual
 - A small code change of low risk may launch none. Small is a few lines; low risk is that it touches none of auth, permissions, money, personal data, migrations, dependencies, deploy or any other security-sensitive path. Say why no review was launched.
 - Any other code change that review decides to review launches `/code-review` and `/security-review` in the same turn, in parallel. The level of `/code-review` is chosen by the size and the risk of the change: `low`, `medium`, `high` or `xhigh`, never `max` or `ultra`, which only the person launches. Say what was launched and why.
 - Each finding is fixed or discarded with its reason. A real finding is fixed in Review, on the same branch, with its test and a one-line commit (folded into the commit it corrects if that is not pushed yet); this exception is only for findings, an unmet criterion still goes back to Implement. A fix that does not fit a small commit sends the issue back to Implement, as in section 4. A finding that is not real is discarded and its reason written down. The report lists every finding with what was done.
+- With the findings resolved, run `/simplify` and then the project's tests again. `/simplify` runs only when code reviews were launched. The issue does not pass if any test fails: it goes back to Implement, as in section 4.
 
 ## 4. Return an unmet criterion to Implement
 
-If a criterion is not met, or a new file is outside the layout, the review ends here. What is not met is corrected in Implement, never inside Review:
+If a criterion is not met, a new file is outside the layout or a test fails after the code reviews, the review ends here. What is not met is corrected in Implement, never inside Review:
 
 1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
-2. Name the criterion that is missing and say what is missing from it, or the file that is outside the layout and where the layout says it should go.
+2. Name the criterion that is missing and say what is missing from it, the file that is outside the layout and where the layout says it should go, or the test that fails.
 3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger), save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
