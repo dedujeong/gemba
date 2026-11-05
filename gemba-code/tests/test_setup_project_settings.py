@@ -38,10 +38,10 @@ class SetupGitignore(unittest.TestCase):
     def test_the_gitignore_comes_after_the_attribution_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("Turn off the Claude attribution"), text.index("scripts/write_gitignore.py"))
-        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 9. Report"))
+        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 10. Report"))
 
     def test_the_report_says_whether_the_gitignore_was_written(self):
-        report = skill().split("## 9. Report")[1]
+        report = skill().split("## 10. Report")[1]
         self.assertIn(".gitignore", report)
 
 
@@ -85,18 +85,18 @@ class SetupLicense(unittest.TestCase):
         self.assertIn("what is missing", text)
 
     def test_the_report_says_what_happened_with_the_license(self):
-        report = skill().split("## 9. Report")[1]
+        report = skill().split("## 10. Report")[1]
         self.assertIn("license", report)
 
 
 class SetupReadme(unittest.TestCase):
     def section(self):
-        return skill().split("## 8. Write the project README")[1].split("## 9. Report")[0]
+        return skill().split("## 8. Write the project README")[1].split("## 9. Write the code layout")[0]
 
     def test_the_readme_comes_after_the_gitignore_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("## 6. Write the base .gitignore"), text.index("## 8. Write the project README"))
-        self.assertLess(text.index("## 8. Write the project README"), text.index("## 9. Report"))
+        self.assertLess(text.index("## 8. Write the project README"), text.index("## 10. Report"))
 
     def test_it_is_written_from_the_template_of_the_assets(self):
         self.assertIn("assets/readme.md", self.section())
@@ -139,13 +139,13 @@ class SetupReadme(unittest.TestCase):
         self.assertIn("remove the whole License section and say so", self.section())
 
     def test_the_report_says_whether_the_readme_was_written(self):
-        report = skill().split("## 9. Report")[1]
+        report = skill().split("## 10. Report")[1]
         self.assertIn("README", report)
 
 
 class SetupExistingReadme(unittest.TestCase):
     def section(self):
-        return skill().split("## 8. Write the project README")[1].split("## 9. Report")[0]
+        return skill().split("## 8. Write the project README")[1].split("## 9. Write the code layout")[0]
 
     def test_an_existing_readme_is_never_replaced_or_rewritten(self):
         text = self.section()
@@ -164,8 +164,45 @@ class SetupExistingReadme(unittest.TestCase):
         self.assertIn("do not write them", text)
 
     def test_the_report_says_which_sections_were_proposed(self):
-        report = skill().split("## 9. Report")[1]
+        report = skill().split("## 10. Report")[1]
         self.assertIn("proposed", report)
+
+
+class SetupCodeLayout(unittest.TestCase):
+    def section(self):
+        return skill().split("## 9. Write the code layout")[1].split("## 10. Report")[0]
+
+    def test_the_code_layout_comes_after_the_readme_and_before_the_report(self):
+        text = skill()
+        self.assertLess(text.index("## 8. Write the project README"), text.index("## 9. Write the code layout"))
+        self.assertLess(text.index("## 9. Write the code layout"), text.index("## 10. Report"))
+
+    def test_it_reads_the_accepted_layout_adr_from_the_decisions_folder(self):
+        text = self.section()
+        self.assertIn("`Decisions` folder", text)
+        self.assertIn("Verified", text)
+        self.assertIn("no later ADR replaces", text)
+
+    def test_it_writes_a_code_layout_section_with_the_four_parts(self):
+        text = self.section()
+        self.assertIn("`## Code layout`", text)
+        for part in ("Folders", "Tests", "File names", "Migrations"):
+            self.assertIn(part, text)
+
+    def test_migrations_say_not_applicable_when_the_adr_says_so(self):
+        self.assertIn("not applicable", self.section())
+
+    def test_without_an_adr_it_invents_no_layout_and_says_architecture_has_not_decided_it(self):
+        text = self.section()
+        self.assertIn("invent no layout", text)
+        self.assertIn("`architecture` has not decided it yet", text)
+
+    def test_an_existing_section_is_updated_in_place(self):
+        self.assertIn("updated in place", self.section())
+
+    def test_the_report_says_whether_the_layout_was_written(self):
+        report = skill().split("## 10. Report")[1]
+        self.assertIn("code layout", report)
 
 
 if __name__ == "__main__":
