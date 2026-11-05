@@ -32,7 +32,7 @@ Each step rests on a method, named here so you know what it is based on before y
   - Blocking links are declared only between direct dependencies; Jira already shows the chain.
 - `implement` takes an issue from Backlog to Implement with its branch, and builds it.
   - It refuses an issue that is not in Backlog or is blocked by one that is not Done or Cancelled.
-  - Before touching code it walks the work (criteria, code, tests, recent history, a manual reproduction for a Bug) and presents a plan in plan mode: the commits in order, and for each criterion the test and why it fails now.
+  - Before touching code it walks the work (criteria, code, tests, recent history, a manual reproduction for a Bug) and presents a plan in plan mode: the commits in order, and for each criterion the test and why it fails now, unless the maintainer says the change is mechanical: then it skips the plan and goes straight to the red test.
   - It builds with test-driven development: red, green, refactor, one criterion at a time. Red is never committed, and a test is never skipped, weakened or deleted to get green.
   - Commits follow Conventional Commits. Mechanical changes (renames, moves, formatting) go in their own commit first.
   - A Spike does not follow TDD: it works in a separate worktree, and its answer is a findings page in Confluence (Recommendation, Options, Impact on scope, Sources).

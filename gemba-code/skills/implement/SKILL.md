@@ -20,7 +20,7 @@ Read the issue with `getJiraIssue` (view `evidence`, which includes its links). 
 
 When it is not taken, no branch is created and the issue stays where it is. Then, by its work type:
 
-- Story, Task or Bug: create its branch and move it to Implement, as in section 3, then walk the work, as in section 6.
+- Story, Task or Bug: create its branch and move it to Implement, as in section 3, then walk the work, as in section 6. If the maintainer said the change is mechanical, the plan of section 7 is skipped.
 - Spike: create its branch in a separate worktree and move it to Implement, as in section 4.
 - Epic: an Epic has no branch. Move it to Implement and take its first child, as in section 5.
 
@@ -54,6 +54,8 @@ Before changing anything, go and see where the work happens, without modifying a
 What you find feeds the plan, in section 7; it is not a separate deliverable.
 
 ## 7. Plan the work
+
+The plan is skipped only when the maintainer says the change is mechanical, in the request or later (a rename, a move, formatting: they decide it, you never decide by yourself that a change is mechanical). Then do not enter plan mode and do not present a plan: go straight on to section 8, starting with the red test. The walk of section 6 still happens. Without that indication, plan as follows.
 
 When the walk is done and before any code or test changes, enter plan mode (`EnterPlanMode`) and present the plan:
 
