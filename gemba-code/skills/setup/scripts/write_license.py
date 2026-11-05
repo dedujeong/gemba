@@ -4,8 +4,9 @@ Usage: python3 write_license.py <repository root> <Apache-2.0|MIT|none> --holder
            --year <yyyy> --product <name> [--holder-url <url>] [--source-dir <dir>]
 
 The LICENSE is the official text, fetched when the script runs: the plugin keeps no copy of
-any license. For MIT the holder and the year go inside the LICENSE. For none nothing is written.
-A LICENSE that already exists is left as it is. If the official text cannot be read, nothing
+any license. For MIT the holder and the year go inside the LICENSE. For Apache-2.0 the NOTICE
+is written from assets/notice.md, unless there is one. For none nothing is written. A LICENSE
+that already exists is left as it is, and then no NOTICE is written. If the official text cannot be read, nothing
 is written and the error says which text is missing and where it comes from.
 
 --source-dir reads <license>.txt from a folder instead of the network; it is meant for tests.
@@ -20,6 +21,7 @@ SOURCES = {
     "MIT": "https://raw.githubusercontent.com/spdx/license-list-data/main/text/MIT.txt",
 }
 LICENSE_FILES = ("LICENSE", "LICENSE.md", "LICENSE.txt")
+NOTICE_TEMPLATE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "notice.md")
 
 
 class TextUnavailable(Exception):
@@ -46,6 +48,17 @@ def license_text(license_name, holder, year, source_dir=None):
     if license_name == "MIT":
         text = text.replace("<year>", year).replace("<copyright holders>", holder)
     return text
+
+
+def notice_text(product, year, holder, holder_url):
+    """The NOTICE, filled from the template of setup."""
+    with open(NOTICE_TEMPLATE, encoding="utf-8", newline="") as f:
+        text = f.read()
+    if holder_url:
+        text = text.replace("<holder URL>", holder_url)
+    else:
+        text = text.replace(" (<holder URL>)", "")
+    return text.replace("<Product name>", product).replace("<year>", year).replace("<holder>", holder)
 
 
 def main(argv):
@@ -76,6 +89,14 @@ def main(argv):
     with open(os.path.join(args.root, "LICENSE"), "w", encoding="utf-8", newline="") as f:
         f.write(text)
     print(f"LICENSE written: {args.license}.")
+    if args.license == "Apache-2.0":
+        notice = os.path.join(args.root, "NOTICE")
+        if os.path.exists(notice):
+            print("NOTICE already exists: left as it is.")
+        else:
+            with open(notice, "w", encoding="utf-8", newline="") as f:
+                f.write(notice_text(args.product, args.year, args.holder, args.holder_url))
+            print("NOTICE written.")
     return 0
 
 

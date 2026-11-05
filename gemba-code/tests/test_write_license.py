@@ -71,6 +71,41 @@ class WriteTheLicense(unittest.TestCase):
         self.assertIn("nothing was written", result.stderr)
 
 
+class WriteTheNotice(unittest.TestCase):
+    def test_apache_writes_the_notice_from_the_template_with_the_confirmed_data(self):
+        result, written = run("Apache-2.0", extra=("--holder-url", "https://github.com/ana"))
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(written["NOTICE"], "Taller\nCopyright 2026 Ana Pérez (https://github.com/ana)\n")
+        self.assertEqual(written["LICENSE"], FAKE_APACHE)
+
+    def test_without_a_holder_url_the_parentheses_are_left_out(self):
+        _, written = run("Apache-2.0")
+        self.assertEqual(written["NOTICE"], "Taller\nCopyright 2026 Ana Pérez\n")
+
+    def test_an_existing_notice_is_left_byte_for_byte(self):
+        mine = "Mine\r\nno final newline"
+        result, written = run("Apache-2.0", files={"NOTICE": mine})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(written["NOTICE"], mine)
+        self.assertEqual(written["LICENSE"], FAKE_APACHE)
+        self.assertIn("NOTICE already exists", result.stdout)
+
+    def test_a_license_that_exists_means_no_notice_is_written(self):
+        _, written = run("Apache-2.0", files={"LICENSE": "Other terms\n"})
+        self.assertEqual(written, {"LICENSE": "Other terms\n"})
+
+    def test_when_the_text_cannot_be_read_no_notice_is_written_either(self):
+        result, written = run("Apache-2.0", sources={})
+        self.assertNotEqual(result.returncode, 0)
+        self.assertEqual(written, {})
+
+    def test_the_template_of_the_notice_has_its_four_fields(self):
+        with open(os.path.join(ROOT, "skills", "setup", "assets", "notice.md"), encoding="utf-8") as f:
+            text = f.read()
+        for field in ("<Product name>", "<year>", "<holder>", "<holder URL>"):
+            self.assertIn(field, text)
+
+
 class ThePluginKeepsNoLicenseText(unittest.TestCase):
     def test_no_file_of_the_plugin_holds_the_text_of_a_license(self):
         marks = ("Permission is hereby granted", "TERMS AND CONDITIONS FOR USE, REPRODUCTION")
