@@ -22,7 +22,7 @@ Gemba Product ends discovery with a closed Story Map. Gemba Code picks it up the
 
 Each step rests on a method, named here so you know what it is based on before you use it.
 
-- `setup` writes the project's `## Gemba` block in its `CLAUDE.md`: Jira project, Confluence space, integration mode (`merge` or `pull request`) and language. It asks for any value it cannot read, never assumes one. It also sets Git to write `into main` in release merges and turns off Claude's attribution lines.
+- `setup` writes the project's `## Gemba` block in its `CLAUDE.md`: Jira project, Confluence space, integration mode (`merge` or `pull request`) and language. It asks for any value it cannot read, never assumes one. It also sets Git to write `into main` in release merges, turns off Claude's attribution lines and writes the base `.gitignore`: Claude's local files, the Spikes' worktrees and the session handoffs, adding only the entries the file lacks.
 - `start` declares one Jira issue, and is the only way an existing one is edited.
   - Work type: Epic (a Story Map card with two or more stories), Story (something a user can do that they could not), Task (technical work no user sees), Bug (something Done that does not do what it should; if its issue is not Done it is a missing criterion, not a bug) or Spike (a question answered in a fixed timebox).
   - Acceptance criteria follow the Given-When-Then form of behavior-driven specification, written in the project's language. Each states a result an automated test can check as true or false, and the issue describes what the person observes, never how it is built.

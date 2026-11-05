@@ -44,9 +44,19 @@ Git leaves `into main` out of the message of a merge into `main` unless told oth
 
 Claude Code adds its own attribution lines to commits and pull requests, and the method's commits are one line with no footer. In `.claude/settings.json` at the root of the repository, set `"attribution": {"commit": "", "pr": ""}`. If the file does not exist, create it with only that key. If it exists, add or replace only the `attribution` key. Keep every other key and the rest of the file unchanged. If the value is already there, change nothing. If you cannot write files, put the whole resulting file in the reply and say that nothing was written.
 
-## 6. Report
+## 6. Write the base .gitignore
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting and for the attribution, whether it was set, already there or not written. Nothing else.
+Claude's local files and the Spikes' worktrees must never reach the repository. Run `python3 scripts/write_gitignore.py <repository root>/.gitignore`. It creates the file when it does not exist, and otherwise adds only the entries it lacks, so the lines already there are neither deleted nor reordered. The base is three groups, each with a comment in English:
+
+- `.claude/settings.local.json` and `CLAUDE.local.md`, the personal Claude Code files;
+- `.claude/worktrees/`, the worktrees of the Spikes;
+- `.gemba/sessions/`, the session handoffs.
+
+Never edit the `.gitignore` by hand. If you cannot run commands, put the command in the reply and say that it was not run.
+
+## 7. Report
+
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution and for the `.gitignore`, whether it was set, already there or not written. Nothing else.
 
 ## Style
 
