@@ -39,5 +39,21 @@ class NewFileOutsideTheLayout(unittest.TestCase):
         self.assertIn("Implement", return_section())
 
 
+class ProjectWithoutALayout(unittest.TestCase):
+    def test_without_a_code_layout_section_it_says_so_and_checks_nothing(self):
+        text = layout_section()
+        self.assertIn("no `## Code layout` section", text)
+        self.assertIn("say so", text)
+        self.assertIn("check nothing", text)
+
+    def test_it_never_invents_a_layout(self):
+        text = layout_section()
+        self.assertIn("Never invent a layout", text)
+        self.assertIn("common one for the stack", text)
+
+    def test_the_missing_layout_does_not_block_the_issue(self):
+        self.assertIn("does not block", layout_section())
+
+
 if __name__ == "__main__":
     unittest.main()

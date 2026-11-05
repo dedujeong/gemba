@@ -30,6 +30,7 @@ Once the issue is in Review, review what was built against what was agreed. Read
 Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. Read the `## Code layout` section of the project's `CLAUDE.md` and check each new file against its four lines (Folders, Tests, File names, Migrations).
 
 - A file whose kind the layout covers but that is in the wrong place or has the wrong name is outside the layout: name the file and where the layout says it should go. The issue does not pass: it goes back to Implement, as in section 4.
+- A project with no `## Code layout` section in its `CLAUDE.md`: say so and check nothing. Never invent a layout, not even a common one for the stack. The missing layout does not block the issue.
 
 ## 4. Return an unmet criterion to Implement
 
