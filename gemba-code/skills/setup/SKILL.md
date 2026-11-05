@@ -78,9 +78,24 @@ If you cannot write files, put the whole README in the reply and say that nothin
 
 When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the sections of the template (What it is, Install, Run, Test and, when a license is known, License): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
 
-## 9. Report
+## 9. Write the code layout
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore`, for the license and for the README, whether it was set, already there or not written, and for an existing README the sections that were proposed. Nothing else.
+`architecture` decides where each file goes and records it as an ADR, so every session can know it without asking. Search the `Decisions` folder of the Confluence Space for the ADR of the code layout, and read it with `getConfluenceContent`. Use only an ADR whose page status is Verified (accepted) and that no later ADR replaces. A Rough draft or a replaced ADR is not used.
+
+- With that ADR, write a `## Code layout` section in `CLAUDE.md`, right after `## Gemba`, with exactly four lines, each with a bold label in English, copied from the Decision of the ADR and written in the project's `Language`:
+  - **Folders:** the folders by domain and the routes.
+  - **Tests:** where the tests go.
+  - **File names:** how the files are named.
+  - **Migrations:** where the migrations go; `not applicable` when the ADR says it does not apply.
+- Every path, folder and file the line names is written as code. Anything else the ADR says stays in the ADR: the section has no other line, and no source line.
+- A `CLAUDE.md` that already has a `## Code layout` section: it is updated in place, keeping the rest of the file unchanged. If it already says the same, change nothing.
+- Without that ADR, write nothing: invent no layout, not even a common one for the stack. Say that `architecture` has not decided it yet.
+
+Without a connection to Confluence, write nothing and say that the ADR could not be read. If you cannot write files, put the section in the reply and say that nothing was written.
+
+## 10. Report
+
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
 
 ## Style
 
