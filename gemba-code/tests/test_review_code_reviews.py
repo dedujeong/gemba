@@ -70,5 +70,25 @@ class CodeReviewsLaunchedInParallel(unittest.TestCase):
         self.assertIn("Say what was launched and why", code_reviews_section())
 
 
+class FindingsOfTheReviews(unittest.TestCase):
+    def test_each_finding_is_fixed_or_discarded_with_its_reason(self):
+        text = code_reviews_section()
+        self.assertIn("Each finding is fixed or discarded with its reason", text)
+
+    def test_a_fix_is_made_in_review_in_a_small_commit_with_its_test(self):
+        text = code_reviews_section()
+        self.assertIn("fixed in Review", text)
+        self.assertIn("one-line commit", text)
+        self.assertIn("with its test", text)
+
+    def test_a_fix_that_does_not_fit_a_small_commit_returns_the_issue_to_implement(self):
+        text = code_reviews_section()
+        self.assertIn("does not fit a small commit", text)
+        self.assertIn("Implement", text)
+
+    def test_the_report_lists_every_finding_with_what_was_done(self):
+        self.assertIn("lists every finding", code_reviews_section())
+
+
 if __name__ == "__main__":
     unittest.main()
