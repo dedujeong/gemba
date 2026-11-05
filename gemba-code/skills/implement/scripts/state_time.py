@@ -1,16 +1,18 @@
 """Print the time an issue spent in a state, from its Jira changelog.
 
-Usage: python3 state_time.py <changelog.json> <State>
+Usage: python3 state_time.py <changelog.json> <State> [--now <ISO datetime>]
 
 The file is what listJiraIssueChangelogs returned (its `data`, or just its `values`). The time
 runs from each status change that moved the issue into the state to the one that moved it out;
-an issue that entered the state twice adds up both spans.
+an issue that entered the state twice adds up both spans. A span still open, because the issue
+has not left the state, runs until --now (the current time when it is not given). A state the
+issue never entered prints an error and exits 1.
 It prints a JSON object with `seconds`, `timeSpent` in the form Jira takes for a worklog
 (`1h 5m`) and `started`, when the issue entered the state.
 """
 import json
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 def read_entries(path):
@@ -31,7 +33,7 @@ def status_changes(entries):
     return sorted(changes, key=lambda change: datetime.fromisoformat(change[0]))
 
 
-def time_in_state(entries, state):
+def time_in_state(entries, state, now):
     first = entered = None
     seconds = 0
     for created, source, target in status_changes(entries):
@@ -41,6 +43,10 @@ def time_in_state(entries, state):
         elif source == state and entered is not None:
             seconds += int((datetime.fromisoformat(created) - datetime.fromisoformat(entered)).total_seconds())
             entered = None
+    if entered is not None:
+        seconds += int((now - datetime.fromisoformat(entered)).total_seconds())
+    if first is None:
+        raise ValueError(f"the issue never entered {state}")
     return {"seconds": seconds, "timeSpent": time_spent(seconds), "started": first}
 
 
@@ -51,4 +57,14 @@ def time_spent(seconds):
 
 
 if __name__ == "__main__":
-    print(json.dumps(time_in_state(read_entries(sys.argv[1]), sys.argv[2])))
+    arguments = sys.argv[1:]
+    now = datetime.now(timezone.utc)
+    if "--now" in arguments:
+        position = arguments.index("--now")
+        now = datetime.fromisoformat(arguments[position + 1])
+        del arguments[position:position + 2]
+    try:
+        print(json.dumps(time_in_state(read_entries(arguments[0]), arguments[1], now)))
+    except ValueError as error:
+        print(error, file=sys.stderr)
+        sys.exit(1)

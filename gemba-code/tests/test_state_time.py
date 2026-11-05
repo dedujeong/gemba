@@ -79,9 +79,46 @@ class TimeInAStateEnteredTwice(unittest.TestCase):
         self.assertEqual(json.loads(out)["started"], "2026-11-04T20:00:00.000-0600")
 
     def test_the_time_out_of_the_state_between_the_spans_is_not_counted(self):
-        code, out, err = state_time(self.changelog, "Review")
+        code, out, err = state_time(self.changelog, "Review", "--now", "2026-11-04T21:20:00.000-0600")
         self.assertEqual(code, 0, err)
         self.assertEqual(json.loads(out)["seconds"], 600)
+
+
+class TimeInAStateNotLeftYet(unittest.TestCase):
+    changelog = [
+        move("2026-11-04T20:00:00.000-0600", "Backlog", "Implement"),
+    ]
+
+    def test_the_time_runs_until_the_given_moment(self):
+        code, out, err = state_time(self.changelog, "Implement", "--now", "2026-11-04T20:20:00.000-0600")
+        self.assertEqual(code, 0, err)
+        result = json.loads(out)
+        self.assertEqual(result["seconds"], 1200)
+        self.assertEqual(result["timeSpent"], "20m")
+
+    def test_without_a_given_moment_the_time_runs_until_now(self):
+        code, out, err = state_time(self.changelog, "Implement")
+        self.assertEqual(code, 0, err)
+        self.assertGreater(json.loads(out)["seconds"], 1200)
+
+    def test_a_span_left_open_adds_to_the_closed_ones(self):
+        changelog = [
+            move("2026-11-04T20:00:00.000-0600", "Backlog", "Implement"),
+            move("2026-11-04T20:30:00.000-0600", "Implement", "Review"),
+            move("2026-11-04T20:40:00.000-0600", "Review", "Implement"),
+        ]
+        code, out, err = state_time(changelog, "Implement", "--now", "2026-11-04T20:55:00.000-0600")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["seconds"], 2700)
+
+
+class StateNeverEntered(unittest.TestCase):
+    def test_it_fails_instead_of_printing_a_zero_time(self):
+        changelog = [move("2026-11-04T20:00:00.000-0600", "Backlog", "Implement")]
+        code, out, err = state_time(changelog, "Review")
+        self.assertEqual(code, 1)
+        self.assertEqual(out, "")
+        self.assertIn("Review", err)
 
 
 if __name__ == "__main__":
