@@ -90,5 +90,30 @@ class SetupReadme(unittest.TestCase):
         self.assertIn("README", report)
 
 
+class SetupExistingReadme(unittest.TestCase):
+    def section(self):
+        return skill().split("## 7. Write the project README")[1].split("## 8. Report")[0]
+
+    def test_an_existing_readme_is_never_replaced_or_rewritten(self):
+        text = self.section()
+        self.assertIn("already has a `README.md`", text)
+        self.assertIn("never replace or rewrite it", text)
+
+    def test_its_headings_are_compared_with_the_four_of_the_template(self):
+        text = self.section()
+        self.assertIn("Compare its headings", text)
+        self.assertIn("counts as present", text)
+        self.assertIn('"Installation" for Install', text)
+
+    def test_only_the_missing_sections_are_proposed_and_not_written(self):
+        text = self.section()
+        self.assertIn("Propose only the sections it lacks", text)
+        self.assertIn("do not write them", text)
+
+    def test_the_report_says_which_sections_were_proposed(self):
+        report = skill().split("## 8. Report")[1]
+        self.assertIn("proposed", report)
+
+
 if __name__ == "__main__":
     unittest.main()

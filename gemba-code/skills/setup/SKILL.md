@@ -65,9 +65,11 @@ Every project starts from the same README. Only when the repository has no `READ
 
 If you cannot write files, put the whole README in the reply and say that nothing was written.
 
+When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the four sections of the template (What it is, Install, Run, Test): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
+
 ## 8. Report
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore` and for the README, whether it was set, already there or not written. Nothing else.
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore` and for the README, whether it was set, already there or not written, and for an existing README the sections that were proposed. Nothing else.
 
 ## Style
 
