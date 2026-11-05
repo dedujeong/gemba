@@ -34,5 +34,20 @@ class ChangeThatOnlyTouchesDocsSkillsOrBehavior(unittest.TestCase):
         self.assertIn("verified with evals or another mechanism", code_reviews_section())
 
 
+class SmallChangeOfLowRisk(unittest.TestCase):
+    def test_a_small_code_change_of_low_risk_may_launch_no_review(self):
+        text = code_reviews_section()
+        self.assertIn("small code change of low risk", text)
+        self.assertIn("may launch none", text)
+
+    def test_it_says_why_no_review_was_launched(self):
+        self.assertIn("Say why", code_reviews_section())
+
+    def test_the_risk_is_judged_by_the_sensitive_areas_the_change_touches(self):
+        text = code_reviews_section()
+        for area in ("auth", "permissions", "money", "personal data", "migrations", "dependencies", "deploy"):
+            self.assertIn(area, text)
+
+
 if __name__ == "__main__":
     unittest.main()

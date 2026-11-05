@@ -38,6 +38,7 @@ Every new file of the branch must follow the project's layout, so the repository
 Choose which code reviews to run by the size and the risk of the change, so quality is checked without spending reviews where they add nothing. Read the files of the diff (`git diff --name-only develop...<branch>`) and its size (`git diff --shortstat develop...<branch>`).
 
 - A change that only touches docs (Markdown and documentation folders), skills (`SKILL.md` and their assets) or behavior checked by evals (the `evals` folders) launches no code review. Say that this is verified with evals or another mechanism.
+- A small code change of low risk may launch none. Small is a few lines; low risk is that it touches none of auth, permissions, money, personal data, migrations, dependencies, deploy or any other security-sensitive path. Say why no review was launched.
 
 ## 4. Return an unmet criterion to Implement
 
