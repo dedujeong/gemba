@@ -33,6 +33,12 @@ Every new file of the branch must follow the project's layout, so the repository
 - A file whose kind the layout does not cover: name the file and ask whether the layout should cover it. A file the layout does not cover does not block the issue.
 - A project with no `## Code layout` section in its `CLAUDE.md`: say so and check nothing. Never invent a layout, not even a common one for the stack. The missing layout does not block the issue.
 
+### Code reviews of the change
+
+Choose which code reviews to run by the size and the risk of the change, so quality is checked without spending reviews where they add nothing. Read the files of the diff (`git diff --name-only develop...<branch>`) and its size (`git diff --shortstat develop...<branch>`).
+
+- A change that only touches docs (Markdown and documentation folders), skills (`SKILL.md` and their assets) or behavior checked by evals (the `evals` folders) launches no code review. Say that this is verified with evals or another mechanism.
+
 ## 4. Return an unmet criterion to Implement
 
 If a criterion is not met, or a new file is outside the layout, the review ends here. What is not met is corrected in Implement, never inside Review:

@@ -10,7 +10,7 @@ def skill():
 
 
 def layout_section():
-    return skill().split("### New files against the layout")[1].split("## 4. ")[0]
+    return skill().split("### New files against the layout")[1].split("\n### ")[0].split("## 4. ")[0]
 
 
 def return_section():
