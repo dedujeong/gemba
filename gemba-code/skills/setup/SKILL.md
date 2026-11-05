@@ -71,11 +71,12 @@ Every project starts from the same README. Only when the repository has no `READ
 - The product name, the one-line description and What it is come from the Product Brief you read in step 2: the name from its title, the description from its Primary job, What it is from its Problem and its actors. If there is no brief, those fields stay as fields to fill and you say so.
 - Install, Run and Test come only from what the repository states: the commands in the project's `CLAUDE.md` and in its package or build files. When the repository states none, the field stays as a field to fill. Never invent a command, a version or a variable.
 - The content is in the project's `Language`. The section names and every field that stays to fill are kept exactly as the template has them, in English, so they can be found. A requirement is the name of the tool or dependency in its canonical form with its version (`Node.js 22`, `Supabase CLI`), never a sentence or the hint of the field.
+- The License section is kept only when a license is known: the one chosen in step 7, or the one read from the title of the existing `LICENSE` ("Apache License" is Apache-2.0, "MIT License" is MIT). Its year, holder and holder URL are the ones confirmed in step 7; what is not known stays as a field to fill. Write the sentence about the NOTICE only for Apache-2.0, and the section without the sentence about the NOTICE for MIT. With none, or a title you do not recognize, remove the whole License section and say so.
 - Remove the comment at the top of the template.
 
 If you cannot write files, put the whole README in the reply and say that nothing was written.
 
-When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the four sections of the template (What it is, Install, Run, Test): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
+When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the sections of the template (What it is, Install, Run, Test and, when a license is known, License): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
 
 ## 9. Report
 

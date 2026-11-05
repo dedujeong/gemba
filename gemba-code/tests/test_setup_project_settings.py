@@ -129,6 +129,15 @@ class SetupReadme(unittest.TestCase):
         self.assertIn("canonical form with its version", text)
         self.assertIn("never a sentence or the hint of the field", text)
 
+    def test_the_license_section_is_kept_with_the_license_name_when_one_is_known(self):
+        text = self.section()
+        self.assertIn("License section", text)
+        self.assertIn("title of the existing `LICENSE`", text)
+        self.assertIn("without the sentence about the NOTICE for MIT", text)
+
+    def test_the_license_section_is_removed_when_no_license_is_known(self):
+        self.assertIn("remove the whole License section and say so", self.section())
+
     def test_the_report_says_whether_the_readme_was_written(self):
         report = skill().split("## 9. Report")[1]
         self.assertIn("README", report)
