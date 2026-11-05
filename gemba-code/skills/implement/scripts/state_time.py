@@ -3,7 +3,8 @@
 Usage: python3 state_time.py <changelog.json> <State>
 
 The file is what listJiraIssueChangelogs returned (its `data`, or just its `values`). The time
-runs from the status change that moved the issue into the state to the one that moved it out.
+runs from each status change that moved the issue into the state to the one that moved it out;
+an issue that entered the state twice adds up both spans.
 It prints a JSON object with `seconds`, `timeSpent` in the form Jira takes for a worklog
 (`1h 5m`) and `started`, when the issue entered the state.
 """
@@ -31,14 +32,16 @@ def status_changes(entries):
 
 
 def time_in_state(entries, state):
-    entered = left = None
+    first = entered = None
+    seconds = 0
     for created, source, target in status_changes(entries):
         if target == state and entered is None:
             entered = created
-        elif source == state and entered is not None and left is None:
-            left = created
-    seconds = int((datetime.fromisoformat(left) - datetime.fromisoformat(entered)).total_seconds())
-    return {"seconds": seconds, "timeSpent": time_spent(seconds), "started": entered}
+            first = first or created
+        elif source == state and entered is not None:
+            seconds += int((datetime.fromisoformat(created) - datetime.fromisoformat(entered)).total_seconds())
+            entered = None
+    return {"seconds": seconds, "timeSpent": time_spent(seconds), "started": first}
 
 
 def time_spent(seconds):

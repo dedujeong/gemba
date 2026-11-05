@@ -58,5 +58,31 @@ class TimeInAState(unittest.TestCase):
         self.assertEqual(result["started"], "2026-11-04T21:55:00.000-0600")
 
 
+class TimeInAStateEnteredTwice(unittest.TestCase):
+    changelog = [
+        move("2026-11-04T20:00:00.000-0600", "Backlog", "Implement"),
+        move("2026-11-04T20:40:00.000-0600", "Implement", "Review"),
+        move("2026-11-04T20:50:00.000-0600", "Review", "Implement"),
+        move("2026-11-04T21:20:00.000-0600", "Implement", "Review"),
+    ]
+
+    def test_both_spans_are_added_up(self):
+        code, out, err = state_time(self.changelog, "Implement")
+        self.assertEqual(code, 0, err)
+        result = json.loads(out)
+        self.assertEqual(result["seconds"], 4200)
+        self.assertEqual(result["timeSpent"], "1h 10m")
+
+    def test_started_is_the_first_time_the_issue_entered_the_state(self):
+        code, out, err = state_time(self.changelog, "Implement")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["started"], "2026-11-04T20:00:00.000-0600")
+
+    def test_the_time_out_of_the_state_between_the_spans_is_not_counted(self):
+        code, out, err = state_time(self.changelog, "Review")
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(out)["seconds"], 600)
+
+
 if __name__ == "__main__":
     unittest.main()
