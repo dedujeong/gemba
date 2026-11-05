@@ -55,5 +55,16 @@ class ProjectWithoutALayout(unittest.TestCase):
         self.assertIn("does not block", layout_section())
 
 
+class FileTheLayoutDoesNotCover(unittest.TestCase):
+    def test_it_names_the_file_and_asks_whether_the_layout_should_cover_it(self):
+        text = layout_section()
+        self.assertIn("does not cover", text)
+        self.assertIn("ask whether the layout should cover it", text)
+
+    def test_it_does_not_block_the_issue(self):
+        text = layout_section()
+        self.assertIn("A file the layout does not cover does not block the issue", text)
+
+
 if __name__ == "__main__":
     unittest.main()
