@@ -32,5 +32,13 @@ class VersionStartLivesInGembaProduct(unittest.TestCase):
         self.assertEqual(evals_that_fire("version-start"), [])
 
 
+class VersionCloseLivesInGembaProduct(unittest.TestCase):
+    def test_the_skill_is_not_in_gemba_code(self):
+        self.assertFalse(exists("skills", "version-close"))
+
+    def test_no_eval_fires_it(self):
+        self.assertEqual(evals_that_fire("version-close"), [])
+
+
 if __name__ == "__main__":
     unittest.main()
