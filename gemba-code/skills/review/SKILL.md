@@ -31,7 +31,7 @@ If a criterion is not met, the review ends here. A criterion that is not met is 
 
 1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
 2. Name the criterion that is missing and say what is missing from it.
-3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): `started` is the time the issue entered Review, read from its changelog (`getJiraIssue` with `expand: changelog`), and `timeSpent` the time from then until now. Never copy the estimate. Tell the person the time you logged, so they can correct it.
+3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger), save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
 
