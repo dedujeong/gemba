@@ -54,7 +54,17 @@ Claude's local files and the Spikes' worktrees must never reach the repository. 
 
 Never edit the `.gitignore` by hand. If you cannot run commands, put the command in the reply and say that it was not run.
 
-## 7. Write the project README
+## 7. Write the license
+
+Only when the repository has no `LICENSE` (nor `LICENSE.md` or `LICENSE.txt`). When it has one, ask nothing and leave it as it is; the README reads its name in step 8.
+
+1. Ask which license to use: Apache-2.0, MIT or none. Offer exactly those three and do not choose for the person. In the same message, for Apache-2.0 or MIT, propose the data and ask the person to confirm or correct it: the holder (`git config user.name`), the holder URL (the owner of `git remote get-url origin` as `https://github.com/<owner>`; none when there is no remote) and the year (the current one). Never write the files before the person confirms.
+2. Run `python3 scripts/write_license.py <repository root> <Apache-2.0|MIT|none> --holder "<holder>" --year <year> --product "<product name>"`, adding `--holder-url <url>` when there is one. The product name is the title of the Product Brief. The script fetches the official text when it runs, writes the `LICENSE` (inside it, for MIT, the holder and the year) and, for Apache-2.0, the `NOTICE`; with none it writes nothing. You never type or paraphrase a license text yourself, and you never keep a copy of one.
+3. If the script cannot read the official text it writes nothing: say what is missing, which license text and which address, and go on with the rest of setup.
+
+The license is not saved in the Gemba block. If you cannot run commands, put the command in the reply and say that it was not run.
+
+## 8. Write the project README
 
 Every project starts from the same README. Only when the repository has no `README.md` at its root, write it from `assets/readme.md`:
 
@@ -67,9 +77,9 @@ If you cannot write files, put the whole README in the reply and say that nothin
 
 When the repository already has a `README.md`, never replace or rewrite it, and leave every line of it as it is. Compare its headings with the four sections of the template (What it is, Install, Run, Test): a heading that covers the same content counts as present, for example "Installation" for Install or "Usage" for Run. Propose only the sections it lacks, written from the template with the data above, and do not write them: the person decides whether to add them. If it has all four, say so and propose nothing.
 
-## 8. Report
+## 9. Report
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore` and for the README, whether it was set, already there or not written, and for an existing README the sections that were proposed. Nothing else.
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the `.gitignore`, for the license and for the README, whether it was set, already there or not written, and for an existing README the sections that were proposed. Nothing else.
 
 ## Style
 
