@@ -31,6 +31,10 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
   (or takes `event`), ignores everything but Bash, calls `decide(event)` and, if it raises, asks with
   `reason` when the command matches `relevant`, the hook's own pattern (a hook that crashes does not block: fail closed). A
   hook keeps inline only the branch for the module failing to import.
+- `hides_subcommand(command, cwd)`: True when a GitCommand's subcommand cannot be trusted: it comes from a variable or a
+  substitution (`$P`, `${P}`, `$(...)`, a backtick) or it is not a git builtin (`BUILTINS`: an alias, also one defined
+  with `-c alias.<name>=...`, or an external `git-<name>`), so the hook cannot tell which rules it breaks. A hook asks with
+  `HIDDEN_SUBCOMMAND` once, unless the command runs outside a project with setup.
 - `word_pattern(*words)`: the compiled regex `git ... <word>` (whole words, not `commit-graph`).
 - Redirections are not part of a command: the operator and its target word (`2>&1`, `2>/dev/null`, `> f`,
   `>> f`, `< f`, `&> f`, `<<< text`, `<<WORD`) are dropped before the words are read, and so is the body of a
@@ -73,6 +77,21 @@ OPTIONS_WITH_A_VALUE = {
     "pull": {"-s", "--strategy", "-X", "--strategy-option", "--depth", "--deepen", "--shallow-since",
              "--shallow-exclude", "-j", "--jobs", "--upstream-pack", "-o", "--server-option"},
 }
+
+# The git builtins (porcelain and plumbing). A subcommand outside this set is an alias or an external command.
+BUILTINS = frozenset("""add am annotate apply archive bisect blame branch bugreport bundle cat-file check-attr check-ignore
+check-mailmap check-ref-format checkout checkout-index cherry cherry-pick citool clean clone column commit commit-graph
+commit-tree config count-objects credential describe diagnose diff diff-files diff-index diff-tree difftool fast-export
+fast-import fetch fetch-pack filter-branch fmt-merge-msg for-each-ref for-each-repo format-patch fsck gc get-tar-commit-id
+grep gui hash-object help hook index-pack init interpret-trailers log ls-files ls-remote ls-tree mailinfo mailsplit maintenance
+merge merge-base merge-file merge-index merge-tree mergetool mktag mktree multi-pack-index mv name-rev notes pack-objects
+pack-redundant pack-refs patch-id prune prune-packed pull push range-diff read-tree rebase reflog refs remote repack replace
+replay request-pull rerere reset restore rev-list rev-parse revert rm send-email shell shortlog show show-branch show-index
+show-ref sparse-checkout stage stash status stripspace submodule switch symbolic-ref tag unpack-file unpack-objects
+update-index update-ref update-server-info var verify-commit verify-pack verify-tag version whatchanged worktree write-tree""".split())
+
+HIDDEN_SUBCOMMAND = ("the git subcommand comes from a variable or is not a git builtin (an alias or an external command),"
+                     " so the hook cannot tell which rules it breaks. Confirm it.")
 
 GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config", defaults=(None, ()))
 
@@ -259,6 +278,12 @@ def parse(words):
         return None
     options, args = parse_options_and_args(words[i], words[i + 1:])
     return GitCommand(folder, words[i], options, args, config=tuple(config))
+
+
+def hides_subcommand(command, cwd):
+    """True when the subcommand of a GitCommand is a variable or not a git builtin, in a project with setup."""
+    sub = command.subcommand
+    return (re.search(r"[$`]", sub) is not None or sub not in BUILTINS) and project_of(command, cwd) != "no"
 
 
 def option_names(command):

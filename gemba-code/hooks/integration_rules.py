@@ -193,6 +193,17 @@ def wraps_pr_merge(words):
     return False
 
 
+def unquoted(command):
+    """The command as the shell reads its words: quotes and escapes gone (`pu""sh`)."""
+    return re.sub(r"[\\'\"]", "", command)
+
+
+def relevant(command):
+    """What the ImportError and crash fallbacks ask for: the hook's own words even written with quotes or
+    escapes, or a git command whose subcommand comes from a variable or an alias."""
+    return bool(RELEVANT.search(unquoted(command)) or re.search(r"\bgit\b[^;&|\n]*(?:[$`]|alias\.)", command))
+
+
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
@@ -206,7 +217,9 @@ def decide(event):
 
     asking = False
     tags = {}  # repository -> the tags an earlier `git tag` of this command creates
+    hidden = False
     for found in git_commands.git_commands(command, cwd):
+        hidden = hidden or git_commands.hides_subcommand(found, cwd)
         if found.subcommand == "tag" and found.folder and not git_commands.option_names(found) & NOT_A_NEW_TAG:
             tags.setdefault(git_commands.repository_key(found.folder), set()).update(found.args[:1])
         if found.subcommand not in GIT_WORDS:
@@ -236,8 +249,8 @@ def decide(event):
                                 " The maintainer merges the pull request.")
             elif gh_words(words) is None and wraps_pr_merge(words):
                 hidden_pr_merge = True
-    if asking:
-        return git_commands.emit("ask", UNREADABLE)
+    if asking or hidden:
+        return git_commands.emit("ask", UNREADABLE if asking else "Gemba rule (integration): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)
     # hides it, so a command that mentions one asks with a generic reason. A local merge, a pull or a pull
     # request merge is only a rule in pull request mode, so only there is a hidden one asked about.
@@ -257,15 +270,18 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    if not RELEVANT.search(event.get("tool_input", {}).get("command", "")):
-        return  # no push, merge, pull or gh pr merge anywhere: skip the import and the parsing
+    command = event.get("tool_input", {}).get("command", "")
+    if not (re.search(r"\bgit\b", unquoted(command)) or GH_PR_MERGE.search(unquoted(command))):
+        return  # no git or gh pr merge at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions one
+        if not relevant(command):
+            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": UNREADABLE}}))
         return
-    git_commands.run_hook(decide, RELEVANT, UNREADABLE, event)
+    git_commands.run_hook(decide, relevant, UNREADABLE, event)
 
 
 if __name__ == "__main__":
