@@ -321,6 +321,30 @@ class RestPayload(HookCase):
         self.assertIn("must not", self.denied(rest({**EPIC, "components": [{"id": "1"}]}, issue_type="Epic")))
 
 
+class FieldValues(HookCase):
+    def test_fix_version_entries_without_a_name_or_an_id_do_not_count(self):
+        for versions in ([{}], [""], ["  "], [{"name": ""}], [{"id": ""}], [{"name": "v1"}, {}], ["v1", ""], "v1"):
+            with self.subTest(versions=versions):
+                self.assertIn("fix version", self.denied(direct({**GOOD, "fixVersions": versions})))
+
+    def test_fix_version_entries_with_a_name_or_an_id_or_given_as_text_count(self):
+        for versions in ([{"name": "v1"}], [{"id": "10002"}], [{"id": 10002}], ["v1"], [{"name": "v1"}, {"id": "2"}]):
+            with self.subTest(versions=versions):
+                self.passes(direct({**GOOD, "fixVersions": versions}))
+
+    def test_an_epic_due_date_must_be_a_date_in_the_form_year_month_day(self):
+        for value in ("31/12/2026", "2026-12-3", "2026-13-40", "soon", 20261231, "2026-12-31T00:00"):
+            with self.subTest(value=value):
+                reason = self.denied(direct({**VERSION, "duedate": value}, issue_type="Epic"))
+                self.assertIn("due date", reason)
+                self.assertIn("YYYY-MM-DD", reason)
+        self.passes(direct({**VERSION, "duedate": "2026-12-31"}, issue_type="Epic"))
+
+    def test_an_epic_with_any_timetracking_is_denied(self):
+        reason = self.denied(direct({**EPIC, "timetracking": {"remainingEstimate": "1h"}}, issue_type="Epic"))
+        self.assertIn("has an estimate", reason)
+
+
 class FailsClosed(unittest.TestCase):
     def alone(self, tool_name, tool_input):
         """Runs a copy of the script with no git_commands next to it, so its import fails."""

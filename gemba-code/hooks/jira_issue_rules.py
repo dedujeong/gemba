@@ -7,8 +7,10 @@ belongs to that section's Jira Project. It then denies the call with one reason 
 missing or wrong field. In every other case it prints nothing. It never reads the Summary or the
 description. A crash while handling a createJiraIssue call asks, so the call never passes unchecked.
 """
+import datetime
 import json
 import os
+import re
 import sys
 
 try:
@@ -97,6 +99,31 @@ def component_names(args):
     return names
 
 
+def has_fix_versions(args):
+    """True when fixVersions is a list whose every entry has a name or an id, or is a non-empty string."""
+    value = field(args, "fixVersions")
+    if not isinstance(value, list) or not value:
+        return False
+    for item in value:
+        if isinstance(item, dict):
+            item = item.get("name") or item.get("id")
+        if isinstance(item, int) and not isinstance(item, bool):
+            item = str(item)
+        if not isinstance(item, str) or not item.strip():
+            return False
+    return True
+
+
+def valid_due_date(value):
+    if not isinstance(value, str) or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        return False
+    try:
+        datetime.date.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
 def original_estimate(args):
     value = field(args, "timetracking")
     return named(value.get("originalEstimate")) if isinstance(value, dict) else ""
@@ -106,10 +133,12 @@ def epic_problems(args):
     found = []
     if component_names(args):
         found.append(("has a component, which an Epic must not have", "Remove additional_fields.components"))
-    if original_estimate(args) or field(args, "timetracking"):
+    if field(args, "timetracking"):
         found.append(("has an estimate, which an Epic must not have", "Remove additional_fields.timetracking"))
     if not field(args, "duedate"):
         found.append(("is missing a due date", 'Add additional_fields.duedate "<YYYY-MM-DD>"'))
+    elif not valid_due_date(field(args, "duedate")):
+        found.append(("has a due date that is not in the form YYYY-MM-DD", 'Use additional_fields.duedate "<YYYY-MM-DD>"'))
     return found
 
 
@@ -130,7 +159,7 @@ def other_problems(args):
 def problems(args):
     """What the issue lacks or has wrong, as (clause about the issue, how to fix it) pairs."""
     found = []
-    if not field(args, "fixVersions"):
+    if not has_fix_versions(args):
         found.append(("is missing a fix version", 'Add additional_fields.fixVersions [{"name": "<version>"}]'))
     rules = epic_problems if issue_type(args).lower() == "epic" else other_problems
     return found + rules(args)
