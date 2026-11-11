@@ -238,6 +238,50 @@ class EpicFields(HookCase):
         self.passes(direct(dict(GOOD)))
 
 
+def call_direct(tool_input):
+    return CLAUDE_CODE + "createJiraIssue", {"cloudId": "c1", **tool_input}
+
+
+def call_write(inputs, prefix=CLAUDE_CODE):
+    return prefix + "executeWrite", {"cloudId": "c1", "name": "createJiraIssue", "inputs": inputs}
+
+
+class RealCallShapes(HookCase):
+    def asked(self, call):
+        out = self.run_call(call)
+        self.assertIsNotNone(out, "the hook printed nothing")
+        self.assertEqual(out["permissionDecision"], "ask")
+        self.assertIn("Gemba Code plugin, not from Jira", out["permissionDecisionReason"])
+        return out["permissionDecisionReason"]
+
+    def test_the_work_type_is_read_from_issueTypeName(self):
+        reason = self.denied(call_direct({"projectKey": "ABC", "issueTypeName": "Epic", "additional_fields": dict(VERSION)}))
+        self.assertIn("due date", reason)
+        self.passes(call_direct({"projectKey": "ABC", "issueTypeName": "Epic", "additional_fields": dict(EPIC)}))
+        self.passes(call_direct({"projectKey": "ABC", "issueTypeName": "Story", "additional_fields": dict(GOOD)}))
+
+    def test_additional_fields_given_as_a_json_string_are_read(self):
+        base = {"projectKey": "ABC", "issueType": "Story"}
+        self.passes(call_direct({**base, "additional_fields": json.dumps(GOOD)}))
+        self.assertIn("component", self.denied(call_direct({**base, "additional_fields": json.dumps(VERSION)})))
+
+    def test_additional_fields_that_do_not_parse_ask(self):
+        self.asked(call_direct({"projectKey": "ABC", "issueType": "Story", "additional_fields": "{not json"}))
+
+    def test_executeWrite_inputs_given_as_a_json_string_are_read(self):
+        inputs = {"projectKey": "ABC", "issueType": "Story", "additional_fields": dict(GOOD)}
+        self.passes(call_write(json.dumps(inputs)))
+        inputs["additional_fields"] = dict(VERSION)
+        self.assertIn("component", self.denied(call_write(json.dumps(inputs))))
+
+    def test_executeWrite_inputs_that_do_not_parse_ask(self):
+        self.asked(call_write("{not json"))
+
+    def test_unreadable_arguments_of_another_project_session_are_not_asked(self):
+        self.repo = make_repo(claude_md="# Notes\n")
+        self.passes(call_write("{not json"))
+
+
 class FailsClosed(unittest.TestCase):
     def alone(self, tool_name, tool_input):
         """Runs a copy of the script with no git_commands next to it, so its import fails."""

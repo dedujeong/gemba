@@ -25,6 +25,29 @@ def output(decision, why):
     }}))
 
 
+def ask(why):
+    output("ask", f"Gemba rule (issue fields): {why} Confirm the issue has its fix version, component and estimate"
+                  " (an Epic: due date). This comes from the Gemba Code plugin, not from Jira.")
+
+
+class Unreadable(Exception):
+    """The call carries something the hook cannot read, so it cannot check it."""
+
+
+def load(value):
+    """A JSON object given as a dict or as a JSON-encoded string; None is an empty object."""
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except ValueError:
+            raise Unreadable("the hook could not read the arguments of the call, which are not valid JSON.")
+    if value is None:
+        return {}
+    if not isinstance(value, dict):
+        raise Unreadable("the hook could not read the arguments of the call.")
+    return value
+
+
 def create_arguments(event):
     """The arguments of a createJiraIssue call, direct or inside executeWrite, or None for any other call."""
     name = event.get("tool_name") or ""
@@ -32,7 +55,7 @@ def create_arguments(event):
     if name.endswith("__createJiraIssue"):
         return tool_input
     if name.endswith("__executeWrite") and tool_input.get("name") == "createJiraIssue":
-        return tool_input.get("inputs") or {}
+        return tool_input.get("inputs")
     return None
 
 
@@ -45,8 +68,8 @@ def named(value):
 
 def field(args, key):
     """A field given in additional_fields or flat in the arguments."""
-    extra = args.get("additional_fields")
-    if isinstance(extra, dict) and extra.get(key) not in (None, "", [], {}):
+    extra = load(args.get("additional_fields"))
+    if extra.get(key) not in (None, "", [], {}):
         return extra[key]
     return args.get(key)
 
@@ -56,7 +79,7 @@ def project_key(args):
 
 
 def issue_type(args):
-    return named(args.get("issueType") or args.get("issuetype"))
+    return named(args.get("issueType") or args.get("issuetype") or args.get("issueTypeName"))
 
 
 def component_names(args):
@@ -112,10 +135,11 @@ def sentence(kind, found):
 
 def decide(event, args):
     cwd = event.get("cwd") or os.getcwd()
-    if not git_commands.has_gemba(cwd):
-        return
     mine = git_commands.gemba_field(cwd, "Jira Project")
-    if not mine or project_key(args).lower() != mine.lower():
+    if not mine:  # no Gemba section, or none with a Jira Project: not a Gemba project
+        return
+    args = load(args)
+    if project_key(args).lower() != mine.lower():
         return
     found = problems(args)
     if found:
@@ -131,17 +155,15 @@ def main():
     if args is None:
         return
     if git_commands is None:
-        output("ask", "Gemba rule (issue fields): the hook that checks the fields of a new Jira issue could not load."
-                      " Confirm the issue has its fix version, component and estimate (an Epic: due date)."
-                      " This comes from the Gemba Code plugin, not from Jira.")
+        ask("the hook that checks the fields of a new Jira issue could not load.")
         return
     try:
         decide(event, args)
+    except Unreadable as why:
+        ask(str(why))
     except Exception:
         # A crash exits non-zero and does not block, so the issue would be created unchecked: fail closed.
-        output("ask", "Gemba rule (issue fields): the hook that checks the fields of a new Jira issue failed."
-                      " Confirm the issue has its fix version, component and estimate (an Epic: due date)."
-                      " This comes from the Gemba Code plugin, not from Jira.")
+        ask("the hook that checks the fields of a new Jira issue failed.")
 
 
 if __name__ == "__main__":
