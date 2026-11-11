@@ -4,7 +4,7 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
 
 - `git_commands(command, cwd=None)`: the `GitCommand` of every segment that is a git command, in order.
   `GitCommand(folder, subcommand, options, args, branch, config)`: `config` are the `-c key=value` pairs of the
-  git global options, in order (`()` when none); `options` are ordered `(name, value)` pairs
+  git global options, in order (`()` when none; the value is None for a bare key); `options` are ordered `(name, value)` pairs
   (`value` is None for a flag), `args` the positionals. With `cwd`, the walk follows the context of the
   compound command: `folder` is the folder the command runs in (`-C` on top of the `cd`s before it, on
   top of `cwd`) and `branch` the branch checked out there when the command runs (the real one, read once
@@ -157,8 +157,8 @@ def parse(words):
         option = words[i]
         if option in GLOBAL_OPTIONS_WITH_A_VALUE:
             if option == "-c" and i + 1 < len(words):
-                key, _, value = words[i + 1].partition("=")
-                config.append((key, value))
+                key, equals, value = words[i + 1].partition("=")
+                config.append((key, value if equals else None))  # a bare key has no value: git reads it as true
             if option == "-C" and i + 1 < len(words):
                 # Git applies every -C on top of the one before, like successive cd.
                 folder = os.path.join(folder, words[i + 1]) if folder else words[i + 1]
