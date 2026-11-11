@@ -35,5 +35,35 @@ class ReadsTheProjectOfTheDashCFolder(unittest.TestCase):
         self.assertIn("develop", out["permissionDecisionReason"])
 
 
+class UsesTheContextOfTheCompoundCommand(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+
+    def test_a_bare_push_names_the_branch_the_command_switched_to(self):
+        out = decision(run_hook(self.repo, "git switch -c task/ABC-9-x && git push"))
+        self.assertIn("task/ABC-9-x", out["permissionDecisionReason"])
+
+    def test_a_push_after_a_cd_reads_the_project_of_that_folder(self):
+        other = make_repo()
+        outside = make_repo(claude_md=None)
+        self.addCleanup(shutil.rmtree, other)
+        self.addCleanup(shutil.rmtree, outside)
+        out = decision(run_hook(outside, "cd %s && git push" % other))
+        self.assertEqual(out["permissionDecision"], "ask")
+
+    def test_a_push_after_a_cd_that_cannot_be_followed_asks(self):
+        out = decision(run_hook(self.repo, "cd $DIR && git push"))
+        self.assertEqual(out["permissionDecision"], "ask")
+
+    def test_a_wrapped_push_next_to_a_parsed_command_asks(self):
+        out = decision(run_hook(self.repo, "git status && bash -c 'git push --force'"))
+        self.assertEqual(out["permissionDecision"], "ask")
+
+    def test_a_push_mentioned_in_the_argument_of_another_git_command_does_not_ask(self):
+        self.assertIsNone(decision(run_hook(self.repo, 'git log --grep push')))
+        self.assertIsNone(decision(run_hook(self.repo, 'git commit -m "git push later"')))
+
+
 if __name__ == "__main__":
     unittest.main()
