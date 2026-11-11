@@ -129,22 +129,6 @@ def push_problem(push, mode, created=()):
     return None
 
 
-def refspec_branch(refspec):
-    """The branch a refspec of `git pull` brings in."""
-    return refspec.lstrip("+").partition(":")[0].removeprefix("refs/heads/")
-
-
-def syncs_with_its_remote(command):
-    """True when the merge brings in only `@{u}` or `<remote>/<the branch it runs on>`."""
-    if len(command.args) != 1:
-        return False
-    target = command.args[0]
-    if target.lower() in ("@{u}", "@{upstream}"):
-        return True
-    remotes = git_commands.git(command.folder, "remote").split()
-    return any(target == f"{remote}/{command.branch}" for remote in remotes)
-
-
 def merge_problem(command, mode):
     """Why a local `git merge`, or a `git pull` of another branch, breaks the mode, None, or UNKNOWN."""
     if mode != "pull request" or git_commands.option_names(command) & {"--abort", "--continue", "--quit"}:
@@ -153,11 +137,9 @@ def merge_problem(command, mode):
         return UNKNOWN
     if command.branch not in MAIN_BRANCHES:
         return None
-    if command.subcommand == "pull" and all(refspec_branch(r) == command.branch for r in command.args[1:]):
-        return None  # `git pull` and `git pull origin develop` on develop only sync it
-    if command.subcommand == "merge" and "--ff-only" in git_commands.option_names(command) and \
-            syncs_with_its_remote(command):
-        return None  # `git merge --ff-only origin/develop` on develop only syncs it, like `git pull`
+    if git_commands.syncs_with_its_remote(command) and \
+            (command.subcommand == "pull" or "--ff-only" in git_commands.option_names(command)):
+        return None  # `git pull [origin develop]` and `git merge --ff-only origin/develop` on develop only sync it
     return (f"Gemba rule (integration: pull request): nothing is merged locally into {command.branch}."
             " Open a pull request from the work branch; the maintainer merges it.")
 
@@ -212,8 +194,8 @@ def decide(event):
         if found.subcommand not in GIT_WORDS:
             continue
         project = git_commands.project_of(found, cwd)
-        if project == "no" or (project == "yes" and not git_commands.has_gemba(found.folder)):
-            continue  # not a project with setup, or an unrelated repository without a Gemba section
+        if project == "no":
+            continue  # a repository without a Gemba section
         if project == "unknown":
             asking = asking or found.subcommand == "push" or mode_of(cwd) != "merge"
             continue
@@ -227,15 +209,16 @@ def decide(event):
             return git_commands.emit("deny", problem)
     in_project = git_commands.has_gemba(cwd)
     hidden_pr_merge = False
-    if in_project:
-        for words in git_commands.segments(command):
-            if is_pr_merge(words):
-                if mode_of(cwd) == "pull request":
-                    return git_commands.emit(
-                        "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
-                                " The maintainer merges the pull request.")
-            elif gh_words(words) is None and wraps_pr_merge(words):
-                hidden_pr_merge = True
+    for words, folder in git_commands.segment_folders(command, cwd):
+        if is_pr_merge(words):
+            if folder is None:  # a cd the parser could not follow: only the session's project can be asked about
+                asking = asking or (in_project and mode_of(cwd) != "merge")
+            elif git_commands.has_gemba(folder) and mode_of(folder) == "pull request":
+                return git_commands.emit(
+                    "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
+                            " The maintainer merges the pull request.")
+        elif in_project and gh_words(words) is None and wraps_pr_merge(words):
+            hidden_pr_merge = True
     if asking:
         return git_commands.emit("ask", UNREADABLE)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)

@@ -116,6 +116,7 @@ class Merges(HookCase):
         self.passes("git pull origin main", "git pull")
 
     def test_a_pull_of_the_same_branch_or_into_another_branch_passes(self):
+        git(self.repo, "remote", "add", "upstream", "https://example.com/acme/up.git")  # a pull keeps its real remote
         self.passes("git pull", "git pull origin develop", "git pull --ff-only origin develop", "git pull upstream develop")
         self.on("story/ABC-2-import")
         self.passes("git pull origin develop", "git pull --squash origin develop")

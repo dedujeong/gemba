@@ -327,14 +327,6 @@ class RepoHelpersTest(unittest.TestCase):
         os.makedirs(sub)
         self.assertEqual(git_commands.gemba_field(sub, "Integration"), "merge")
 
-    def test_in_gemba_project_reads_the_command_folder_or_the_session_folder(self):
-        self.write_claude("## Gemba\n\n- Jira Project: ABC\n")
-        outside = tempfile.mkdtemp()
-        self.addCleanup(subprocess.run, ["rm", "-rf", outside])
-        self.assertTrue(git_commands.in_gemba_project(self.repo, outside))
-        self.assertTrue(git_commands.in_gemba_project(outside, self.repo))
-        self.assertFalse(git_commands.in_gemba_project(outside, outside))
-
     def test_current_branch(self):
         run(self.repo, "checkout", "-q", "-b", "task/ABC-1-x")
         self.assertEqual(git_commands.current_branch(self.repo), "task/ABC-1-x")
@@ -599,6 +591,7 @@ class SimplifiedHelpersTest(unittest.TestCase):
         here = GitCommand(self.repo, "push", [], [])
         self.assertEqual(git_commands.project_of(here, self.repo), "yes")
         self.assertEqual(git_commands.project_of(GitCommand(outside, "push", [], []), outside), "no")
+        self.assertEqual(git_commands.project_of(GitCommand(outside, "push", [], []), self.repo), "no")  # the session does not decide
         self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), self.repo), "unknown")
         self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), outside), "no")
 
