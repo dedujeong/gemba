@@ -230,6 +230,67 @@ class ProtectedBranches(CommitRulesCase):
         self.passes('git commit -m "feat(export): add the export"')
 
 
+class TrackedBranch(CommitRulesCase):
+    def test_a_commit_after_a_checkout_of_develop_is_blocked(self):
+        reason = self.blocked('git checkout develop && git commit -m "feat: x"')
+        self.assertIn("develop", reason)
+        self.blocked('git switch develop && git commit -m "feat: x"')
+
+    def test_a_commit_on_a_new_work_branch_made_from_develop_passes(self):
+        git(self.repo, "checkout", "-q", "develop")
+        self.passes('git switch -c story/ABC-2-y && git commit -m "feat: y"')
+        self.passes('git checkout -b story/ABC-2-y && git commit -m "feat: y"')
+
+    def test_a_commit_after_leaving_a_protected_branch_passes_and_after_a_path_checkout_does_not(self):
+        git(self.repo, "checkout", "-q", "develop")
+        self.passes('git switch story/ABC-1-export && git commit -m "feat: x"')
+        self.blocked('git checkout -- . && git commit -m "feat: x"')
+
+    def test_a_commit_after_a_cd_to_a_folder_on_develop_is_blocked(self):
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        self.blocked(f'cd {other} && git commit -m "feat: x"')
+
+    def test_a_commit_when_the_folder_or_the_branch_cannot_be_told_asks(self):
+        self.assertIn("could not", self.asked('cd && git commit -m "feat: x"'))
+        self.asked('cd $DIR && git commit -m "feat: x"')
+        self.asked('git switch - && git commit -m "feat: x"')
+
+    def test_a_broken_message_after_an_unknown_folder_is_still_blocked(self):
+        self.blocked('cd && git commit -m "add the export."')
+
+
+class OtherCommitsOnProtectedBranches(CommitRulesCase):
+    def test_revert_cherry_pick_and_am_are_blocked_on_develop_and_main(self):
+        git(self.repo, "checkout", "-q", "develop")
+        for command in ("git revert HEAD", "git cherry-pick abc1234", "git am patch.mbox", "git -C %s revert HEAD" % self.repo):
+            with self.subTest(command=command):
+                reason = self.blocked(command)
+                self.assertIn("develop", reason)
+        git(self.repo, "checkout", "-q", "-b", "main")
+        self.blocked("git revert HEAD")
+
+    def test_after_a_checkout_of_develop_they_are_blocked_too(self):
+        self.blocked("git checkout develop && git cherry-pick abc1234")
+
+    def test_finishing_or_leaving_the_operation_passes(self):
+        git(self.repo, "checkout", "-q", "develop")
+        for command in ("git revert --abort", "git revert --continue", "git cherry-pick --skip", "git cherry-pick --quit",
+                        "git am --abort", "git am --continue", "git am --skip", "git revert -n HEAD"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+    def test_on_a_work_branch_they_pass(self):
+        for command in ("git revert HEAD", "git revert --no-edit HEAD", "git cherry-pick abc1234", "git am patch.mbox"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+    def test_without_a_gemba_section_they_pass(self):
+        repo = make_repo(claude_md=None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git revert HEAD", repo)
+
+
 class ProjectsWithoutGemba(CommitRulesCase):
     def setUp(self):
         self.repo = make_repo(claude_md=None)
