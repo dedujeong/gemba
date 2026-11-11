@@ -19,6 +19,15 @@
             "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/confirm_push.py\""
           }
         ]
+      },
+      {
+        "matcher": "mcp__.*__(createJiraIssue|executeWrite)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/jira_issue_rules.py\""
+          }
+        ]
       }
     ]
   }
