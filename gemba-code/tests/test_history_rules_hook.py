@@ -207,6 +207,26 @@ class Rebases(HookCase):
         self.denied("git rebase -i --autosquash develop story/ABC-1-export", "rebase")
         self.passes("git rebase -i --autosquash develop story/ABC-2-other")
 
+    def test_a_root_autosquash_rebase_passes_when_no_commit_of_head_is_on_a_remote(self):
+        local = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", local])
+        git(local, "commit", "-q", "--allow-empty", "-m", "fixup! x")
+        self.passes("git rebase -i --autosquash --root", "git rebase --root --autosquash", repo=local)
+
+    def test_a_root_rebase_is_denied_without_autosquash_or_over_pushed_commits(self):
+        local = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", local])
+        self.denied("git rebase -i --root", "rebase", repo=local)
+        self.denied("git rebase -i --autosquash --root", "rebase")  # develop is on the remote here
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-9-x", "develop")
+        self.denied("git rebase -i --autosquash --root", "rebase")
+
+    def test_onto_and_keep_base_still_read_the_range_from_the_upstream(self):
+        self.passes("git rebase --keep-base --autosquash develop")
+        git(self.repo, "push", "-q", "origin", "story/ABC-1-export")
+        self.denied("git rebase --keep-base --autosquash develop", "rebase")
+        self.denied("git rebase --onto main --autosquash develop", "rebase")
+
     def test_ending_a_rebase_passes(self):
         self.passes("git rebase --abort", "git rebase --continue", "git rebase --skip", "git rebase --quit")
 

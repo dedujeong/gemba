@@ -81,10 +81,14 @@ def rebase_problem(rebase):
     todo = "Do not rebase: merge instead. The only rebase allowed is `git rebase -i --autosquash <upstream>` over commits that are not pushed"
     if "--autosquash" not in names or "--no-autosquash" in names:
         return rule("rebase", "a rebase rewrites history", todo)
-    upstream = rebase.args[0] if rebase.args else "@{u}"
-    head = rebase.args[1] if len(rebase.args) > 1 else "HEAD"
-    mine = count(rebase.folder, f"{upstream}..{head}")
-    not_pushed = count(rebase.folder, f"{upstream}..{head}", "--not", "--remotes")
+    if "--root" in names:  # every commit of the branch is rebased: `<branch>` is the only argument
+        upstream = "the root"
+        revisions = [rebase.args[0] if rebase.args else "HEAD"]
+    else:
+        upstream = rebase.args[0] if rebase.args else "@{u}"
+        revisions = [f"{upstream}..{rebase.args[1] if len(rebase.args) > 1 else 'HEAD'}"]
+    mine = count(rebase.folder, *revisions)
+    not_pushed = count(rebase.folder, *revisions, "--not", "--remotes")
     if mine is None or not_pushed is None:
         return rule("rebase", f"the commits to rebase on {upstream} could not be read", todo)
     if mine != not_pushed:
