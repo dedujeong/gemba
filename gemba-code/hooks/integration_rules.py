@@ -15,6 +15,8 @@ import re
 import os
 import sys
 
+import fallback_words  # before git_commands: it still loads when the parser does not
+
 git_commands = None  # imported by main() once the command is known to mention a push, a merge or a pull
 
 MODES = ("merge", "pull request")
@@ -185,6 +187,12 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     modes = {}  # repository -> its mode, read once
+    # The cheap test before any repository is read: no git command that matters, no gh pr merge, nothing hidden.
+    walk = git_commands.needs_walk(command, GIT_WORDS + ("tag",))
+    if not (walk or GH_PR_MERGE.search(fallback_words.unquoted(command))
+            or git_commands.unparsed_mentions(command, ("push", "merge", "pull"))
+            or git_commands.unparsed_hides_subcommand(command)):
+        return
 
     def mode_of(folder):
         key = git_commands.toplevel(folder)
@@ -194,7 +202,9 @@ def decide(event):
 
     asking = False
     tags = {}  # repository -> the tags an earlier `git tag` of this command creates
-    for found in git_commands.git_commands(command, cwd):
+    hidden = False
+    for found in git_commands.git_commands(command, cwd) if walk else ():
+        hidden = hidden or git_commands.hides_subcommand(found, cwd)
         if found.subcommand == "tag" and found.folder and not git_commands.option_names(found) & NOT_A_NEW_TAG:
             tags.setdefault(git_commands.repository_key(found.folder), set()).update(found.args[:1])
         if found.subcommand not in GIT_WORDS:
@@ -228,8 +238,8 @@ def decide(event):
                     "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
                             " The maintainer merges the pull request.")
             asking = asking or (not is_plain and mode_of(folder) != "merge")  # a hidden one, like a hidden merge
-    if asking:
-        return git_commands.emit("ask", UNREADABLE)
+    if asking or hidden:
+        return git_commands.emit("ask", UNREADABLE if asking else "Gemba rule (integration): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)
     # hides it, so a command that mentions one asks with a generic reason. A local merge, a pull or a pull
     # request merge is only a rule in pull request mode, so only there is a hidden one asked about.
@@ -237,7 +247,7 @@ def decide(event):
         return
     hidden_push = git_commands.unparsed_mentions(command, "push")
     hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull"))
-    if hidden_push or (hidden_merge and mode_of(cwd) != "merge"):
+    if hidden_push or git_commands.unparsed_hides_subcommand(command) or (hidden_merge and mode_of(cwd) != "merge"):
         git_commands.emit("ask", UNREADABLE)
 
 
@@ -249,15 +259,18 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    if not RELEVANT.search(event.get("tool_input", {}).get("command", "")):
-        return  # no push, merge, pull or gh pr merge anywhere: skip the import and the parsing
+    command = event.get("tool_input", {}).get("command", "")
+    if not (fallback_words.mentions_git(command) or GH_PR_MERGE.search(fallback_words.unquoted(command))):
+        return  # no git or gh pr merge at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions one
+        if not fallback_words.relevant(command, RELEVANT):
+            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": UNREADABLE}}))
         return
-    git_commands.run_hook(decide, RELEVANT, UNREADABLE, event)
+    git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, RELEVANT), UNREADABLE, event)
 
 
 if __name__ == "__main__":

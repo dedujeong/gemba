@@ -13,6 +13,8 @@ import os
 import re
 import sys
 
+import fallback_words  # before git_commands: it still loads when the parser does not
+
 git_commands = None  # imported by main() once the command is known to mention an operation
 
 PROTECTED = ("develop", "main")
@@ -213,7 +215,9 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = False
-    for git_command in git_commands.git_commands(command, cwd):
+    hidden = False
+    for git_command in git_commands.git_commands(command, cwd) if git_commands.needs_walk(command, OPERATIONS) else ():
+        hidden = hidden or git_commands.hides_subcommand(git_command, cwd)
         check = CHECKS.get(git_command.subcommand)
         if check is None:
             continue
@@ -228,9 +232,12 @@ def decide(event):
             return git_commands.emit("deny", problem)
     if asking:
         return git_commands.emit("ask", UNKNOWN)
+    if hidden:
+        return git_commands.emit("ask", "Gemba rule (history): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the operation from it, so a segment that looks like one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, WRAPPED_OPERATIONS) and git_commands.has_gemba(cwd):
+    if (git_commands.unparsed_mentions(command, WRAPPED_OPERATIONS) or git_commands.unparsed_hides_subcommand(command)) \
+            and git_commands.has_gemba(cwd):
         git_commands.emit("ask", WRAPPED)
 
 
@@ -242,16 +249,19 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    if not OPERATION_WORDS.search(event.get("tool_input", {}).get("command", "")):
-        return  # no merge, rebase, pull, push, branch or tag anywhere: skip the import and the parsing
+    command = event.get("tool_input", {}).get("command", "")
+    if not fallback_words.mentions_git(command):
+        return  # no git at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions an operation
+        if not fallback_words.relevant(command, OPERATION_WORDS):
+            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (history): the hook could not load its parser. Confirm that this command does not rewrite or lose history."}}))
         return
-    git_commands.run_hook(decide, OPERATION_WORDS, BROKEN, event)
+    git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, OPERATION_WORDS), BROKEN, event)
 
 
 if __name__ == "__main__":
