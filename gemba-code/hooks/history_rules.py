@@ -105,7 +105,7 @@ def pull_problem(pull):
     return None
 
 
-FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes"}
+FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror"}
 
 
 def push_problem(push):
@@ -113,7 +113,14 @@ def push_problem(push):
     forced = any(name in FORCE_OPTIONS for name, _ in push.options) or any(arg.startswith("+") for arg in push.args)
     if forced:
         return rule("history", "a force push rewrites the history of the remote",
-                    "Push without --force, --force-with-lease or a `+` refspec; if the remote moved, merge it first")
+                    "Push without --force, --force-with-lease, --mirror or a `+` refspec; if the remote moved, merge it first")
+    names = {name for name, _ in push.options}
+    refspecs = push.args[1:]  # the first argument is the remote
+    deleted = refspecs if names & {"--delete", "-d"} else [arg[1:] for arg in refspecs if arg.startswith(":")]
+    lost = [name for name in deleted if name.removeprefix("refs/heads/") in PROTECTED]
+    if lost:
+        return rule("history", f"deleting {', '.join(lost)} on the remote loses the history of the project",
+                    "Never delete develop or main; delete only the branch of a closed work item")
     return None
 
 

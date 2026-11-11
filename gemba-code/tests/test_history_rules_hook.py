@@ -261,6 +261,20 @@ class ForcePushes(HookCase):
             reason = self.denied(command, "history")
             self.assertIn("force", reason, command)
 
+    def test_a_mirror_push_counts_as_forced(self):
+        for command in ("git push --mirror", "git push --mirror origin", "git push origin --mirror"):
+            self.assertIn("force", self.denied(command, "history"), command)
+
+    def test_deleting_develop_or_main_on_the_remote_is_denied(self):
+        for command in ("git push origin --delete develop", "git push origin :develop", "git push -d origin main",
+                        "git push origin --delete refs/heads/main", "git push origin :refs/heads/develop",
+                        "git push --delete origin story/ABC-1-export develop", "git push origin :story/ABC-1-export :main"):
+            self.assertIn("lose", self.denied(command, "history"), command)
+
+    def test_deleting_other_remote_branches_passes(self):
+        self.passes("git push origin --delete story/ABC-1-export", "git push origin :story/ABC-1-export",
+                    "git push -d origin task/ABC-2-x", "git push origin --delete feature/develop")
+
     def test_a_push_that_does_not_force_prints_nothing(self):
         self.passes("git push origin develop", "git push", "git push -u origin story/ABC-1-export",
                     "git push origin develop:develop", "git push origin --delete story/ABC-1-export",
