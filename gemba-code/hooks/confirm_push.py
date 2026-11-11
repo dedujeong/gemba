@@ -31,7 +31,7 @@ def reason(push):
     folder = push.folder
     remote, refspecs = (push.args[0] if push.args else None), push.args[1:]
     flags = [name for name, value in push.options if value is None]
-    branch = git_commands.current_branch(folder)
+    branch = push.branch
     remote = remote or default_remote(folder, branch)
     whole = next((label for flag, label in WHOLE_PUSHES if flag in flags), None)
     target = ", ".join(refspecs) if refspecs else (whole or branch or "the current branch")
@@ -40,27 +40,24 @@ def reason(push):
     return f"git push: {target} to remote {where}. Confirm before anything reaches the remote."
 
 
-def ask(why):
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": "ask",
-        "permissionDecisionReason": why,
-    }}))
+WRAPPED = ("git push: this command contains a git push the hook could not read (a wrapper, a shell keyword"
+           " or a quoted script). Confirm before anything reaches the remote.")
 
 
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
-    push = next((found for found in git_commands.git_commands(command, cwd) if found.subcommand == "push"), None)
-    if push is not None:
-        if git_commands.in_gemba_project(push.folder, cwd):
-            ask(reason(push))
-        return
+    for push in (found for found in git_commands.git_commands(command, cwd) if found.subcommand == "push"):
+        if push.folder is None:  # a cd the parser could not follow: the folder is unknown
+            if git_commands.has_gemba(cwd):
+                return git_commands.emit("ask", "git push: the hook could not tell which folder this push runs in."
+                                                " Confirm before anything reaches the remote.")
+        elif git_commands.in_gemba_project(push.folder, cwd):
+            return git_commands.emit("ask", reason(push))
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
-    # keyword) hides the push from it, so any command that mentions one asks with a generic reason.
-    if git_commands.mentions(command, "push") and git_commands.has_gemba(cwd):
-        ask("git push: this command contains a git push the hook could not read (a wrapper, a shell keyword"
-            " or a quoted script). Confirm before anything reaches the remote.")
+    # keyword) hides the push from it, so any such segment that mentions one asks with a generic reason.
+    if git_commands.unparsed_mentions(command, "push") and git_commands.has_gemba(cwd):
+        git_commands.emit("ask", WRAPPED)
 
 
 def main():
@@ -72,14 +69,16 @@ def main():
         return
     if git_commands is None:
         if re.search(r"\bgit\b.*\bpush\b", event.get("tool_input", {}).get("command", ""), re.DOTALL):
-            ask("git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote.")
+            print(json.dumps({"hookSpecificOutput": {
+                "hookEventName": "PreToolUse", "permissionDecision": "ask",
+                "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
         return
     try:
         decide(event)
     except Exception:
         # A crash exits non-zero and does not block, so the push would run unasked: fail closed.
         if git_commands.mentions(event.get("tool_input", {}).get("command", ""), "push"):
-            ask("git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote.")
+            git_commands.emit("ask", "git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote.")
 
 
 if __name__ == "__main__":
