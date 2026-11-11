@@ -7,6 +7,19 @@ description: Prepare a project for Gemba Code by writing its Gemba block in the 
 
 You write the project's data in its `CLAUDE.md`, so every session knows where to declare and publish without asking. The data is the Gemba block in `assets/gemba-block.md`. Besides it, you only set what the sections below name.
 
+## 1. Prepare the repository
+
+The method works on `main` (production) and `develop` (integration), so they exist before anything else. Run `python3 scripts/init_repository.py <project folder>`:
+
+- A folder with no repository, or a repository with no commit yet, gets `git init`, an empty `initial commit` on `main` and `develop` created from `main`. The repository stays on `main`, and the files already in the folder stay uncommitted.
+- A repository with `main` and no `develop` gets `develop` from `main`.
+- A repository with `main` and `develop` keeps its branches and its history as they are.
+- A repository with commits but no `main` is not touched: never rename a branch. The script says `main` is missing; ask the person what to do and go on with the rest of setup.
+- A clone whose `main` or `develop` exists only on `origin` gets the local branch from the remote one.
+- When git has no name and email for the initial commit, the script says so: ask the person for them, set them in the repository with `git config user.name` and `git config user.email`, and run the script again.
+
+If you cannot run commands, put the command in the reply and say that it was not run.
+
 ## 2. Read what is there
 
 Read `CLAUDE.md` at the root of the repository, if it exists. A `## Gemba` section already in it is the starting point: its values stay unless the person changes them.
@@ -103,7 +116,7 @@ Without a connection to Confluence, write nothing and say that the ADR could not
 
 ## 12. Report
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
+Say first what was done with the repository (created with `main` and `develop`, `develop` created, nothing changed, or `main` missing and asked). Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
 
 ## Style
 
