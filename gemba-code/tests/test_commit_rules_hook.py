@@ -211,7 +211,7 @@ class ProtectedBranches(CommitRulesCase):
         self.write_commit("export.txt")
         git(self.repo, "checkout", "-q", "develop")
         git(self.repo, "merge", "-q", "--no-ff", "--no-commit", "story/ABC-1-export")
-        self.passes("git commit --no-edit")
+        self.passes("git commit --no-edit --cleanup=strip")
         self.passes("git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
 
     def test_a_merge_does_not_excuse_a_message_that_breaks_the_rules(self):
@@ -228,6 +228,45 @@ class ProtectedBranches(CommitRulesCase):
     def test_a_branch_that_only_contains_the_name_passes(self):
         git(self.repo, "checkout", "-q", "-b", "task/ABC-3-merge-develop-docs")
         self.passes('git commit -m "feat(export): add the export"')
+
+
+class ConflictedMerge(CommitRulesCase):
+    def conflict(self):
+        """A merge of a work branch into develop that stops on a conflict in one file."""
+        for branch, text in (("develop", "develop\n"), ("story/ABC-1-export", "story\n")):
+            git(self.repo, "checkout", "-q", branch)
+            with open(os.path.join(self.repo, "a.txt"), "w", encoding="utf-8") as f:
+                f.write(text)
+            git(self.repo, "add", "a.txt")
+            git(self.repo, "commit", "-q", "-m", "feat: edit a")
+        git(self.repo, "checkout", "-q", "develop")
+        subprocess.run(["git", "-C", self.repo, "merge", "-q", "story/ABC-1-export"], capture_output=True)  # exits 1
+        self.assertTrue(os.path.exists(os.path.join(self.repo, ".git", "MERGE_HEAD")))
+
+    def test_concluding_without_cleanup_strip_is_blocked_and_asks_for_it(self):
+        self.conflict()
+        for command in ("git commit --no-edit", "git commit", "git merge --continue"):
+            reason = self.blocked(command)
+            self.assertIn("git commit --no-edit --cleanup=strip", reason, command)
+
+    def test_a_merge_earlier_in_the_command_counts(self):
+        self.blocked("git merge --no-commit story/ABC-1-export && git commit --no-edit")
+
+    def test_cleanup_strip_passes(self):
+        self.conflict()
+        self.passes("git commit --no-edit --cleanup=strip")
+        self.passes("git commit --no-edit --cleanup strip")
+
+    def test_a_message_keeps_the_message_checks(self):
+        self.conflict()
+        self.passes("git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
+        self.blocked('git commit -m "add the export."')
+
+    def test_without_a_merge_in_progress_it_passes(self):
+        git(self.repo, "commit", "-q", "--allow-empty", "-m", "feat: x")
+        self.passes("git commit --no-edit")
+        self.passes("git merge --continue")
+        self.passes("git merge story/ABC-1-export")
 
 
 class TrackedBranch(CommitRulesCase):
@@ -389,7 +428,7 @@ class SecondReview(CommitRulesCase):
 
     def test_a_merge_earlier_in_the_command_counts_as_in_progress(self):
         self.merge_in_progress()
-        self.passes('git merge --no-ff --no-commit story/ABC-1-export && git commit --no-edit')
+        self.passes('git merge --no-ff --no-commit story/ABC-1-export && git commit --no-edit --cleanup=strip')
         self.passes("git merge --no-commit story/ABC-1-export && git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
 
     def test_a_merge_abort_earlier_in_the_command_counts_as_none(self):
