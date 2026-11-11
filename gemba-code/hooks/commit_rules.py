@@ -24,6 +24,7 @@ REVERT = re.compile(r'Revert ".+"(\n\nThis reverts commit [0-9a-f]{7,40}\.)?')
 FORMAT = "`<type>(<scope>): <description>`"
 EXAMPLE = "for example `feat(hooks): block commit messages that break the commit format`"
 
+PROTECTED_BRANCHES = ("main", "develop")
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
 
@@ -72,8 +73,22 @@ def messages_problem(messages, project=None):
     return message_problem(messages[0], project)
 
 
+def branch_problem(folder):
+    """The reason a commit cannot land on the folder's branch, or None."""
+    branch = git_commands.current_branch(folder)
+    if branch not in PROTECTED_BRANCHES:
+        return None
+    if git_commands.git(folder, "rev-parse", "-q", "--verify", "MERGE_HEAD"):
+        return None  # concluding a merge
+    return rule(f"the current branch is `{branch}`, and nothing is committed on main or develop",
+                "Create a branch for the work item (`story/`, `task/`, `bug/` or `spike/`, then its key and a short name) and commit there")
+
+
 def commit_problem(commit):
     """A (decision, reason) for a commit that breaks a rule or cannot be read, or None."""
+    problem = branch_problem(commit.folder)
+    if problem:
+        return "deny", problem
     names = {name for name, _ in commit.options}
     if names & MESSAGE_FROM_A_FILE:
         return "ask", unreadable("it comes from a file")

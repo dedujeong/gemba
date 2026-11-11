@@ -176,6 +176,60 @@ class MessagesThatCannotBeRead(CommitRulesCase):
         self.assert_generic("git commit -a")
 
 
+class ProtectedBranches(CommitRulesCase):
+    def write_commit(self, name):
+        with open(os.path.join(self.repo, name), "w", encoding="utf-8") as f:
+            f.write(name)
+        git(self.repo, "add", name)
+        git(self.repo, "commit", "-q", "-m", "feat: add " + name)
+
+    def test_a_commit_on_develop_is_blocked_and_names_the_branch(self):
+        git(self.repo, "checkout", "-q", "develop")
+        reason = self.blocked('git commit -m "feat(export): add the export"')
+        self.assertIn("develop", reason)
+        self.assertIn("branch", reason)
+
+    def test_a_commit_on_main_is_blocked_and_names_the_branch(self):
+        git(self.repo, "checkout", "-q", "-b", "main")
+        reason = self.blocked('git commit -m "feat(export): add the export"')
+        self.assertIn("main", reason)
+
+    def test_a_fixup_and_an_unreadable_commit_on_develop_are_blocked_too(self):
+        git(self.repo, "checkout", "-q", "develop")
+        self.blocked("git commit --fixup HEAD")
+        self.blocked("git commit -F message.txt")
+
+    def test_the_branch_of_the_folder_the_commit_runs_in_is_the_one_that_counts(self):
+        git(self.repo, "checkout", "-q", "develop")
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        git(other, "checkout", "-q", "-b", "story/ABC-2-import")
+        self.passes(f'git -C {other} commit -m "feat(export): add the export"', self.repo)
+        self.blocked(f'git -C {self.repo} commit -m "feat(export): add the export"')
+
+    def test_a_commit_that_concludes_a_merge_on_develop_passes(self):
+        self.write_commit("export.txt")
+        git(self.repo, "checkout", "-q", "develop")
+        git(self.repo, "merge", "-q", "--no-ff", "--no-commit", "story/ABC-1-export")
+        self.passes("git commit --no-edit")
+        self.passes("git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
+
+    def test_a_merge_does_not_excuse_a_message_that_breaks_the_rules(self):
+        self.write_commit("export.txt")
+        git(self.repo, "checkout", "-q", "develop")
+        git(self.repo, "merge", "-q", "--no-ff", "--no-commit", "story/ABC-1-export")
+        self.blocked('git commit -m "add the export."')
+
+    def test_a_commit_on_a_detached_head_or_another_branch_passes(self):
+        self.passes('git commit -m "feat(export): add the export"')
+        git(self.repo, "checkout", "-q", "--detach")
+        self.passes('git commit -m "feat(export): add the export"')
+
+    def test_a_branch_that_only_contains_the_name_passes(self):
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-3-merge-develop-docs")
+        self.passes('git commit -m "feat(export): add the export"')
+
+
 class ProjectsWithoutGemba(CommitRulesCase):
     def setUp(self):
         self.repo = make_repo(claude_md=None)
@@ -186,6 +240,10 @@ class ProjectsWithoutGemba(CommitRulesCase):
         self.passes('git commit -m "add the export."')
         self.passes("git commit -F message.txt")
         self.passes("bash -c 'git commit -m x'")
+
+    def test_a_commit_on_develop_passes_without_a_gemba_section(self):
+        git(self.repo, "checkout", "-q", "develop")
+        self.passes('git commit -m "feat(export): add the export"')
 
     def test_a_claude_md_without_the_section_blocks_nothing(self):
         other = make_repo(claude_md="## Notes\n\nNothing here.\n")
