@@ -170,5 +170,13 @@ class SetupPreparesTheRepositoryFirst(unittest.TestCase):
         self.assertIn("repository", report)
 
 
+
+class CommitExceptionInTheMethod(unittest.TestCase):
+    def test_the_commit_rule_names_the_initial_commit_in_lowercase(self):
+        with open(os.path.join(ROOT, "references", "context.md"), encoding="utf-8") as f:
+            rule = next(line for line in f if line.startswith("- One line, with no body or footer"))
+        self.assertIn("a repository's `initial commit`", rule)
+        self.assertNotIn("Initial commit", rule)
+
 if __name__ == "__main__":
     unittest.main()

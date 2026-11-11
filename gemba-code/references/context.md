@@ -44,7 +44,7 @@ In a project with setup, every `git push` asks the maintainer first, with the br
 
 ## Commits
 
-- One line, with no body or footer: `<type>(<scope>): <description>`. Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`. The scope is optional and is one of the project's Jira components, in lowercase. A breaking change adds `!` before the colon and its description says what breaks. The only exceptions are the merge commit and a repository's `Initial commit`. Prevents: a history nobody can read or filter.
+- One line, with no body or footer: `<type>(<scope>): <description>`. Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`. The scope is optional and is one of the project's Jira components, in lowercase. A breaking change adds `!` before the colon and its description says what breaks. The only exceptions are the merge commit and a repository's `initial commit`. Prevents: a history nobody can read or filter.
 - The description starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
 - A commit is one coherent change you would revert as a whole, and it leaves the branch working. Its tests and docs go in the same commit. Prevents: reverts that break something else.
 - A correction to a commit not yet pushed is folded into it (`git commit --fixup`, then `git rebase --autosquash`). This is the only rebase allowed.
