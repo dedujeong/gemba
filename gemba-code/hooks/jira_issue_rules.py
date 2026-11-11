@@ -67,24 +67,34 @@ def named(value):
 
 
 def field(args, key):
-    """A field given in additional_fields or flat in the arguments."""
-    extra = load(args.get("additional_fields"))
-    if extra.get(key) not in (None, "", [], {}):
-        return extra[key]
-    return args.get(key)
+    """A field given in additional_fields, flat in the arguments or inside a REST-style `fields` object."""
+    for source in (load(args.get("additional_fields")), args, load(args.get("fields"))):
+        if source.get(key) not in (None, "", [], {}):
+            return source[key]
+    return None
 
 
 def project_key(args):
-    return named(args.get("projectKey") or args.get("project"))
+    value = field(args, "projectKey") or field(args, "project")
+    if isinstance(value, dict):
+        value = value.get("key")
+    return value.strip() if isinstance(value, str) else ""
 
 
 def issue_type(args):
-    return named(args.get("issueType") or args.get("issuetype") or args.get("issueTypeName"))
+    return named(field(args, "issueType") or field(args, "issuetype") or field(args, "issueTypeName"))
 
 
 def component_names(args):
+    """The names of the components that are present; one given only by id has the name ''."""
     value = field(args, "components")
-    return [named(item) for item in value] if isinstance(value, list) else []
+    names = []
+    for item in value if isinstance(value, list) else []:
+        if named(item):
+            names.append(named(item))
+        elif isinstance(item, dict) and str(item.get("id") or "").strip():
+            names.append("")  # present, but its case cannot be checked
+    return names
 
 
 def original_estimate(args):
@@ -139,7 +149,10 @@ def decide(event, args):
     if not mine:  # no Gemba section, or none with a Jira Project: not a Gemba project
         return
     args = load(args)
-    if project_key(args).lower() != mine.lower():
+    key = project_key(args)
+    if not key:
+        raise Unreadable("the hook could not tell the project of the issue.")
+    if key.lower() != mine.lower():
         return
     found = problems(args)
     if found:

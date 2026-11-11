@@ -76,6 +76,13 @@ class HookCase(unittest.TestCase):
     def passes(self, call):
         self.assertIsNone(self.run_call(call))
 
+    def asked(self, call):
+        out = self.run_call(call)
+        self.assertIsNotNone(out, "the hook printed nothing")
+        self.assertEqual(out["permissionDecision"], "ask")
+        self.assertIn("Gemba Code plugin, not from Jira", out["permissionDecisionReason"])
+        return out["permissionDecisionReason"]
+
 
 class FixVersion(HookCase):
     def test_an_issue_without_additional_fields_is_denied_for_every_shape(self):
@@ -247,13 +254,6 @@ def call_write(inputs, prefix=CLAUDE_CODE):
 
 
 class RealCallShapes(HookCase):
-    def asked(self, call):
-        out = self.run_call(call)
-        self.assertIsNotNone(out, "the hook printed nothing")
-        self.assertEqual(out["permissionDecision"], "ask")
-        self.assertIn("Gemba Code plugin, not from Jira", out["permissionDecisionReason"])
-        return out["permissionDecisionReason"]
-
     def test_the_work_type_is_read_from_issueTypeName(self):
         reason = self.denied(call_direct({"projectKey": "ABC", "issueTypeName": "Epic", "additional_fields": dict(VERSION)}))
         self.assertIn("due date", reason)
@@ -280,6 +280,45 @@ class RealCallShapes(HookCase):
     def test_unreadable_arguments_of_another_project_session_are_not_asked(self):
         self.repo = make_repo(claude_md="# Notes\n")
         self.passes(call_write("{not json"))
+
+
+def rest(fields, issue_type="Story", project=None):
+    """executeWrite with a REST-style payload: everything inside inputs.fields."""
+    project = {"key": "ABC"} if project is None else project
+    body = {"project": project, "issuetype": {"name": issue_type}, **fields}
+    return call_write({"fields": body})
+
+
+class RestPayload(HookCase):
+    def test_a_rest_payload_is_checked_like_the_other_shapes(self):
+        self.passes(rest(dict(GOOD)))
+        self.passes(rest(dict(EPIC), issue_type="Epic"))
+        self.assertIn("fixVersions", self.denied(rest({})))
+        self.assertIn("due date", self.denied(rest(dict(VERSION), issue_type="Epic")))
+        self.assertIn("lowercase", self.denied(rest({**GOOD, "components": [{"name": "Hooks"}]})))
+
+    def test_a_rest_payload_of_another_project_is_not_checked(self):
+        self.passes(rest({}, project={"key": "OTHER"}))
+
+    def test_a_project_that_cannot_be_read_asks_and_says_so(self):
+        for project in ({"id": "10000"}, {}, ""):
+            with self.subTest(project=project):
+                self.assertIn("could not tell the project", self.asked(rest(dict(GOOD), project=project)))
+        self.asked(call_direct({"issueType": "Story", "additional_fields": dict(GOOD)}))
+
+    def test_components_without_a_readable_name_do_not_count(self):
+        for components in ([{}], [""], ["  "], [{"name": ""}], [{"id": ""}]):
+            with self.subTest(components=components):
+                self.assertIn("is missing a component", self.denied(rest({**GOOD, "components": components})))
+        self.assertIn("is missing a component", self.denied(rest({**GOOD, "components": [{}]}, issue_type="Task")))
+
+    def test_a_component_with_only_an_id_counts_and_its_case_is_not_checked(self):
+        self.passes(rest({**GOOD, "components": [{"id": "10001"}]}))
+        self.passes(rest({**GOOD, "components": [{"id": 10001}, {"name": "hooks"}]}))
+        self.denied(rest({**GOOD, "components": [{"id": "10001"}, {"name": "Hooks"}]}))
+
+    def test_an_epic_with_an_id_only_component_is_denied(self):
+        self.assertIn("must not", self.denied(rest({**EPIC, "components": [{"id": "1"}]}, issue_type="Epic")))
 
 
 class FailsClosed(unittest.TestCase):
