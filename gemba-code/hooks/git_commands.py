@@ -32,6 +32,12 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
   `reason` when the command mentions one of `words` (a hook that crashes does not block: fail closed). A
   hook keeps inline only the branch for the module failing to import.
 - `word_pattern(*words)`: the compiled regex `git ... <word>` (whole words, not `commit-graph`).
+- Redirections are not part of a command: the operator and its target word (`2>&1`, `2>/dev/null`, `> f`,
+  `>> f`, `< f`, `&> f`, `<<< text`, `<<WORD`) are dropped before the words are read, and so is the body of a
+  heredoc (`<<WORD`, `<<'WORD'`, `<<"WORD"`, `<<-WORD`) up to its terminator line: its lines are text, not
+  commands (the command line with the `<<` itself still is read). A heredoc without terminator swallows the
+  rest. A number is a file descriptor only when it touches the operator (`2>&1`, not `2 > f`). A bare
+  operator character inside quotes (`'>'`) is still read as an operator.
 - `parse(words)`, `segments(command)`: the building blocks; `mentions(command, word)` is the plain-text
   search for a hook's ImportError / crash fallback, where the parser itself may be broken.
 - `emit(decision, reason)`: prints the PreToolUse decision (`allow`, `ask` or `deny`) a hook answers with.
@@ -71,16 +77,99 @@ OPTIONS_WITH_A_VALUE = {
 GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config", defaults=(None, ()))
 
 
+def _without_heredocs_and_descriptors(command):
+    """The command without the bodies of its heredocs (up to the terminator line, which goes too) and without
+    the file descriptor number in front of a redirection (`2>&1` becomes `>&1`: the number is part of the
+    operator, not a word). Quote aware: an operator inside quotes is text. A heredoc whose terminator never
+    comes swallows the rest of the command, like in bash."""
+    out = []
+    pending = []  # (delimiter, strip_tabs) of the heredocs opened on the current line
+    i, n = 0, len(command)
+    quote = None
+    while i < n:
+        char = command[i]
+        if quote == "'":
+            quote = None if char == "'" else quote
+        elif quote == '"':
+            if char == "\\" and i + 1 < n:
+                out.append(char)
+                i += 1
+                char = command[i]
+            elif char == '"':
+                quote = None
+        elif char == "\\" and i + 1 < n:
+            out.append(char)
+            i += 1
+            char = command[i]
+        elif char in "'\"":
+            quote = char
+        elif char == "\n" and pending:
+            out.append(char)
+            i += 1
+            for delimiter, strip_tabs in pending:
+                while i < n:
+                    end = command.find("\n", i)
+                    end = n if end == -1 else end
+                    line = command[i:end]
+                    i = min(end + 1, n)
+                    if (line.lstrip("\t") if strip_tabs else line) == delimiter:
+                        break
+            pending = []
+            continue
+        elif char.isdigit() and (not out or out[-1] in " \t\n;&|()") and re.match(r"\d+[<>]", command[i:]):
+            while command[i].isdigit():
+                i += 1
+            continue
+        elif command.startswith("<<<", i):
+            out.append("<<<")
+            i += 3
+            continue
+        elif command.startswith("<<", i):
+            match = re.compile(r"<<(-?)[ \t]*((?:[^\s;&|()<>'\"\\]|'[^']*'|\"[^\"]*\"|\\.)+)").match(command, i)
+            if match:
+                delimiter = re.sub(r"\\(.)|['\"]", r"\1", match.group(2))
+                pending.append((delimiter, match.group(1) == "-"))
+                out.append(command[i:match.end()])
+                i = match.end()
+                continue
+        out.append(char)
+        i += 1
+    return "".join(out)
+
+
+_REDIRECTION_CHARS = frozenset("<>&")
+
+
+def _is_redirection(word):
+    return set(word) <= _REDIRECTION_CHARS and ("<" in word or ">" in word)
+
+
+def _without_redirections(words):
+    """The words without the redirection operators and their target (`2>&1`, `> file`, `<<EOF`, `<<< text`)."""
+    found = []
+    i = 0
+    while i < len(words):
+        if _is_redirection(words[i]):
+            i += 1
+            if i < len(words) and not _is_separator(words[i]):
+                i += 1
+        else:
+            found.append(words[i])
+            i += 1
+    return found
+
+
 @functools.lru_cache(maxsize=32)
 def _words(command):
     """The words of the command with the separators as words of their own (a tuple), or None when it cannot
-    be split. Cached: one hook run tokenizes the same command once."""
+    be split. Redirections (operator and target) and heredoc bodies are not words. Cached: one hook run
+    tokenizes the same command once."""
     try:
-        lexer = shlex.shlex(command, posix=True, punctuation_chars=SEPARATORS)
+        lexer = shlex.shlex(_without_heredocs_and_descriptors(command), posix=True, punctuation_chars=SEPARATORS)
         lexer.whitespace_split = True
         lexer.whitespace = " \t\r"  # a new line separates commands
         lexer.commenters = ""  # bash starts a comment only at the start of a word, shlex also inside one
-        return tuple(lexer)
+        return tuple(_without_redirections(list(lexer)))
     except ValueError:
         return None
 

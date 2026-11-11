@@ -275,6 +275,10 @@ class TrackedBranch(CommitRulesCase):
         self.assertIn("develop", reason)
         self.blocked('git switch develop && git commit -m "feat: x"')
 
+    def test_a_redirection_does_not_hide_the_switch_from_the_tracking(self):
+        self.blocked('git switch develop 2>&1 && git commit -m "feat: x"')
+        self.blocked('git checkout develop >/dev/null 2>&1 && git commit -m "feat: x"')
+
     def test_a_commit_on_a_new_work_branch_made_from_develop_passes(self):
         git(self.repo, "checkout", "-q", "develop")
         self.passes('git switch -c story/ABC-2-y && git commit -m "feat: y"')
