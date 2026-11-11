@@ -53,8 +53,7 @@ def merge_problem(merge):
     if "--squash" in names:
         return rule("merges", f"a squash merge into {target} loses the history of the branch",
                     "Merge with `git merge --no-ff <branch>` and Git's default message")
-    updates_from_remote = all(arg in (f"origin/{target}", "@{u}", "@{upstream}") for arg in merge.args)
-    if updates_from_remote:
+    if git_commands.syncs_with_its_remote(merge):
         return None
     last = [name for name, _ in merge.options if name in FAST_FORWARD_OPTIONS]
     if not last or last[-1] != "--no-ff":
@@ -130,8 +129,7 @@ def pull_problem(pull):
         return rule("rebase", "git pull that rebases rewrites history",
                     "Pull without rebasing: `git pull --no-rebase` or `git merge --ff-only origin/<branch>`")
     # Without a rebase a pull is a merge of what it fetches: of another branch it follows the merge rules.
-    branches = [arg.removeprefix("refs/heads/") for arg in pull.args[1:]]
-    return merge_problem(pull._replace(subcommand="merge", args=[f"origin/{name}" for name in branches]))
+    return merge_problem(pull)  # the merge rules read a pull through `syncs_with_its_remote`
 
 
 FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror"}
@@ -211,24 +209,11 @@ def tag_problem(tag):
 CHECKS = {"tag": tag_problem, "branch": branch_problem, "merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
 
 
-def unquoted(command):
-    """The command as the shell reads its words: quotes and escapes gone (`pu""sh`)."""
-    return re.sub(r"[\\'\"]", "", command)
-
-
-def relevant(command):
-    """What the ImportError and crash fallbacks ask for: the hook's own words even written with quotes or
-    escapes, or a git command whose subcommand comes from a variable or an alias."""
-    return bool(OPERATION_WORDS.search(unquoted(command)) or re.search(r"\bgit\b[^;&|\n]*(?:[$`]|alias\.)", command))
-
-
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = False
-    hidden = False
     for git_command in git_commands.git_commands(command, cwd):
-        hidden = hidden or git_commands.hides_subcommand(git_command, cwd)
         check = CHECKS.get(git_command.subcommand)
         if check is None:
             continue
@@ -243,8 +228,6 @@ def decide(event):
             return git_commands.emit("deny", problem)
     if asking:
         return git_commands.emit("ask", UNKNOWN)
-    if hidden:
-        return git_commands.emit("ask", "Gemba rule (history): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the operation from it, so a segment that looks like one asks with a generic reason.
     if git_commands.unparsed_mentions(command, WRAPPED_OPERATIONS) and git_commands.has_gemba(cwd):
@@ -259,19 +242,16 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    command = event.get("tool_input", {}).get("command", "")
-    if not re.search(r"\bgit\b", unquoted(command)):
-        return  # no git at all: skip the import and the parsing
+    if not OPERATION_WORDS.search(event.get("tool_input", {}).get("command", "")):
+        return  # no merge, rebase, pull, push, branch or tag anywhere: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions an operation
-        if not relevant(command):
-            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (history): the hook could not load its parser. Confirm that this command does not rewrite or lose history."}}))
         return
-    git_commands.run_hook(decide, relevant, BROKEN, event)
+    git_commands.run_hook(decide, OPERATION_WORDS, BROKEN, event)
 
 
 if __name__ == "__main__":

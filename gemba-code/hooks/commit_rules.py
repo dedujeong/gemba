@@ -151,25 +151,12 @@ def commit_problem(commit, folder, merging=None):
     return next((item for item in found if item[0] == "deny"), found[0] if found else None)
 
 
-def unquoted(command):
-    """The command as the shell reads its words: quotes and escapes gone (`pu""sh`)."""
-    return re.sub(r"[\\'\"]", "", command)
-
-
-def relevant(command):
-    """What the ImportError and crash fallbacks ask for: the hook's own words even written with quotes or
-    escapes, or a git command whose subcommand comes from a variable or an alias."""
-    return bool(CREATING_WORDS.search(unquoted(command)) or re.search(r"\bgit\b[^;&|\n]*(?:[$`]|alias\.)", command))
-
-
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = None
     merging = {}  # repository -> True after a `git merge --no-commit/--squash` earlier in this command, False after a merge that commits or --abort/--quit
-    hidden = False
     for commit in git_commands.git_commands(command, cwd):
-        hidden = hidden or git_commands.hides_subcommand(commit, cwd)
         key = git_commands.repository_key(commit.folder) if commit.folder else None
         names = git_commands.option_names(commit)
         if commit.subcommand == "merge" and key and "--continue" not in names:
@@ -185,8 +172,6 @@ def decide(event):
         asking = asking or found
     if asking:
         return git_commands.emit(*asking)
-    if hidden:
-        return git_commands.emit("ask", "Gemba rule (commits): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
     if git_commands.unparsed_mentions(command, CREATES_COMMITS) and git_commands.has_gemba(cwd):
@@ -201,19 +186,16 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    command = event.get("tool_input", {}).get("command", "")
-    if not re.search(r"\bgit\b", unquoted(command)):
-        return  # no git at all: skip the import and the parsing
+    if not CREATING_WORDS.search(event.get("tool_input", {}).get("command", "")):
+        return  # no commit, revert, cherry-pick or am anywhere: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions a commit
-        if not relevant(command):
-            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
         return
-    git_commands.run_hook(decide, relevant, BROKEN, event)
+    git_commands.run_hook(decide, CREATING_WORDS, BROKEN, event)
 
 
 if __name__ == "__main__":

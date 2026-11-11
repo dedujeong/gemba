@@ -218,8 +218,9 @@ class PullRequestMode(HookCase):
         reason = self.denied("gh pr merge 12 --merge")
         self.assertIn("Gemba rule (integration: pull request)", reason)
         self.assertIn("gh pr merge", reason)
-        self.denied("gh -R acme/app pr merge 3")
-        self.denied("gh --repo acme/app pr merge 3 --squash")
+        # a named repository does not depend on the folder: the hook cannot tell if it is a project, so it asks
+        self.asked("gh -R acme/app pr merge 3")
+        self.asked("gh --repo acme/app pr merge 3 --squash")
         self.denied("git status && gh pr merge")
 
     def test_other_gh_commands_pass(self):

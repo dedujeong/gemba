@@ -163,13 +163,13 @@ class PassesAValidName(HookTestCase):
         out = decision(run_hook(sub, "git switch -c feature/login"))
         self.assertEqual(out["permissionDecision"], "deny")
 
-    def test_a_project_without_setup_is_found_from_the_session_folder(self):
+    def test_a_repository_without_setup_is_not_checked_even_when_the_session_folder_has_setup(self):
         other = make_repo(claude_md="# Notes\n")
         self.addCleanup(subprocess.run, ["rm", "-rf", other])
         event = {"tool_name": "Bash", "cwd": self.repo,
                  "tool_input": {"command": f"git -C {other} switch -c feature/login"}}
         result = subprocess.run([sys.executable, SCRIPT], input=json.dumps(event), capture_output=True, text=True)
-        self.assertEqual(decision(result)["permissionDecision"], "deny")
+        self.assertIsNone(decision(result))
 
 
 class AsksWhenItCannotRead(HookTestCase):

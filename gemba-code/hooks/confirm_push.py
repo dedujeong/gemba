@@ -43,17 +43,6 @@ WRAPPED = ("git push: this command contains a git push the hook could not read (
            " or a quoted script). Confirm before anything reaches the remote.")
 
 
-def unquoted(command):
-    """The command as the shell reads its words: quotes and escapes gone (`pu""sh`)."""
-    return re.sub(r"[\\'\"]", "", command)
-
-
-def relevant(command):
-    """What the ImportError and crash fallbacks ask for: the hook's own words even written with quotes or
-    escapes, or a git command whose subcommand comes from a variable or an alias."""
-    return bool(MENTIONS_A_PUSH.search(unquoted(command)) or re.search(r"\bgit\b[^;&|\n]*(?:[$`]|alias\.)", command))
-
-
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
@@ -64,8 +53,6 @@ def decide(event):
                                             " Confirm before anything reaches the remote.")
         if project == "yes":
             return git_commands.emit("ask", reason(push))
-    if any(git_commands.hides_subcommand(found, cwd) for found in git_commands.git_commands(command, cwd)):
-        return git_commands.emit("ask", "git push: " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the push from it, so any such segment that mentions one asks with a generic reason.
     if git_commands.unparsed_mentions(command, "push") and git_commands.has_gemba(cwd):
@@ -80,19 +67,16 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    command = event.get("tool_input", {}).get("command", "")
-    if not re.search(r"\bgit\b", unquoted(command)):
-        return  # no git at all: skip the import and the parsing
+    if not MENTIONS_A_PUSH.search(event.get("tool_input", {}).get("command", "")):
+        return  # not a push of any kind: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions a push
-        if not relevant(command):
-            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
         return
-    git_commands.run_hook(decide, relevant, BROKEN, event)
+    git_commands.run_hook(decide, MENTIONS_A_PUSH, BROKEN, event)
 
 
 if __name__ == "__main__":
