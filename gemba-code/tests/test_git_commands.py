@@ -34,6 +34,83 @@ class SegmentsTest(unittest.TestCase):
         self.assertEqual(list(segments('git commit -m "a && b"')), [["git", "commit", "-m", "a && b"]])
 
 
+class RedirectionsTest(unittest.TestCase):
+    def test_a_descriptor_duplication_is_not_an_argument(self):
+        self.assertEqual(only("git push origin develop 2>&1").args, ["origin", "develop"])
+        self.assertEqual(only("git push origin develop >&2").args, ["origin", "develop"])
+        self.assertEqual(only("git push origin develop 2>&-").args, ["origin", "develop"])
+
+    def test_a_redirection_and_its_target_are_not_arguments(self):
+        for redirection in ("2>/dev/null", "2> /dev/null", ">out.txt", "> out.txt", ">>out.txt", ">> out.txt",
+                            "<in.txt", "< in.txt", "&>all.txt", "&> all.txt", "<<<word", "<<< word"):
+            with self.subTest(redirection):
+                self.assertEqual(only(f"git push origin develop {redirection}").args, ["origin", "develop"])
+
+    def test_a_redirection_before_or_between_the_words_is_not_an_argument(self):
+        self.assertEqual(only("git push 2>/dev/null origin develop").args, ["origin", "develop"])
+        self.assertEqual(only(">out.txt git status").subcommand, "status")
+
+    def test_a_number_apart_from_the_operator_is_an_argument(self):
+        self.assertEqual(only("git push origin 2 > out.txt").args, ["origin", "2"])
+
+    def test_a_redirection_does_not_hide_the_next_command(self):
+        self.assertEqual([c.subcommand for c in commands_of("git status 2>&1 && git log")], ["status", "log"])
+        self.assertEqual([c.subcommand for c in commands_of("git status > out.txt; git log")], ["status", "log"])
+
+    def test_redirection_characters_inside_quotes_stay(self):
+        self.assertEqual(only('git commit -m "a 2>&1 b"').options, [("-m", "a 2>&1 b")])
+        self.assertEqual(only("git grep 'a>b' file").args, ["a>b", "file"])
+
+    def test_the_tracked_branch_survives_a_redirection(self):
+        found = commands_of("git switch develop 2>&1 && git commit -m x")
+        self.assertEqual([c.subcommand for c in found], ["switch", "commit"])
+
+
+class HeredocTest(unittest.TestCase):
+    def test_the_body_is_not_read_as_commands(self):
+        for opener in ("<<EOF", "<<'EOF'", '<<"EOF"', "<<-EOF", "<< EOF", "<<\\EOF"):
+            with self.subTest(opener):
+                command = f"cat > notes.md {opener}\ngit merge story/ABC-1-x\ngit push --force\nEOF"
+                self.assertEqual(commands_of(command), [])
+
+    def test_the_command_line_with_the_heredoc_is_still_read(self):
+        found = commands_of("git commit -F - <<'EOF'\nfeat(x): y\nEOF")
+        self.assertEqual([(c.subcommand, c.options, c.args) for c in found], [("commit", [("-F", "-")], [])])
+
+    def test_the_commands_after_the_terminator_are_read(self):
+        found = commands_of("cat <<EOF\ngit merge x\nEOF\ngit status\ngit log")
+        self.assertEqual([c.subcommand for c in found], ["status", "log"])
+
+    def test_a_dash_heredoc_ends_at_a_terminator_indented_with_tabs(self):
+        found = commands_of("cat <<-EOF\n\tgit merge x\n\tEOF\ngit status")
+        self.assertEqual([c.subcommand for c in found], ["status"])
+
+    def test_a_line_that_only_starts_with_the_word_does_not_end_it(self):
+        found = commands_of("cat <<EOF\nEOF2\ngit merge x\nEOF\ngit status")
+        self.assertEqual([c.subcommand for c in found], ["status"])
+
+    def test_two_heredocs_on_one_line(self):
+        found = commands_of("cat <<A <<B\ngit merge a\nA\ngit merge b\nB\ngit status")
+        self.assertEqual([c.subcommand for c in found], ["status"])
+
+    def test_a_heredoc_inside_a_compound_command(self):
+        found = commands_of("git status && cat <<EOF | git apply\ngit merge x\nEOF\ngit log")
+        self.assertEqual([c.subcommand for c in found], ["status", "apply", "log"])
+
+    def test_the_here_string_and_a_quoted_operator_are_not_heredocs(self):
+        found = commands_of("git status <<< word\ngit log")
+        self.assertEqual([c.subcommand for c in found], ["status", "log"])
+        found = commands_of("git commit -m '<<EOF'\ngit log")
+        self.assertEqual([c.subcommand for c in found], ["commit", "log"])
+
+    def test_a_heredoc_without_a_terminator_swallows_the_rest(self):
+        self.assertEqual(commands_of("cat <<EOF\ngit merge x"), [])
+
+    def test_the_body_may_hold_quotes_that_do_not_balance(self):
+        found = commands_of("cat <<'EOF'\nit's here\nEOF\ngit status")
+        self.assertEqual([c.subcommand for c in found], ["status"])
+
+
 class ParseTest(unittest.TestCase):
     def test_not_a_git_command_is_none(self):
         self.assertIsNone(parse(["ls", "-la"]))
