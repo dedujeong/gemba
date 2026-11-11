@@ -341,6 +341,21 @@ class BranchDeletion(HookCase):
                     "git branch -a", "git branch story/ABC-5-new", "git branch -f story/ABC-1-export develop",
                     "git branch -m old new", "git branch --list 'spike/*'")
 
+    def test_forcing_a_branch_onto_an_existing_one_is_denied_because_it_discards_commits(self):
+        git(self.repo, "branch", "story/ABC-6-x")
+        for command in ("git branch -f story/ABC-6-x develop", "git branch --force story/ABC-6-x", "git branch -f develop HEAD",
+                        "git branch -M story/ABC-6-x", "git branch -M develop story/ABC-6-x", "git branch -C develop story/ABC-6-x",
+                        "git branch -m -f develop story/ABC-6-x", "git branch --move --force develop story/ABC-6-x",
+                        "git branch -mf develop story/ABC-6-x", "git branch --copy --force develop story/ABC-6-x",
+                        "git branch -cf story/ABC-6-x"):
+            self.assertIn("discard", self.denied(command, "history"), command)
+
+    def test_forcing_a_branch_that_does_not_exist_or_renaming_without_force_passes(self):
+        git(self.repo, "branch", "story/ABC-6-x")
+        self.passes("git branch -f story/ABC-7-new develop", "git branch -M develop story/ABC-7-new",
+                    "git branch -C develop story/ABC-7-new", "git branch -M story/ABC-7-new", "git branch -m develop story/ABC-8-y",
+                    "git branch -m story/ABC-6-x story/ABC-9-z", "git branch -c develop story/ABC-8-y", "git branch -M develop")
+
     def test_a_forced_delete_the_parser_cannot_read_asks_with_a_generic_reason(self):
         for command in ("bash -c 'git branch -D story/ABC-1-export'", "sudo git branch -D story/ABC-1-export"):
             self.assertIn("could not read", self.asked(command), command)

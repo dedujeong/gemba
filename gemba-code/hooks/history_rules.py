@@ -149,15 +149,27 @@ def push_problem(push):
 
 
 def branch_problem(branch):
-    """The reason a branch command breaks the rules, or None: only a Spike's branch is deleted by force."""
+    """The reason a branch command breaks the rules, or None: only a Spike's branch is deleted by force, and
+    no branch is forced, renamed or copied over an existing one (the commits it had are discarded)."""
     names = {name for name, _ in branch.options}
-    forced_delete = "-D" in names or (names & {"-d", "--delete"} and names & {"-f", "--force"})
-    if not forced_delete:
+    forced = bool(names & {"-f", "--force"})
+    if "-D" in names or (names & {"-d", "--delete"} and forced):
+        kept = [name for name in branch.args if not name.startswith("spike/")]
+        if kept:
+            return rule("history", f"a forced delete of {', '.join(kept)}, which is not a Spike's branch, can lose commits",
+                        "Delete it with `git branch -d`, which refuses a branch that is not merged; only `spike/` branches are deleted with -D")
         return None
-    kept = [name for name in branch.args if not name.startswith("spike/")]
-    if kept:
-        return rule("history", f"a forced delete of {', '.join(kept)}, which is not a Spike's branch, can lose commits",
-                    "Delete it with `git branch -d`, which refuses a branch that is not merged; only `spike/` branches are deleted with -D")
+    moving = names & {"-m", "--move", "-c", "--copy"}
+    if "-M" in names or "-C" in names or (forced and moving):
+        target = branch.args[-1] if branch.args else None
+        source = branch.args[0] if len(branch.args) > 1 else branch.branch
+    elif forced and not names & {"-d", "--delete"}:
+        target, source = (branch.args[0] if branch.args else None), None
+    else:
+        return None
+    if target and target != source and git_commands.is_branch(branch.folder, target):
+        return rule("history", f"forcing the branch {target} over the one that exists discards its commits",
+                    "Use another name, or merge the branch into the one you want and delete it with `git branch -d`")
     return None
 
 
