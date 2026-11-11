@@ -217,6 +217,23 @@ class StaysOutOfTheWay(unittest.TestCase):
         self.assertEqual(out["permissionDecision"], "ask")
 
 
+class DeclinedPushRule(unittest.TestCase):
+    def merges(self):
+        with open(os.path.join(ROOT, "references", "context.md"), encoding="utf-8") as f:
+            return f.read().split("## Merges")[1].split("## Commits")[0]
+
+    def test_the_method_says_every_git_push_asks_the_maintainer_with_the_branch_and_the_remote(self):
+        text = self.merges()
+        self.assertIn("every `git push` asks the maintainer", text)
+        self.assertIn("the branch and the remote", text)
+
+    def test_a_declined_push_is_not_retried_by_another_route_and_what_was_left_is_said(self):
+        text = self.merges()
+        self.assertIn("If the maintainer declines, nothing is pushed", text)
+        self.assertIn("do not retry it with another command, another remote or another tool", text)
+        self.assertIn("say what was left unpushed", text)
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def pre_tool_use(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
