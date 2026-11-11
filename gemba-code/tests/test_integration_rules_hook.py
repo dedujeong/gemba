@@ -139,6 +139,83 @@ class ModeSpelling(HookCase):
         self.passes("git push origin develop")
 
 
+class PullRequestMode(HookCase):
+    integration = "pull request"
+
+    def test_a_push_of_develop_or_main_is_denied_and_the_reason_names_the_rule(self):
+        reason = self.denied("git push origin develop")
+        self.assertIn("Gemba rule (integration: pull request)", reason)
+        self.assertIn("develop", reason)
+        self.denied("git push origin main")
+        self.denied("git push")  # the repository is on develop
+        self.denied("git push origin HEAD:main")
+        self.denied("git push origin task/ABC-1-x:develop")
+
+    def test_a_push_of_a_work_branch_passes(self):
+        self.passes("git push -u origin story/ABC-1-export")
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-2-x")
+        self.passes("git push")
+        self.passes("git push origin HEAD")
+
+    def test_the_commands_of_the_close_skill_pass(self):
+        self.passes("git switch develop")
+        self.passes("git pull origin develop")
+        self.passes("git pull")
+        self.passes("git push origin --delete story/ABC-1-export")
+
+    def test_a_merge_while_on_develop_or_main_is_denied(self):
+        reason = self.denied("git merge --no-ff story/ABC-1-export")
+        self.assertIn("Gemba rule (integration: pull request)", reason)
+        self.assertIn("develop", reason)
+        git(self.repo, "checkout", "-q", "-b", "main")
+        self.denied("git merge task/ABC-1-x")
+
+    def test_a_merge_into_a_work_branch_passes(self):
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-2-x")
+        self.passes("git merge develop")
+        self.passes("git merge --no-ff develop")
+
+    def test_aborting_or_continuing_a_merge_passes_on_develop(self):
+        for flag in ("--abort", "--continue", "--quit"):
+            self.passes("git merge " + flag)
+
+    def test_the_folder_of_dash_c_decides_the_branch_of_the_merge(self):
+        other = make_repo(claude_md("pull request"))
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-3-y")  # the session is on a work branch
+        self.denied(f"git -C {other} merge task/x")  # the other folder is on develop
+        git(other, "checkout", "-q", "-b", "task/ABC-4-z")
+        self.passes(f"git -C {other} merge develop")
+
+    def test_gh_pr_merge_is_denied_even_with_options_before_it(self):
+        reason = self.denied("gh pr merge 12 --merge")
+        self.assertIn("Gemba rule (integration: pull request)", reason)
+        self.assertIn("gh pr merge", reason)
+        self.denied("gh -R acme/app pr merge 3")
+        self.denied("gh --repo acme/app pr merge 3 --squash")
+        self.denied("git status && gh pr merge")
+
+    def test_other_gh_commands_pass(self):
+        self.passes("gh pr create --base develop --title x --body y")
+        self.passes("gh pr view 3")
+        self.passes("gh pr list --state merged")
+
+    def test_a_wrapped_merge_or_pr_merge_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git merge story/ABC-1-x'", "sudo git merge x", "bash -c 'gh pr merge 3'",
+                        "sh -c \"gh -R a/b pr merge 3\""):
+            self.assertIn("could not read", self.asked(command))
+
+    def test_a_wrapped_push_still_asks(self):
+        self.assertIn("could not read", self.asked("bash -c 'git push origin develop'"))
+
+
+class MergeModeKeepsMerging(HookCase):
+    def test_local_merges_and_pr_merges_are_not_this_modes_business(self):
+        self.passes("git merge --no-ff story/ABC-1-export")
+        self.passes("gh pr merge 3")
+        self.passes("bash -c 'git merge x'")
+
+
 class AllowedPushKeepsItsConfirmation(HookCase):
     def test_an_allowed_push_prints_nothing_here_and_confirm_push_still_asks(self):
         self.passes("git push origin develop")
