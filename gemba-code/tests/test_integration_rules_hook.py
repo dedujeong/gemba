@@ -259,6 +259,119 @@ class UnreadableCommands(HookCase):
         self.assertEqual(stdout.getvalue(), "")
 
 
+def other_repo(case, integration="merge"):
+    repo = make_repo(None if integration is None else claude_md(integration))
+    case.addCleanup(subprocess.run, ["rm", "-rf", repo])
+    return repo
+
+
+class ReviewFindingsMergeMode(HookCase):
+    def test_a_bare_push_follows_the_branch_the_command_switches_to(self):
+        git(self.repo, "branch", "task/ABC-2-x")
+        self.denied("git switch task/ABC-2-x && git push")
+        self.denied("git checkout task/ABC-2-x && git push origin")
+        git(self.repo, "checkout", "-q", "task/ABC-2-x")
+        self.passes("git switch develop && git push")
+
+    def test_a_push_to_an_unrelated_repository_without_gemba_prints_nothing(self):
+        other = other_repo(self, None)
+        git(other, "checkout", "-q", "-b", "task/x")
+        self.passes(f"git -C {other} push origin task/x")
+        self.passes(f"cd {other} && git push origin task/x")
+
+    def test_the_mode_comes_from_the_repository_the_command_runs_in(self):
+        other = other_repo(self, "pull request")
+        self.denied(f"git -C {other} push origin develop")  # the session repository is in merge mode
+        self.passes(f"git -C {other} push origin task/x")
+
+    def test_repo_option_is_the_remote_and_every_positional_is_a_refspec(self):
+        self.denied("git push --repo origin task/ABC-2-x")
+        self.denied("git push --repo=origin task/ABC-2-x")
+        self.passes("git push --repo origin develop")
+
+    def test_at_is_an_alias_of_head(self):
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-2-x")
+        self.denied("git push origin @")
+        self.denied("git push origin @:task/ABC-3-y")
+        self.passes("git push origin @:develop")
+
+    def test_words_that_only_look_like_a_merge_or_a_push_do_not_ask(self):
+        self.passes("git merge-base HEAD develop")
+        self.passes("git commit -m 'merge notes' --allow-empty")
+        self.passes("git commit -m 'push notes' --allow-empty")
+        self.passes("git log --grep=push")
+
+    def test_the_mode_is_read_once_per_repository(self):
+        sys.path.insert(0, os.path.join(ROOT, "hooks"))
+        self.addCleanup(sys.path.remove, os.path.join(ROOT, "hooks"))
+        import integration_rules
+        import git_commands
+        event = {"tool_name": "Bash", "cwd": self.repo,
+                 "tool_input": {"command": "git push origin develop && git push origin main && git push origin develop"}}
+        with mock.patch.object(integration_rules, "git_commands", git_commands), \
+                mock.patch.object(git_commands, "gemba_field", return_value="merge") as field, \
+                mock.patch("sys.stdout", new_callable=io.StringIO):
+            integration_rules.decide(event)
+        self.assertEqual(field.call_count, 1)
+
+    def test_gh_pr_merge_has_one_shared_pattern(self):
+        with open(SCRIPT, encoding="utf-8") as f:
+            self.assertEqual(f.read().count(r"\bgh\b"), 1)
+
+
+class ReviewFindingsPullRequestMode(HookCase):
+    integration = "pull request"
+
+    def test_all_and_mirror_include_develop_and_main(self):
+        reason = self.denied("git push --all origin")
+        self.assertIn("pull request", reason)
+        self.denied("git push --mirror origin")
+        self.denied("git push origin --all")
+
+    def test_a_local_merge_follows_the_branch_the_command_switches_to(self):
+        git(self.repo, "branch", "task/ABC-2-x")
+        self.denied("git switch develop && git merge task/ABC-2-x")
+        git(self.repo, "checkout", "-q", "task/ABC-2-x")
+        self.denied("git checkout develop && git merge task/ABC-3-y")
+        self.passes("git merge develop")
+
+    def test_a_bare_push_follows_the_branch_the_command_switches_to(self):
+        git(self.repo, "branch", "task/ABC-2-x")
+        git(self.repo, "checkout", "-q", "task/ABC-2-x")
+        self.denied("git checkout develop && git push")
+        self.denied("git switch develop && git push origin HEAD")
+        self.passes("git push")
+
+    def test_the_repo_option_and_at_name_develop_too(self):
+        self.denied("git push --repo origin develop")
+        self.denied("git push origin @")  # the repository is on develop
+
+    def test_pulling_another_branch_into_develop_or_main_is_a_local_merge(self):
+        reason = self.denied("git pull origin task/ABC-2-x")
+        self.assertIn("Gemba rule (integration: pull request)", reason)
+        self.denied("git pull --no-rebase origin story/ABC-1-export")
+        self.denied("git pull origin main")  # the repository is on develop
+        git(self.repo, "checkout", "-q", "-b", "main")
+        self.denied("git pull origin develop")
+
+    def test_pulling_the_same_branch_or_pulling_on_a_work_branch_passes(self):
+        self.passes("git pull")
+        self.passes("git pull origin develop")
+        self.passes("git pull --ff-only origin develop")
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-2-x")
+        self.passes("git pull origin develop")
+        self.passes("git pull origin task/ABC-2-x")
+
+    def test_a_wrapped_pull_asks_and_a_merge_base_does_not(self):
+        self.assertIn("could not read", self.asked("bash -c 'git pull origin task/x'"))
+        self.passes("git merge-base HEAD develop")
+        self.passes("git commit -m 'merge notes' --allow-empty")
+
+    def test_an_unknown_folder_asks(self):
+        self.assertIn("could not read", self.asked("cd $SOMEWHERE && git merge task/x"))
+        self.assertIn("could not read", self.asked("cd $SOMEWHERE && git push origin task/x"))
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
