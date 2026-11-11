@@ -50,7 +50,14 @@ BROKEN = PREFIX + "the branch hook could not read this command. Confirm that the
 Creation = namedtuple("Creation", "name start kind")
 
 
-def creations(command):
+def updates(command, cwd, name, forced):
+    """True when the command only forces an existing branch to a new commit (`branch -f`, `checkout -B`,
+    `switch -C`, `worktree add -B`): that is not a creation, and the history hook governs forced updates."""
+    folder = command.folder or cwd
+    return bool(forced and name and folder and git_commands.is_branch(folder, name))
+
+
+def creations(command, cwd=None):
     """The Creation of every branch the git command creates, copies or renames."""
     flags = git_commands.option_names(command)
     options = dict(command.options)
@@ -60,11 +67,15 @@ def creations(command):
             return [Creation(orphan, None, "orphan")]
         names = ("-c", "-C", "--create", "--force-create") if command.subcommand == "switch" else ("-b", "-B")
         name = next((value for option, value in command.options if option in names and value), None)
+        if updates(command, cwd, name, flags & {"-C", "--force-create", "-B"}):
+            return []
         return [Creation(name, command.args[0] if command.args else None, "create")] if name else []
     if command.subcommand == "worktree":
         if command.args[:1] != ["add"]:
             return []
         name = next((value for option, value in command.options if option in ("-b", "-B") and value), None)
+        if updates(command, cwd, name, "-B" in flags):
+            return []
         return [Creation(name, command.args[2] if len(command.args) > 2 else None, "create")] if name else []
     if command.subcommand == "branch" and command.args:
         old = command.args[0] if len(command.args) > 1 else None
@@ -73,6 +84,8 @@ def creations(command):
         if flags & {"-c", "-C", "--copy"}:
             return [Creation(command.args[-1], old, "copy")]
         if not flags & BRANCH_MODES:
+            if updates(command, cwd, command.args[0], flags & {"-f", "--force"}):
+                return []
             return [Creation(command.args[0], command.args[1] if len(command.args) > 1 else None, "create")]
     return []
 
@@ -152,7 +165,7 @@ def decide(event):
     command = event.get("tool_input", {}).get("command", "")
     asking = None
     for git_command in git_commands.git_commands(command, cwd):
-        for creation in creations(git_command):
+        for creation in creations(git_command, cwd):
             project = git_commands.project_of(git_command, cwd)
             if project == "no":
                 continue

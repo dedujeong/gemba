@@ -427,6 +427,27 @@ class CopiesOrphansAndRenames(HookTestCase):
         self.passes("git branch -m task/ABC-1-a task/ABC-1-b")
 
 
+class ForcedUpdatesOfAnExistingBranch(HookTestCase):
+    def test_a_forced_update_of_an_existing_branch_is_not_a_creation(self):
+        git(self.repo, "branch", "feature/old")
+        git(self.repo, "branch", "story/ABC-1-a")
+        for command in ("git branch -f feature/old main", "git branch --force story/ABC-1-a origin/develop",
+                        "git checkout -B feature/old main", "git switch -C feature/old main",
+                        "git switch --force-create story/ABC-1-a main", "git worktree add -B feature/old ../w main"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+    def test_the_same_commands_on_a_branch_that_does_not_exist_are_creations(self):
+        for command in ("git branch -f feature/new main", "git checkout -B feature/new develop",
+                        "git switch -C story/ABC-2-b main", "git worktree add -B story/ABC-2-b ../w main"):
+            with self.subTest(command=command):
+                self.denied(command)
+
+    def test_a_lowercase_b_still_checks_a_name_that_exists_as_a_creation_error(self):
+        git(self.repo, "branch", "feature/old")
+        self.denied("git checkout -b feature/old main")  # git itself refuses, the hook still checks it
+
+
 class TheReasonSuggestsTheSameForm(HookTestCase):
     def test_each_form_is_suggested_back(self):
         git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
