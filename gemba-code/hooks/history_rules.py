@@ -129,7 +129,7 @@ def pull_problem(pull):
         return rule("rebase", "git pull that rebases rewrites history",
                     "Pull without rebasing: `git pull --no-rebase` or `git merge --ff-only origin/<branch>`")
     # Without a rebase a pull is a merge of what it fetches: of another branch it follows the merge rules.
-    return merge_problem(pull._replace(subcommand="merge", args=git_commands.pulled(pull)))
+    return merge_problem(pull)  # the merge rules read a pull through `syncs_with_its_remote`
 
 
 FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror"}

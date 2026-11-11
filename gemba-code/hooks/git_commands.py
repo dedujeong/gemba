@@ -32,8 +32,9 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
 - `segment_folders(command, cwd)`: `(words, folder)` of every segment, git or not, with the same folder walk, for
   a hook that checks something else (`gh pr merge`).
 - `syncs_with_its_remote(command)`: the one rule for "brings in only its own remote": a `merge`, or a `pull`
-  (its refspecs read as `<remote>/<branch>`, none as `@{u}`), of only `@{u}`, `@{upstream}` or
-  `<configured remote>/<the branch it runs on>`.
+  of only `@{u}`, `@{upstream}` or `<configured remote>/<the branch it runs on>`; a pull of that branch from a
+  configured remote or a url, or of a remote only when it is the upstream remote of the branch. The remotes
+  are read lazily and once.
 - `run_hook(decide, relevant, reason, event=None)`: the shared `main()` skeleton. Reads the event from stdin
   (or takes `event`), ignores everything but Bash, calls `decide(event)` and, if it raises, asks with
   `reason` when the command matches `relevant`, the hook's own pattern (a hook that crashes does not block: fail closed). A
@@ -81,8 +82,8 @@ OPTIONS_WITH_A_VALUE = {
              "--shallow-exclude", "-j", "--jobs", "--upstream-pack", "-o", "--server-option"},
 }
 
-GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config git_dir work_tree",
-                        defaults=(None, (), None, None))
+GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config git_dir unresolved",
+                        defaults=(None, (), None, False))
 
 
 def _without_heredocs_and_descriptors(command):
@@ -245,25 +246,28 @@ def parse(words):
     """A GitCommand when the words are a git command, otherwise None."""
     i = 0
     env = {}
-    while i < len(words) and re.fullmatch(r"\w+=.*", words[i]):
-        name, _, value = words[i].partition("=")
-        env[name] = value
+    while i < len(words):
+        if re.fullmatch(r"\w+=.*", words[i]):
+            name, _, value = words[i].partition("=")
+            env[name] = value
+        elif words[i] != "env" or i + 1 >= len(words) or not re.fullmatch(r"\w+=.*", words[i + 1]):
+            break  # `env NAME=value git ...` is read; `env` with options or alone is a wrapper the parser does not read
         i += 1
     if i >= len(words) or os.path.basename(words[i]) != "git":
         return None
     i += 1
     folder = None
     config = []
-    git_dir, work_tree = env.get("GIT_DIR"), env.get("GIT_WORK_TREE")  # the options win over the environment
+    git_dir = env.get("GIT_DIR")  # `--git-dir` wins over the environment; `--work-tree` and GIT_WORK_TREE never change the repository
     while i < len(words) and words[i].startswith("-"):
         option = words[i]
         name, equals, value = option.partition("=")
-        if equals and name in ("--git-dir", "--work-tree"):
-            git_dir, work_tree = (value, work_tree) if name == "--git-dir" else (git_dir, value)
+        if equals and name == "--git-dir":
+            git_dir = value
             i += 1
         elif option in GLOBAL_OPTIONS_WITH_A_VALUE:
-            if option in ("--git-dir", "--work-tree") and i + 1 < len(words):
-                git_dir, work_tree = (words[i + 1], work_tree) if option == "--git-dir" else (git_dir, words[i + 1])
+            if option == "--git-dir" and i + 1 < len(words):
+                git_dir = words[i + 1]
             if option == "-c" and i + 1 < len(words):
                 key, equals, value = words[i + 1].partition("=")
                 config.append((key, value if equals else None))  # a bare key has no value: git reads it as true
@@ -276,7 +280,7 @@ def parse(words):
     if i >= len(words):
         return None
     options, args = parse_options_and_args(words[i], words[i + 1:])
-    return GitCommand(folder, words[i], options, args, config=tuple(config), git_dir=git_dir, work_tree=work_tree)
+    return GitCommand(folder, words[i], options, args, config=tuple(config), git_dir=git_dir)
 
 
 def option_names(command):
@@ -333,18 +337,29 @@ def _join(base, lost, relative):
 
 
 def _walk(command, cwd):
-    """Each segment of the command as (words, base, lost): the folder it starts in (`cwd` after the `cd`s
-    before it) and whether that folder is lost (a `cd` the parser cannot follow). Nothing when it cannot be split."""
+    """Each segment of the command as (words, base, lost, env): the folder it starts in (`cwd` after the `cd`s
+    before it), whether that folder is lost (a `cd` the parser cannot follow) and the variables `export`ed before
+    it (a dict). Nothing when it cannot be split."""
     items = _words(command)
     if items is None:
         return
-    state = {"folder": cwd, "lost": False}
+    state = {"folder": cwd, "lost": False, "env": {}}
     saved = []
     pending = []
 
     def segment(words, asynchronous):
-        yield words, state["folder"], state["lost"]
-        if words and words[0] == "cd" and parse(words) is None and not asynchronous:
+        yield words, state["folder"], state["lost"], dict(state["env"])
+        if asynchronous or not words:
+            return
+        if words[0] == "export":
+            for word in words[1:]:
+                name, equals, value = word.partition("=")
+                if equals:
+                    state["env"][name] = value
+        elif words[0] == "unset":
+            for word in words[1:]:
+                state["env"].pop(word, None)
+        elif words[0] == "cd" and parse(words) is None:
             target = _cd_target(words)
             if target is None:
                 state["folder"], state["lost"] = None, True
@@ -361,7 +376,7 @@ def _walk(command, cwd):
         pending = []
         for char in word:
             if char == "(":
-                saved.append(dict(state))
+                saved.append({**state, "env": dict(state["env"])})
             elif char == ")" and saved:
                 state.clear()
                 state.update(saved.pop())
@@ -370,22 +385,48 @@ def _walk(command, cwd):
 
 
 def segment_folders(command, cwd):
-    """(words, folder) of every segment of the command, whatever it runs (`gh`, `cd`, `git`): the folder it runs
-    in as `git_commands` follows it, None when it cannot be told. For a hook that checks a command that is not git."""
-    return [(words, None if lost else base) for words, base, lost in _walk(command, cwd)]
+    """(words, folder, env) of every segment of the command, whatever it runs (`gh`, `cd`, `git`): the folder it
+    runs in as `git_commands` follows it (None when it cannot be told) and the variables exported before it. For
+    a hook that checks a command that is not git."""
+    return [(words, None if lost else base, env) for words, base, lost, env in _walk(command, cwd)]
 
 
-def _repository_folder(command, base, lost):
-    """The folder of the repository a GitCommand runs in: `--work-tree`, else the folder of `--git-dir` (its
-    parent when it is a `.git`), else `-C`, each on top of the folder the command starts in."""
+EXPANSION = re.compile(r"[$`~*?\[]")
+
+
+@functools.lru_cache(maxsize=None)
+def _main_worktree(start, git_dir):
+    """The folder of the main worktree of the repository `git_dir` names (seen from `start`): the parent of its
+    common git dir, which is the same for a linked worktree's git dir. None when git cannot read it, the
+    common dir itself for a bare repository (it has no CLAUDE.md)."""
+    command = ["git", f"--git-dir={git_dir}"] + (["-C", start] if start else [])
+    result = subprocess.run(command + ["rev-parse", "--path-format=absolute", "--git-common-dir"],
+                            capture_output=True, text=True)
+    common = result.stdout.strip()
+    if result.returncode != 0 or not common:
+        return None
+    return os.path.dirname(common) if os.path.basename(common) == ".git" else common
+
+
+def _repository_folder(command, base, lost, env, cwd):
+    """(folder, unresolved) of the repository a GitCommand runs in: the folder it starts in (`cd`, `-C`), or the
+    main worktree of the repository `--git-dir` / `GIT_DIR` names (the work tree never changes the repository).
+    `unresolved` when a value has a shell expansion or does not exist, or git cannot read the git dir: the
+    caller must ask. A folder that cannot be told because of a `cd` is (None, False): the session decides."""
+    if cwd is None:
+        return _join(base, lost, command.folder), False
+    git_dir = command.git_dir or env.get("GIT_DIR")
+    if EXPANSION.search(command.folder or "") or EXPANSION.search(git_dir or ""):
+        return None, True
     start = _join(base, lost, command.folder)
-    if command.work_tree:
-        return _join(start, start is None, command.work_tree)
-    if command.git_dir:
-        git_dir = _join(start, start is None, command.git_dir)
-        return git_dir and (os.path.dirname(os.path.normpath(git_dir)) if os.path.basename(os.path.normpath(git_dir)) == ".git"
-                            else git_dir)
-    return start
+    if start is None and not (git_dir and os.path.isabs(git_dir)):
+        return None, git_dir is not None
+    if start is not None and not os.path.isdir(start):
+        return None, True
+    if git_dir:
+        root = _main_worktree(start, git_dir)
+        return root, root is None
+    return start, False
 
 
 def git_commands(command, cwd=None):
@@ -394,11 +435,11 @@ def git_commands(command, cwd=None):
     `folder` is the `-C` folder as written (None when there is none) and `branch` is None."""
     found = []
     branches = {}
-    for words, base, lost in _walk(command, cwd):
+    for words, base, lost, env in _walk(command, cwd):
         git_command = parse(words)
         if git_command is None:
             continue
-        folder = _repository_folder(git_command, base, lost)
+        folder, unresolved = _repository_folder(git_command, base, lost, env, cwd)
         branch = None
         if cwd is not None and folder is not None:
             key = repository_key(folder)
@@ -408,7 +449,7 @@ def git_commands(command, cwd=None):
             switched = _switches_to(git_command, words, folder)
             if switched is not UNCHANGED:
                 branches[key] = switched
-        found.append(git_command._replace(folder=folder, branch=branch))
+        found.append(git_command._replace(folder=folder, branch=branch, unresolved=unresolved))
     return found
 
 
@@ -527,7 +568,11 @@ def has_gemba(folder):
 def project_of(command, cwd):
     """"yes", "no" or "unknown": whether the repository the GitCommand runs in (its folder: `cd`, `-C`,
     `--git-dir`, `--work-tree`, `GIT_DIR`, `GIT_WORK_TREE`) is a project with setup. The session's folder only
-    matters when the folder cannot be told (None): "unknown" when it has setup, "no" when it has none."""
+    matters when the folder cannot be told (None): "unknown" when it has setup, "no" when it has none. A folder or
+    git dir that cannot be resolved (a shell expansion, a path that does not exist yet, git cannot read it) is
+    always "unknown": the hook asks."""
+    if command.unresolved:
+        return "unknown"
     if command.folder is None:
         return "unknown" if has_gemba(cwd) else "no"
     return "yes" if has_gemba(command.folder) else "no"
@@ -546,18 +591,30 @@ def current_branch(folder):
     return git(folder, "branch", "--show-current")
 
 
-def pulled(pull):
-    """What a `git pull` merges, as the arguments of a `git merge`: `<remote>/<branch>` for each refspec (the
-    remote the pull names), `@{u}` when it names none."""
-    remote = pull.args[0] if pull.args else None
-    names = [arg.lstrip("+").partition(":")[0].removeprefix("refs/heads/") for arg in pull.args[1:]]
-    return [f"{remote}/{name}" for name in names] if names else ["@{u}"]
+@functools.lru_cache(maxsize=None)
+def remotes(folder):
+    """The names of the configured remotes of the repository of `folder`. Read once per folder, and only when needed."""
+    return tuple(git(folder, "remote").split())
+
+
+def _is_a_url(remote):
+    return "/" in remote or ":" in remote or remote.startswith(".")
 
 
 def syncs_with_its_remote(command):
-    """True when the `merge` (or the `pull`) brings in only `@{u}`, `@{upstream}` or `<remote>/<the branch it
-    runs on>` of a configured remote: it updates the branch from its own remote and merges nothing else."""
-    targets = pulled(command) if command.subcommand == "pull" else (command.args or ["@{u}"])  # a bare merge brings in @{u}
-    remotes = git(command.folder, "remote").split()
-    return all(target.lower() in ("@{u}", "@{upstream}") or any(target == f"{remote}/{command.branch}" for remote in remotes)
-               for target in targets)
+    """True when the `merge` or the `pull` only updates the branch it runs on from its own remote: it brings in
+    `@{u}`, `@{upstream}` or `<configured remote>/<that branch>` (a bare merge or pull is `@{u}`); a pull of
+    the same branch from a configured remote or a url; a pull of a remote only, when it is the branch's upstream
+    remote. Anything else merges another branch."""
+    branch = command.branch
+    if command.subcommand == "pull":
+        remote = command.args[0] if command.args else None
+        names = [arg.lstrip("+").partition(":")[0].removeprefix("refs/heads/") for arg in command.args[1:]]
+        if remote is None:
+            return True
+        if not names:
+            return bool(branch) and git(command.folder, "config", "--get", f"branch.{branch}.remote") == remote
+        return all(name == branch for name in names) and (_is_a_url(remote) or remote in remotes(command.folder))
+    return all(target.lower() in ("@{u}", "@{upstream}")
+               or (bool(branch) and "/" in target and any(target == f"{remote}/{branch}" for remote in remotes(command.folder)))
+               for target in (command.args or ["@{u}"]))  # a bare merge brings in @{u}

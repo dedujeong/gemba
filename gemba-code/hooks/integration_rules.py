@@ -163,6 +163,12 @@ def is_pr_merge(words):
     return rest is not None and rest[:2] == ["pr", "merge"]
 
 
+def names_a_repository(words, env):
+    """True when a `gh` command (or a wrapper of one) names its repository with `-R`, `--repo` or `GH_REPO`."""
+    return "GH_REPO" in env or any(re.fullmatch(r"GH_REPO=.*|-R.*|--repo(=.*)?", word) or "GH_REPO=" in word
+                                   for word in words if not word.startswith("---"))
+
+
 def wraps_pr_merge(words):
     """True when a segment that is not `gh` itself hides a `gh ... pr merge` (a wrapper such as `sudo` or
     `bash -c '...'`): a word that is `gh` followed by a pr merge, or a quoted script that has one."""
@@ -208,17 +214,20 @@ def decide(event):
         elif problem:
             return git_commands.emit("deny", problem)
     in_project = git_commands.has_gemba(cwd)
-    hidden_pr_merge = False
-    for words, folder in git_commands.segment_folders(command, cwd):
-        if is_pr_merge(words):
-            if folder is None:  # a cd the parser could not follow: only the session's project can be asked about
-                asking = asking or (in_project and mode_of(cwd) != "merge")
-            elif git_commands.has_gemba(folder) and mode_of(folder) == "pull request":
+    for words, folder, env in git_commands.segment_folders(command, cwd):
+        is_plain = is_pr_merge(words)
+        if not (is_plain or (gh_words(words) is None and wraps_pr_merge(words))):
+            continue
+        if names_a_repository(words, env):  # `-R`, `--repo`, `GH_REPO`: the folder does not tell which repository it is
+            asking = True
+        elif folder is None:  # a cd the parser could not follow: only the session's project can be asked about
+            asking = asking or (in_project and mode_of(cwd) != "merge")
+        elif git_commands.has_gemba(folder):
+            if is_plain and mode_of(folder) == "pull request":
                 return git_commands.emit(
                     "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
                             " The maintainer merges the pull request.")
-        elif in_project and gh_words(words) is None and wraps_pr_merge(words):
-            hidden_pr_merge = True
+            asking = asking or (not is_plain and mode_of(folder) != "merge")  # a hidden one, like a hidden merge
     if asking:
         return git_commands.emit("ask", UNREADABLE)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)
@@ -227,7 +236,7 @@ def decide(event):
     if not in_project:
         return
     hidden_push = git_commands.unparsed_mentions(command, "push")
-    hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull")) or hidden_pr_merge
+    hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull"))
     if hidden_push or (hidden_merge and mode_of(cwd) != "merge"):
         git_commands.emit("ask", UNREADABLE)
 

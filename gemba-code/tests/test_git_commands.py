@@ -256,12 +256,22 @@ class GitCommandsTest(unittest.TestCase):
 
 
 class ResolvedFoldersTest(unittest.TestCase):
+    def setUp(self):  # real folders: one that does not exist cannot be resolved (it is `unresolved`)
+        self.work = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, self.work)
+        os.mkdir(os.path.join(self.work, "sub"))
+
     def test_with_cwd_the_folder_is_cwd_or_the_dash_c_folder_joined_to_it(self):
-        found = commands_of("git status && git -C sub log", "/work")
-        self.assertEqual([command.folder for command in found], ["/work", os.path.join("/work", "sub")])
+        found = commands_of("git status && git -C sub log", self.work)
+        self.assertEqual([command.folder for command in found], [self.work, os.path.join(self.work, "sub")])
 
     def test_an_absolute_dash_c_folder_stays_absolute(self):
-        self.assertEqual(commands_of("git -C /other push", "/work")[0].folder, "/other")
+        self.assertEqual(commands_of(f"git -C {self.work}/sub push", "/work")[0].folder, f"{self.work}/sub")
+
+    def test_a_folder_that_does_not_exist_or_has_an_expansion_is_unresolved(self):
+        for command in ("git -C /nowhere/x push", "git -C $X push", "git -C `pwd` push"):
+            found = commands_of(command, self.work)[0]
+            self.assertEqual((found.folder, found.unresolved), (None, True), command)
 
 
 class MentionsTest(unittest.TestCase):
@@ -453,7 +463,7 @@ class ContextTrackingTest(unittest.TestCase):
 
     def test_the_branch_is_read_once_per_folder(self):
         with mock.patch.object(git_commands, "current_branch", return_value="b") as read:
-            commands_of("git status && git log && git -C /elsewhere log && git status", self.repo)
+            commands_of("git status && git log && git -C /tmp log && git status", self.repo)
         self.assertEqual(read.call_count, 2)
 
     def test_without_cwd_the_branch_is_not_read(self):
@@ -594,6 +604,21 @@ class SimplifiedHelpersTest(unittest.TestCase):
         self.assertEqual(git_commands.project_of(GitCommand(outside, "push", [], []), self.repo), "no")  # the session does not decide
         self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), self.repo), "unknown")
         self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), outside), "no")
+
+    def test_syncs_with_its_remote_reads_the_remotes_only_for_a_remote_branch_and_once(self):
+        calls = []
+        real = git_commands.git
+        def spy(folder, *args):
+            calls.append(args)
+            return real(folder, *args)
+        with mock.patch.object(git_commands, "git", spy):
+            command = GitCommand(self.repo, "merge", [], ["@{u}"], "develop")
+            self.assertTrue(git_commands.syncs_with_its_remote(command))
+            self.assertEqual(calls, [])
+            other = command._replace(args=["origin/develop"])
+            git_commands.syncs_with_its_remote(other)
+            git_commands.syncs_with_its_remote(other)
+            self.assertEqual([c for c in calls if c == ("remote",)], [("remote",)])
 
     def test_failures_of_the_repo_reads_are_cached_too(self):
         outside = tempfile.mkdtemp()
