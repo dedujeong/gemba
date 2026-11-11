@@ -128,6 +128,11 @@ class ParseTest(unittest.TestCase):
         self.assertEqual((command.options, command.args), ([("-m", "x")], []))
         self.assertEqual(parse(["git", "push", "origin", "#", "-f"]).args, ["origin"])
 
+    def test_the_global_config_pairs_are_exposed_in_order(self):
+        found = parse(["git", "-c", "pull.rebase=true", "-C", "x", "-c", "user.name=A=B", "-c", "flag", "pull"])
+        self.assertEqual(found.config, (("pull.rebase", "true"), ("user.name", "A=B"), ("flag", None)))
+        self.assertEqual(parse(["git", "pull"]).config, ())
+
     def test_value_option_without_a_value_at_the_end(self):
         self.assertEqual(parse(["git", "commit", "-m"]).options, [("-m", None)])
 
