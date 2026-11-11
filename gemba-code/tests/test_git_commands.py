@@ -421,5 +421,63 @@ class EmitTest(unittest.TestCase):
             "hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "because"}})
 
 
+class SecondReviewTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = init_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+        run(self.repo, "branch", "develop")
+        os.makedirs(os.path.join(self.repo, "sub"))
+
+    def branches(self, command):
+        return [c.branch for c in commands_of(command, self.repo)]
+
+    def test_the_tracked_branch_belongs_to_the_repository_not_the_folder(self):
+        self.assertEqual(self.branches("git switch develop && git -C sub status"), ["main", "develop"])
+        self.assertEqual(self.branches("git switch develop && cd sub && git status"), ["main", "develop"])
+        self.assertEqual(self.branches("cd sub && git switch develop && cd .. && git status"), ["main", "develop"])
+
+    def test_another_repository_keeps_its_own_branch(self):
+        other = init_repo("other-main")
+        self.addCleanup(shutil.rmtree, other)
+        self.assertEqual(self.branches(f"git switch develop && git -C {other} status"), ["main", "other-main"])
+
+    def test_track_options_are_flags(self):
+        self.assertEqual(parse(["git", "checkout", "-t", "origin/x"]), GitCommand(None, "checkout", [("-t", None)], ["origin/x"]))
+        self.assertEqual(parse(["git", "checkout", "--track", "origin/x"]).options, [("--track", None)])
+        self.assertEqual(parse(["git", "switch", "--track=direct", "origin/x"]).options, [("--track", "direct")])
+        self.assertEqual(parse(["git", "switch", "--track", "origin/x"]).args, ["origin/x"])
+
+    def test_tracking_a_remote_branch_checks_out_the_local_branch(self):
+        self.assertEqual(self.branches("git checkout -t origin/feat && git status"), ["main", "feat"])
+        self.assertEqual(self.branches("git checkout --track origin/story/A-1-x && git status"), ["main", "story/A-1-x"])
+        self.assertEqual(self.branches("git switch --track origin/feat && git status"), ["main", "feat"])
+        self.assertEqual(self.branches("git switch -t origin/develop && git status"), ["main", "develop"])
+
+    def test_a_new_name_wins_over_the_tracked_one(self):
+        self.assertEqual(self.branches("git checkout -b mine -t origin/develop && git status"), ["main", "mine"])
+
+    def test_the_claude_md_is_read_once_per_repository(self):
+        with open(os.path.join(self.repo, "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("## Gemba\n\n- Jira Project: ABC\n")
+        self.assertEqual(git_commands.gemba_field(self.repo, "Jira Project"), "ABC")
+        with mock.patch.object(git_commands, "git", side_effect=AssertionError("git ran")), \
+                mock.patch("builtins.open", side_effect=AssertionError("file read")):
+            self.assertEqual(git_commands.gemba_field(self.repo, "Jira Project"), "ABC")
+            self.assertTrue(git_commands.has_gemba(self.repo))
+
+    def test_a_changed_claude_md_is_read_again(self):
+        path = os.path.join(self.repo, "CLAUDE.md")
+        self.assertFalse(git_commands.has_gemba(self.repo))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("## Gemba\n")
+        self.assertTrue(git_commands.has_gemba(self.repo))
+
+    def test_the_repository_key_is_the_same_from_every_folder_of_it(self):
+        self.assertEqual(git_commands.repository_key(self.repo), git_commands.repository_key(os.path.join(self.repo, "sub")))
+        other = init_repo()
+        self.addCleanup(shutil.rmtree, other)
+        self.assertNotEqual(git_commands.repository_key(self.repo), git_commands.repository_key(other))
+
+
 if __name__ == "__main__":
     unittest.main()

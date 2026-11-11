@@ -21,6 +21,7 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
 - `emit(decision, reason)`: prints the PreToolUse decision (`allow`, `ask` or `deny`) a hook answers with.
 - Repo helpers: `git`, `current_branch`, `gemba_section`, `gemba_field`, `has_gemba`, `in_gemba_project`.
 """
+import functools
 import json
 import os
 import re
@@ -170,6 +171,8 @@ def _switches_to(command, words, folder):
     target = command.args[0]
     if target == "-":
         return None
+    if ("-t" in names or "--track" in names) and "/" in target:
+        return target.partition("/")[2]  # `origin/feat` creates and checks out the local `feat`
     if command.subcommand == "checkout" and folder and (
             os.path.exists(os.path.join(folder, target))
             and not git(folder, "rev-parse", "-q", "--verify", f"refs/heads/{target}")):
@@ -217,7 +220,7 @@ def git_commands(command, cwd=None):
         folder = folder_of(git_command.folder)
         branch = None
         if cwd is not None and folder is not None:
-            key = os.path.normpath(folder)
+            key = repository_key(folder)
             if key not in branches:
                 branches[key] = current_branch(folder)
             branch = branches[key]
@@ -281,13 +284,47 @@ def git(folder, *args):
     return result.stdout.strip() if result.returncode == 0 else ""
 
 
-def read_claude_md(folder):
-    top = git(folder, "rev-parse", "--show-toplevel") or folder
+_TOPLEVELS = {}
+_KEYS = {}
+
+
+def toplevel(folder):
+    """The top folder of the repository of `folder` (the folder itself outside one). Read once per folder."""
+    if folder not in _TOPLEVELS:
+        found = git(folder, "rev-parse", "--show-toplevel")
+        if not found:
+            return folder
+        _TOPLEVELS[folder] = found
+    return _TOPLEVELS[folder]
+
+
+def repository_key(folder):
+    """A key that is the same from every folder of one repository (its git dir; the folder itself outside one)."""
+    if folder not in _KEYS:
+        found = git(folder, "rev-parse", "--absolute-git-dir")
+        if not found:
+            return os.path.normpath(folder)
+        _KEYS[folder] = found
+    return _KEYS[folder]
+
+
+@functools.lru_cache(maxsize=None)
+def _read(path, mtime, size):
     try:
-        with open(os.path.join(top, "CLAUDE.md"), encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             return f.read()
     except OSError:
         return None
+
+
+def read_claude_md(folder):
+    """The CLAUDE.md of the repository of `folder`, or None. Read once per file version within a hook run."""
+    path = os.path.join(toplevel(folder), "CLAUDE.md")
+    try:
+        info = os.stat(path)
+    except OSError:
+        return None
+    return _read(path, info.st_mtime_ns, info.st_size)
 
 
 def gemba_section(folder):
