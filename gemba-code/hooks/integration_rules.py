@@ -180,6 +180,18 @@ def is_pr_merge(words):
     return rest is not None and rest[:2] == ["pr", "merge"]
 
 
+def wraps_pr_merge(words):
+    """True when a segment that is not `gh` itself hides a `gh ... pr merge` (a wrapper such as `sudo` or
+    `bash -c '...'`): a word that is `gh` followed by a pr merge, or a quoted script that has one."""
+    for i, word in enumerate(words):
+        if os.path.basename(word) == "gh" and is_pr_merge(words[i:]):
+            return True
+        if " " in word and any(is_pr_merge(inner) or (gh_words(inner) is None and wraps_pr_merge(inner))
+                               for inner in git_commands.segments(word)):
+            return True
+    return False
+
+
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
@@ -208,15 +220,16 @@ def decide(event):
         elif problem:
             return git_commands.emit("deny", problem)
     in_project = git_commands.has_gemba(cwd)
-    pr_merged = False
+    hidden_pr_merge = False
     if in_project:
         for words in git_commands.segments(command):
             if is_pr_merge(words):
-                pr_merged = True
                 if mode_of(cwd) == "pull request":
                     return git_commands.emit(
                         "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
                                 " The maintainer merges the pull request.")
+            elif gh_words(words) is None and wraps_pr_merge(words):
+                hidden_pr_merge = True
     if asking:
         return git_commands.emit("ask", UNREADABLE)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)
@@ -225,21 +238,9 @@ def decide(event):
     if not in_project:
         return
     hidden_push = git_commands.unparsed_mentions(command, "push")
-    hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull")) or (
-        not pr_merged and git_commands.unparsed_mentions(command, GH_PR_MERGE))
+    hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull")) or hidden_pr_merge
     if hidden_push or (hidden_merge and mode_of(cwd) != "merge"):
         git_commands.emit("ask", UNREADABLE)
-
-
-def safe_decide(event):
-    """`decide`, which also asks when it crashes on a `gh pr merge` (run_hook covers the git words)."""
-    try:
-        decide(event)
-    except Exception:
-        if GH_PR_MERGE.search(event.get("tool_input", {}).get("command", "")):
-            git_commands.emit("ask", UNREADABLE)
-        else:
-            raise
 
 
 def main():
@@ -258,7 +259,7 @@ def main():
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": UNREADABLE}}))
         return
-    git_commands.run_hook(safe_decide, GIT_WORDS, UNREADABLE, event)
+    git_commands.run_hook(decide, GIT_WORDS, UNREADABLE, event)
 
 
 if __name__ == "__main__":

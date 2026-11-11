@@ -434,6 +434,16 @@ class SecondRoundPullRequestMode(HookCase):
         self.passes("git pull -j 4 origin develop")
         self.denied("git pull --depth 1 origin task/ABC-2-x")
 
+    def test_gh_commands_that_only_mention_merge_pass(self):
+        self.passes("gh pr view 3 --json mergeable")
+        self.passes("gh pr create --base develop --title 'merge the export' --body 'merge it'")
+        self.passes("gh pr list --search merge")
+        self.passes("gh -R a/b pr create --title 'gh pr merge'")
+
+    def test_a_wrapped_gh_pr_merge_still_asks(self):
+        for command in ("bash -c 'gh pr merge 3'", "sudo gh pr merge 3", "sh -c \"gh -R a/b pr merge 3\""):
+            self.assertIn("could not read", self.asked(command))
+        self.passes("bash -c 'gh pr view 3'")
 
 
 class RegisteredInThePlugin(unittest.TestCase):
