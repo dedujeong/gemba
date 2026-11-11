@@ -96,12 +96,36 @@ def rebase_problem(rebase):
     return None
 
 
+REBASING_VALUES = {"true", "yes", "on", "1", "merges", "m", "interactive", "i"}
+
+
+def configured_rebase(pull):
+    """The value `pull.rebase` or `branch.<b>.rebase` gives this pull, or None. The `-c` of the command wins
+    over the config files, and the key of the branch over `pull.rebase`."""
+    keys = [f"branch.{pull.branch}.rebase"] if pull.branch else []
+    for key in keys + ["pull.rebase"]:
+        given = [value for name, value in pull.config if name.lower() == key.lower()]
+        if given:
+            return given[-1]
+        value = git_commands.git(pull.folder, "config", "--get", key)
+        if value:
+            return value
+    return None
+
+
 def pull_problem(pull):
-    """The reason a pull breaks the rules, or None: `git pull --rebase` is a rebase."""
+    """The reason a pull breaks the rules, or None: a pull that rebases, by option or by config, is a rebase."""
+    rebasing = None  # the last of --rebase, -r and --no-rebase on the command line wins
     for name, value in pull.options:
-        if name in ("--rebase", "-r") and value != "false":
-            return rule("rebase", "git pull --rebase rewrites history",
-                        "Pull without rebasing: `git pull` or `git merge --ff-only origin/<branch>`")
+        if name in ("--rebase", "-r"):
+            rebasing = (value or "true").lower() not in ("false", "no", "0")
+        elif name == "--no-rebase":
+            rebasing = False
+    if rebasing is None:
+        rebasing = (configured_rebase(pull) or "").lower() in REBASING_VALUES
+    if rebasing:
+        return rule("rebase", "git pull that rebases rewrites history",
+                    "Pull without rebasing: `git pull --no-rebase` or `git merge --ff-only origin/<branch>`")
     return None
 
 

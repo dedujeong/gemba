@@ -235,6 +235,33 @@ class Rebases(HookCase):
                         "git pull --rebase=interactive", "git pull origin develop --rebase", "git pull -rq"):
             self.denied(command, "rebase")
 
+    def test_a_pull_that_rebases_through_the_global_config_option_is_denied(self):
+        for value in ("true", "merges", "interactive"):
+            self.denied(f"git -c pull.rebase={value} pull", "rebase")
+        self.denied("git -c pull.rebase=true -C . pull origin develop", "rebase")
+        self.denied("git -c branch.story/ABC-1-export.rebase=true pull", "rebase")
+
+    def test_a_pull_that_rebases_through_the_repository_config_is_denied(self):
+        for value in ("true", "merges", "interactive"):
+            git(self.repo, "config", "pull.rebase", value)
+            self.denied("git pull", "rebase")
+        git(self.repo, "config", "--unset", "pull.rebase")
+        git(self.repo, "config", "branch.story/ABC-1-export.rebase", "true")
+        self.denied("git pull origin develop", "rebase")
+
+    def test_the_command_line_and_the_most_specific_config_win_over_a_rebasing_config(self):
+        git(self.repo, "config", "pull.rebase", "true")
+        self.passes("git pull --no-rebase", "git pull --rebase=false", "git -c pull.rebase=false pull",
+                    "git pull --rebase --no-rebase")
+        self.denied("git pull --no-rebase --rebase", "rebase")
+        git(self.repo, "config", "branch.story/ABC-1-export.rebase", "false")
+        self.passes("git pull")
+        self.passes("git -c pull.rebase=true -c pull.rebase=false pull")
+
+    def test_a_pull_with_a_config_that_does_not_rebase_passes(self):
+        git(self.repo, "config", "pull.rebase", "false")
+        self.passes("git pull", "git -c pull.rebase=false pull")
+
     def test_a_pull_that_does_not_rebase_passes(self):
         self.passes("git pull", "git pull --no-rebase", "git pull --rebase=false", "git pull origin develop")
 
