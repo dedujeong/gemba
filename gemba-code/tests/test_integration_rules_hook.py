@@ -420,6 +420,20 @@ class SecondRoundPullRequestMode(HookCase):
         git(self.repo, "config", "remote.origin.push", "task/ABC-2-x")
         self.passes("git push")
 
+    def test_a_fast_forward_merge_of_the_same_remote_branch_is_a_sync(self):
+        self.passes("git merge --ff-only origin/develop")
+        self.passes("git merge --ff-only @{u}")
+        self.denied("git merge --ff-only origin/task/ABC-2-x")
+        self.denied("git merge origin/develop")
+        git(self.repo, "checkout", "-q", "-b", "main")
+        self.denied("git merge --ff-only origin/develop")
+        self.passes("git merge --ff-only origin/main")
+
+    def test_pull_options_with_a_value_do_not_shift_the_positionals(self):
+        self.passes("git pull --depth 1 origin develop")
+        self.passes("git pull -j 4 origin develop")
+        self.denied("git pull --depth 1 origin task/ABC-2-x")
+
 
 
 class RegisteredInThePlugin(unittest.TestCase):

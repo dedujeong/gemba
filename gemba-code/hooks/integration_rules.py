@@ -133,6 +133,17 @@ def refspec_branch(refspec):
     return refspec.lstrip("+").partition(":")[0].removeprefix("refs/heads/")
 
 
+def syncs_with_its_remote(command):
+    """True when the merge brings in only `@{u}` or `<remote>/<the branch it runs on>`."""
+    if len(command.args) != 1:
+        return False
+    target = command.args[0]
+    if target.lower() in ("@{u}", "@{upstream}"):
+        return True
+    remotes = git_commands.git(command.folder, "remote").split()
+    return any(target == f"{remote}/{command.branch}" for remote in remotes)
+
+
 def merge_problem(command, mode):
     """Why a local `git merge`, or a `git pull` of another branch, breaks the mode, None, or UNKNOWN."""
     if mode != "pull request" or git_commands.option_names(command) & {"--abort", "--continue", "--quit"}:
@@ -143,6 +154,9 @@ def merge_problem(command, mode):
         return None
     if command.subcommand == "pull" and all(refspec_branch(r) == command.branch for r in command.args[1:]):
         return None  # `git pull` and `git pull origin develop` on develop only sync it
+    if command.subcommand == "merge" and "--ff-only" in git_commands.option_names(command) and \
+            syncs_with_its_remote(command):
+        return None  # `git merge --ff-only origin/develop` on develop only syncs it, like `git pull`
     return (f"Gemba rule (integration: pull request): nothing is merged locally into {command.branch}."
             " Open a pull request from the work branch; the maintainer merges it.")
 
