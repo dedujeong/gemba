@@ -431,6 +431,15 @@ class SecondReview(CommitRulesCase):
         self.passes('git merge --no-ff --no-commit story/ABC-1-export && git commit --no-edit --cleanup=strip')
         self.passes("git merge --no-commit story/ABC-1-export && git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
 
+    def test_a_merge_that_makes_its_own_commit_leaves_nothing_in_progress(self):
+        self.merge_in_progress()
+        self.blocked('git merge --no-ff story/ABC-1-export && git commit --allow-empty -m "feat: x"')
+        self.blocked('git merge --no-ff story/ABC-1-export && git commit --no-edit')
+
+    def test_a_squash_merge_earlier_in_the_command_leaves_a_merge_to_conclude(self):
+        self.merge_in_progress()
+        self.passes("git merge --squash story/ABC-1-export && git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
+
     def test_a_merge_abort_earlier_in_the_command_counts_as_none(self):
         self.merge_in_progress()
         git(self.repo, "merge", "-q", "--no-ff", "--no-commit", "story/ABC-1-export")

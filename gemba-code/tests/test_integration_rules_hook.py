@@ -90,6 +90,14 @@ class MergeModePushes(HookCase):
         self.passes("git push origin --delete story/ABC-1-export")
         self.passes("git push origin :story/ABC-1-export")
 
+    def test_a_tag_created_earlier_in_the_command_is_a_tag_in_its_push(self):
+        self.passes("git tag v1.0.0 && git push origin v1.0.0")
+        self.passes("git tag -a v1.0.1 -m release && git push origin v1.0.1")
+        self.passes("git tag -s v1.0.2 -m release && git push origin v1.0.2")
+        self.passes("git tag -f v1.0.3 && git push origin v1.0.3")
+        self.denied("git tag v1.0.0 && git push origin story/ABC-1-export")
+        self.denied("git tag -d v1.0.0 && git push origin v1.0.0")
+
     def test_the_folder_of_dash_c_decides_the_current_branch(self):
         other = make_repo(claude_md("merge"))
         self.addCleanup(subprocess.run, ["rm", "-rf", other])
@@ -150,6 +158,10 @@ class PullRequestMode(HookCase):
         self.denied("git push")  # the repository is on develop
         self.denied("git push origin HEAD:main")
         self.denied("git push origin task/ABC-1-x:develop")
+
+    def test_a_tag_created_earlier_in_the_command_is_a_tag_in_its_push(self):
+        self.passes("git tag v1.0.0 && git push origin v1.0.0")
+        self.denied("git tag v1.0.0 && git push origin develop")
 
     def test_a_push_of_a_work_branch_passes(self):
         self.passes("git push -u origin story/ABC-1-export")

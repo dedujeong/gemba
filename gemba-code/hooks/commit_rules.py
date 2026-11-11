@@ -25,6 +25,7 @@ EXAMPLE = "for example `feat(hooks): block commit messages that break the commit
 PROTECTED_BRANCHES = ("main", "develop")
 CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
 ENDS_WITHOUT_A_COMMIT = {"--abort", "--quit"}
+LEAVES_A_MERGE = {"--no-commit", "--squash"}  # a merge with these waits for its commit; any other makes its own
 EDITOR_FIXUPS = ("amend:", "reword:")
 # Any git command that creates a commit, as whole words: the cheap test that skips every other command.
 CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s|merge\b.*--continue)(?![\w-])" % "|".join(map(re.escape, CREATES_COMMITS)), re.DOTALL)
@@ -154,12 +155,12 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = None
-    merging = {}  # repository -> True after a `git merge` earlier in this command, False after merge --abort/--quit
+    merging = {}  # repository -> True after a `git merge --no-commit/--squash` earlier in this command, False after a merge that commits or --abort/--quit
     for commit in git_commands.git_commands(command, cwd):
         key = git_commands.repository_key(commit.folder) if commit.folder else None
         names = git_commands.option_names(commit)
         if commit.subcommand == "merge" and key and "--continue" not in names:
-            merging[key] = not (ENDS_WITHOUT_A_COMMIT & names)
+            merging[key] = bool(LEAVES_A_MERGE & names) and not ENDS_WITHOUT_A_COMMIT & names
         if commit.subcommand not in CREATES_COMMITS and not (commit.subcommand == "merge" and "--continue" in names):
             continue
         if git_commands.project_of(commit, cwd) == "no":

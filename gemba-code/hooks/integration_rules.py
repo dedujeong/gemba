@@ -26,6 +26,7 @@ RELEVANT = re.compile(r"\bgit\b.*(?<![\w-])(?:%s)(?![\w-])|%s" % ("|".join(GIT_W
 UNREADABLE = ("Gemba rule (integration): this command contains a git push or a merge the hook could not read (a wrapper,"
               " a shell keyword, a folder or a branch it cannot tell or a quoted script), so it cannot check the"
               " integration mode. Confirm it.")
+NOT_A_NEW_TAG = {"-d", "--delete", "-l", "--list", "-v", "--verify"}  # `git tag` options that create no tag
 UNKNOWN = object()  # a branch the hook cannot tell
 
 
@@ -48,10 +49,10 @@ def is_a_tag(folder, name):
     return bool(git_commands.git(folder, "rev-parse", "--verify", "--quiet", f"refs/tags/{name}"))
 
 
-def pushed_branches(push):
+def pushed_branches(push, created=()):
     """The branches a `git push` writes, UNKNOWN when it depends on a branch the hook cannot tell. Tag pushes and
     deletions write none. `--all`, `--branches` and `--mirror` are reported as `all branches`. `--repo <remote>` takes the
-    remote, so then every positional is a refspec."""
+    remote, so then every positional is a refspec. `created` are the tags an earlier `git tag` of the same command makes."""
     flags = git_commands.option_names(push)
     if flags & {"--delete", "-d"}:
         return []
@@ -93,7 +94,7 @@ def pushed_branches(push):
             if tracked is None:
                 return UNKNOWN
             name = tracked
-        elif not colon and is_a_tag(push.folder, name):
+        elif not colon and (name in created or is_a_tag(push.folder, name)):
             continue
         name = name.removeprefix("refs/heads/")
         if name:
@@ -101,9 +102,9 @@ def pushed_branches(push):
     return branches
 
 
-def push_problem(push, mode):
+def push_problem(push, mode, created=()):
     """Why the push breaks the mode, None when the mode allows it, or UNKNOWN."""
-    branches = pushed_branches(push)
+    branches = pushed_branches(push, created)
     if branches is UNKNOWN:
         return UNKNOWN
     if not branches:
@@ -204,7 +205,10 @@ def decide(event):
         return modes[key]
 
     asking = False
+    tags = {}  # repository -> the tags an earlier `git tag` of this command creates
     for found in git_commands.git_commands(command, cwd):
+        if found.subcommand == "tag" and found.folder and not git_commands.option_names(found) & NOT_A_NEW_TAG:
+            tags.setdefault(git_commands.repository_key(found.folder), set()).update(found.args[:1])
         if found.subcommand not in GIT_WORDS:
             continue
         project = git_commands.project_of(found, cwd)
@@ -213,8 +217,10 @@ def decide(event):
         if project == "unknown":
             asking = asking or found.subcommand == "push" or mode_of(cwd) != "merge"
             continue
-        check = push_problem if found.subcommand == "push" else merge_problem
-        problem = check(found, mode_of(found.folder))
+        if found.subcommand == "push":
+            problem = push_problem(found, mode_of(found.folder), tags.get(git_commands.repository_key(found.folder), ()))
+        else:
+            problem = merge_problem(found, mode_of(found.folder))
         if problem is UNKNOWN:
             asking = True
         elif problem:
