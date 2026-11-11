@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: every `git push` of a project with setup asks the maintainer first.
 
-Reads the hook event from stdin. When a Bash command contains a `git push` and the
+Reads the hook event from stdin (alone, or through `bash_rules.py`, which calls `decide(event)`
+for the answer `(decision, reason)` or None). When a Bash command contains a `git push` and the
 project's CLAUDE.md has a `## Gemba` section, it prints an `ask` decision whose reason
 names the branch and the remote. In every other case it prints nothing, so the normal
 permission flow is untouched. It never allows, never denies and never pushes.
@@ -14,8 +15,8 @@ import sys
 import fallback_words  # before git_commands: it still loads when the parser does not
 
 git_commands = None  # imported by main() once the command is known to mention a push
-MENTIONS_A_PUSH = re.compile(r"\bgit\b.*\bpush\b", re.DOTALL)
-BROKEN = "git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote."
+MENTIONS_A_PUSH = fallback_words.MENTIONS_A_PUSH
+BROKEN = fallback_words.RULES["confirm_push"].broken
 
 WHOLE_PUSHES = (("--mirror", "every ref (mirror)"), ("--all", "all branches"), ("--tags", "all tags"))
 
@@ -55,17 +56,17 @@ def decide(event):
             continue
         project = git_commands.project_of(push, cwd)
         if project == "unknown":  # a cd the parser could not follow
-            return git_commands.emit("ask", "git push: the hook could not tell which folder this push runs in."
-                                            " Confirm before anything reaches the remote.")
+            return "ask", ("git push: the hook could not tell which folder this push runs in."
+                          " Confirm before anything reaches the remote.")
         if project == "yes":
-            return git_commands.emit("ask", reason(push))
+            return "ask", reason(push)
     if hidden:
-        return git_commands.emit("ask", "git push: " + git_commands.HIDDEN_SUBCOMMAND)
+        return "ask", "git push: " + git_commands.HIDDEN_SUBCOMMAND
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the push from it, so any such segment that mentions one asks with a generic reason.
     if (git_commands.unparsed_mentions(command, "push") or git_commands.unparsed_hides_subcommand(command)) \
             and git_commands.has_gemba(cwd):
-        git_commands.emit("ask", WRAPPED)
+        return "ask", WRAPPED
 
 
 def main():
@@ -86,7 +87,7 @@ def main():
             return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
-            "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
+            "permissionDecisionReason": fallback_words.RULES["confirm_push"].unloaded}}))
         return
     git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, MENTIONS_A_PUSH), BROKEN, event)
 

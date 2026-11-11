@@ -35,8 +35,10 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
   of only `@{u}`, `@{upstream}` or `<configured remote>/<the branch it runs on>`; a pull of that branch from a
   configured remote or a url, or of a remote only when it is the upstream remote of the branch. The remotes
   are read lazily and once.
+- `PROTECTED_BRANCHES`: develop and main, and `syncs_with_its_remote` below: the two rules several hooks share.
 - `run_hook(decide, relevant, reason, event=None)`: the shared `main()` skeleton. Reads the event from stdin
-  (or takes `event`), ignores everything but Bash, calls `decide(event)` and, if it raises, asks with
+  (or takes `event`), ignores everything but Bash, calls `decide(event)`, which returns `(decision, reason)` or None
+  and is emitted here, and, if it raises, asks with
   `reason` when the command matches `relevant`, the hook's own pattern (a hook that crashes does not block: fail closed). A
   hook keeps inline only the branch for the module failing to import.
 - `hides_subcommand(command, cwd)`: True when a GitCommand's subcommand cannot be trusted: it comes from a variable or a
@@ -73,6 +75,7 @@ from collections import namedtuple
 
 import fallback_words
 
+PROTECTED_BRANCHES = fallback_words.PROTECTED_BRANCHES  # develop and main: the one place the rules read them from
 SEPARATORS = "();<>|&\n"
 GLOBAL_OPTIONS_WITH_A_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
                                 "--attr-source", "--config-env", "--super-prefix", "--list-cmds"}
@@ -606,13 +609,16 @@ def run_hook(decide, relevant, reason, event=None):
     if event.get("tool_name") != "Bash":
         return
     try:
-        decide(event)
+        found = decide(event)
     except Exception:
         command = event.get("tool_input", {}).get("command", "")
         if isinstance(relevant, (tuple, list)):
             relevant = word_pattern(*relevant)
         if relevant(command) if callable(relevant) else relevant.search(command):
             emit("ask", reason)
+    else:
+        if found:
+            emit(*found)
 
 
 def git(folder, *args):

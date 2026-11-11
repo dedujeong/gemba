@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: every `git commit` of a project with setup follows the commit rules.
 
-Reads the hook event from stdin. When a Bash command contains a `git commit` and the project's
+Reads the hook event from stdin (alone, or through `bash_rules.py`, which calls `decide(event)`
+for the answer `(decision, reason)` or None). When a Bash command contains a `git commit` and the project's
 CLAUDE.md has a `## Gemba` section, it checks the message against the rules of references/context.md
 (Commits). A message that breaks one is denied with the rule it breaks; a message the hook cannot
 read from the command asks for confirmation. In every other case it prints nothing, so the normal
@@ -24,14 +25,13 @@ REVERT = re.compile(r'Revert ".+"(\n\nThis reverts commit [0-9a-f]{7,40}\.)?')
 FORMAT = "`<type>(<scope>): <description>`"
 EXAMPLE = "for example `feat(hooks): block commit messages that break the commit format`"
 
-PROTECTED_BRANCHES = ("main", "develop")
-CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
+PROTECTED_BRANCHES = fallback_words.PROTECTED_BRANCHES
+CREATES_COMMITS = fallback_words.CREATES_COMMITS
 ENDS_WITHOUT_A_COMMIT = {"--abort", "--quit"}
 LEAVES_A_MERGE = {"--no-commit", "--squash"}  # a merge with these waits for its commit; any other makes its own
 EDITOR_FIXUPS = ("amend:", "reword:")
-# Any git command that creates a commit, as whole words: the cheap test that skips every other command.
-CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s|merge\b.*--continue)(?![\w-])" % "|".join(map(re.escape, CREATES_COMMITS)), re.DOTALL)
-BROKEN = "Gemba rule (commits): the hook could not check this commit. Confirm the commit message follows the commit rules."
+CREATING_WORDS = fallback_words.CREATING_WORDS  # any git command that creates a commit: the cheap test that skips the others
+BROKEN = fallback_words.RULES["commit_rules"].broken
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
 HAS_ITS_OWN_MESSAGE = {"-m", "--message", "-F", "--file", "-C", "--reuse-message", "--fixup", "--squash"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
@@ -173,17 +173,17 @@ def decide(event):
         folder = commit.folder or cwd  # an unknown folder: the session's project holds the settings
         found = commit_problem(commit, folder, merging.get(key))
         if found and found[0] == "deny":
-            return git_commands.emit(*found)
+            return found
         asking = asking or found
     if asking:
-        return git_commands.emit(*asking)
+        return asking
     if hidden:
-        return git_commands.emit("ask", "Gemba rule (commits): " + git_commands.HIDDEN_SUBCOMMAND)
+        return "ask", "Gemba rule (commits): " + git_commands.HIDDEN_SUBCOMMAND
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
     if (git_commands.unparsed_mentions(command, CREATES_COMMITS) or git_commands.unparsed_hides_subcommand(command)) \
             and git_commands.has_gemba(cwd):
-        git_commands.emit("ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)"))
+        return "ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)")
 
 
 def main():
@@ -204,7 +204,7 @@ def main():
             return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
-            "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
+            "permissionDecisionReason": fallback_words.RULES["commit_rules"].unloaded}}))
         return
     git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, CREATING_WORDS), BROKEN, event)
 
