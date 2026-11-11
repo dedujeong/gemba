@@ -122,7 +122,7 @@ class MessagesThatPass(CommitRulesCase):
         self.passes("git commit -m 'feat(export): add the export'")
 
     def test_initial_commit_passes(self):
-        self.passes('git commit -m "Initial commit"')
+        self.passes('git commit -m "initial commit"')
 
     def test_a_merge_commit_message_passes(self):
         self.passes("git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
@@ -327,9 +327,10 @@ class ExactExemptions(CommitRulesCase):
         self.passes('git commit -m "squash! feat(export): add the export"')
 
     def test_initial_commit_is_exact(self):
-        self.blocked('git commit -m "Initial commit."')
-        self.blocked('git commit -m "Initial commit of the export"')
-        self.blocked('git commit -m "Initial commit\n\nBody"')
+        self.blocked('git commit -m "Initial commit"')
+        self.blocked('git commit -m "initial commit."')
+        self.blocked('git commit -m "initial commit of the export"')
+        self.blocked('git commit -m "initial commit\n\nBody"')
 
 
 class MessagesWithExpansions(CommitRulesCase):
