@@ -34,7 +34,7 @@ def reason(push):
     remote = remote or default_remote(folder, branch)
     whole = next((label for flag, label in WHOLE_PUSHES if flag in flags), None)
     target = ", ".join(refspecs) if refspecs else (whole or branch or "the current branch")
-    url = git_commands.git(folder, "remote", "get-url", "--push", remote)
+    url = "" if remote.startswith("-") else git_commands.git(folder, "remote", "get-url", "--push", remote)
     where = f"{remote} ({url})" if url else remote
     return f"git push: {target} to remote {where}. Confirm before anything reaches the remote."
 

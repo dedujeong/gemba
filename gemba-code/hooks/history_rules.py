@@ -66,9 +66,12 @@ def merge_problem(merge):
     return None
 
 
-def count(folder, *revisions):
-    """How many commits the revisions select, or None when git cannot tell."""
-    out = git_commands.git(folder, "rev-list", "--count", *revisions)
+def count(folder, *revisions, not_pushed=False):
+    """How many commits the revisions select (only those no remote has with `not_pushed`), or None when git
+    cannot tell. A revision that starts with `-` would be an option of git: it is not read."""
+    if any(revision.startswith("-") for revision in revisions):
+        return None
+    out = git_commands.git(folder, "rev-list", "--count", *revisions, *(("--not", "--remotes") if not_pushed else ()))
     return int(out) if out.isdigit() else None
 
 
@@ -88,7 +91,7 @@ def rebase_problem(rebase):
         upstream = rebase.args[0] if rebase.args else "@{u}"
         revisions = [f"{upstream}..{rebase.args[1] if len(rebase.args) > 1 else 'HEAD'}"]
     mine = count(rebase.folder, *revisions)
-    not_pushed = count(rebase.folder, *revisions, "--not", "--remotes")
+    not_pushed = count(rebase.folder, *revisions, not_pushed=True)
     if mine is None or not_pushed is None:
         return rule("rebase", f"the commits to rebase on {upstream} could not be read", todo)
     if mine != not_pushed:
