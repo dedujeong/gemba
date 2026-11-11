@@ -383,6 +383,25 @@ class Tags(HookCase):
                     "git tag gemba-code--v0.1.0", "git tag gemba-product--v1.2.3 main", "git tag -a gemba-design--v0.0.1 -m 'x'",
                     "git tag -f v1.2.3")
 
+    def test_moving_an_existing_tag_is_denied(self):
+        git(self.repo, "tag", "v1.2.3")
+        git(self.repo, "tag", "gemba-code--v0.1.0")
+        for command in ("git tag -f v1.2.3", "git tag --force v1.2.3 develop", "git tag -fa v1.2.3 -m x",
+                        "git tag -a -f gemba-code--v0.1.0 -m x", "git tag -f -s v1.2.3"):
+            self.assertIn("moves", self.denied(command, "tags"), command)
+
+    def test_forcing_a_version_tag_that_does_not_exist_yet_passes(self):
+        git(self.repo, "tag", "v1.2.3")
+        self.passes("git tag -f v1.2.4", "git tag --force gemba-code--v0.2.0 develop")
+
+    def test_deleting_a_version_tag_is_denied(self):
+        for command in ("git tag -d v1.2.3", "git tag --delete gemba-product--v0.1.0", "git tag -d wip v1.2.3",
+                        "git tag -d v1.2.3 && git push origin :refs/tags/v1.2.3"):
+            self.assertIn("version", self.denied(command, "tags"), command)
+
+    def test_deleting_a_tag_that_is_not_a_version_passes(self):
+        self.passes("git tag -d wip", "git tag --delete wip other", "git tag -d v1.2")
+
     def test_listing_deleting_and_verifying_tags_print_nothing(self):
         self.passes("git tag", "git tag -l", "git tag --list 'v*'", "git tag -l 'wip*'", "git tag -n", "git tag -d wip",
                     "git tag --delete wip", "git tag -v wip", "git tag --verify wip", "git tag --contains develop",

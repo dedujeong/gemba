@@ -174,18 +174,29 @@ def branch_problem(branch):
 
 
 VERSION_TAG = re.compile(r"v\d+\.\d+\.\d+|[a-z0-9][a-z0-9-]*--v\d+\.\d+\.\d+")
-TAG_NOT_CREATING = {"-l", "--list", "-d", "--delete", "-v", "--verify", "-n", "--contains", "--no-contains",
+TAG_NOT_CREATING = {"-l", "--list", "-v", "--verify", "-n", "--contains", "--no-contains",
                     "--merged", "--no-merged", "--points-at", "--sort", "--format"}
 
 
 def tag_problem(tag):
-    """The reason a tag breaks the rules, or None: a tag is a version, `vX.Y.Z` or `<plugin>--vX.Y.Z`."""
-    if not tag.args or {name for name, _ in tag.options} & TAG_NOT_CREATING:
+    """The reason a tag breaks the rules, or None: a tag is a version, `vX.Y.Z` or `<plugin>--vX.Y.Z`, a
+    version tag is never deleted and an existing tag is never moved."""
+    names = {name for name, _ in tag.options}
+    if names & {"-d", "--delete"}:
+        versions = [name for name in tag.args if VERSION_TAG.fullmatch(name)]
+        if versions:
+            return rule("tags", f"deleting the version tag {', '.join(versions)} loses a release",
+                        "Keep the tag; a version tag is never deleted")
         return None
-    if VERSION_TAG.fullmatch(tag.args[0]):
+    if not tag.args or names & TAG_NOT_CREATING:
         return None
-    return rule("tags", f"the tag {tag.args[0]} is not a version",
-                "Tag only versions, named vX.Y.Z or <plugin>--vX.Y.Z (for example gemba-product--v0.1.0)")
+    if not VERSION_TAG.fullmatch(tag.args[0]):
+        return rule("tags", f"the tag {tag.args[0]} is not a version",
+                    "Tag only versions, named vX.Y.Z or <plugin>--vX.Y.Z (for example gemba-product--v0.1.0)")
+    if names & {"-f", "--force"} and git_commands.git(tag.folder, "rev-parse", "-q", "--verify", f"refs/tags/{tag.args[0]}"):
+        return rule("tags", f"`-f` moves the tag {tag.args[0]}, which already exists",
+                    "Do not move a tag; release the fix as the next version")
+    return None
 
 
 CHECKS = {"tag": tag_problem, "branch": branch_problem, "merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
