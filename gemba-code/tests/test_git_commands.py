@@ -141,6 +141,13 @@ class OptionsFoundInReviewTest(unittest.TestCase):
         self.assertEqual(parse(["git", "pull", "--strategy", "ours", "--strategy-option", "theirs", "origin", "main"]),
                          GitCommand(None, "pull", [("--strategy", "ours"), ("--strategy-option", "theirs")], ["origin", "main"]))
 
+    def test_pull_options_with_a_value_do_not_shift_the_positionals(self):
+        for option in ("--depth", "--deepen", "--shallow-since", "--shallow-exclude", "--jobs", "--upstream-pack",
+                       "--server-option", "-j", "-o"):
+            found = parse(["git", "pull", option, "5", "origin", "main"])
+            self.assertEqual(found.args, ["origin", "main"], option)
+        self.assertEqual(parse(["git", "pull", "--recurse-submodules=on-demand", "origin", "main"]).args, ["origin", "main"])
+
     def test_commit_trailer_cleanup_and_pathspec_file_take_a_value(self):
         found = parse(["git", "commit", "--trailer", "Co: x", "--cleanup", "strip", "--pathspec-from-file", "f", "-m", "m"])
         self.assertEqual(found.options, [("--trailer", "Co: x"), ("--cleanup", "strip"), ("--pathspec-from-file", "f"), ("-m", "m")])
