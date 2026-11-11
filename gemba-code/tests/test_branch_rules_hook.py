@@ -179,6 +179,70 @@ class AsksWhenItCannotRead(HookTestCase):
         self.assertIsNone(decision(run("git status")))
 
 
+class BlocksABaseThatIsNotDevelop(HookTestCase):
+    def test_a_start_point_that_is_not_develop_is_denied_in_every_form(self):
+        for start in ("main", "HEAD", "origin/develop", "story/ABC-1-a", "abc1234"):
+            for command in (f"git switch -c story/ABC-2-b {start}", f"git checkout -b story/ABC-2-b {start}",
+                            f"git branch story/ABC-2-b {start}",
+                            f"git worktree add -b story/ABC-2-b ../w {start}"):
+                with self.subTest(command=command):
+                    reason = self.denied(command)
+                    self.assertTrue(reason.startswith("Gemba rule (branches): "), reason)
+                    self.assertIn("develop", reason)
+                    self.assertIn(start, reason)
+
+    def test_without_a_start_point_the_current_branch_must_be_develop(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        for command in ("git switch -c story/ABC-2-b", "git checkout -b story/ABC-2-b", "git branch story/ABC-2-b",
+                        "git worktree add -b story/ABC-2-b ../w"):
+            with self.subTest(command=command):
+                reason = self.denied(command)
+                self.assertIn("story/ABC-1-a", reason)
+                self.assertIn("develop", reason)
+
+    def test_a_detached_head_is_not_develop(self):
+        git(self.repo, "checkout", "-q", "--detach")
+        self.assertIn("develop", self.denied("git switch -c story/ABC-2-b"))
+
+    def test_the_folder_of_dash_c_is_the_one_checked(self):
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        git(other, "checkout", "-q", "-b", "task/ABC-5-x")
+        self.denied(f"git -C {other} switch -c story/ABC-2-b")
+        self.passes(f"git -C {self.repo} switch -c story/ABC-2-b", other)
+
+    def test_a_name_that_breaks_the_form_is_denied_for_the_name_first(self):
+        self.assertIn("is not <type>/<KEY>-<slug>", self.denied("git switch -c feature/login main"))
+
+
+class PassesDevelopAsBase(HookTestCase):
+    def test_a_valid_name_from_develop_passes_in_every_form(self):
+        for command in ("git switch -c story/ABC-2-b", "git switch -c story/ABC-2-b develop",
+                        "git switch -C story/ABC-2-b develop", "git checkout -b task/ABC-2-b develop",
+                        "git checkout -B bug/ABC-2-b", "git branch story/ABC-2-b", "git branch story/ABC-2-b develop",
+                        "git branch -f story/ABC-2-b develop", "git branch --track story/ABC-2-b develop",
+                        "git worktree add -b story/ABC-2-b ../w develop", "git worktree add -b story/ABC-2-b ../w",
+                        "git -C . switch -c story/ABC-2-b"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+    def test_a_spike_worktree_from_develop_passes_inside_the_worktree_too(self):
+        worktree = os.path.join(self.repo, ".claude", "worktrees", "ABC-9-try")
+        git(self.repo, "worktree", "add", "-q", "-b", "spike/ABC-9-try", worktree, "develop")
+        self.passes("git worktree add -b spike/ABC-10-other ../ABC-10-other develop", worktree)
+        self.passes("git switch -c task/ABC-11-x develop", worktree)
+        self.passes(f"git -C {self.repo} worktree add -b spike/ABC-12-y .claude/worktrees/ABC-12-y develop", worktree)
+        self.passes(f"git -C {self.repo} switch -c story/ABC-13-z", worktree)
+
+    def test_the_spike_worktree_command_of_the_implement_skill_passes(self):
+        self.passes("git worktree add -b spike/ABC-9-try .claude/worktrees/ABC-9-try develop")
+
+    def test_a_rename_has_no_base_check(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        self.passes("git branch -m story/ABC-1-b")
+        self.passes("git branch -M story/ABC-1-a story/ABC-1-b")
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

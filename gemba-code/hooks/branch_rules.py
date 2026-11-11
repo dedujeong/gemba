@@ -4,8 +4,9 @@
 Reads the hook event from stdin. When a Bash command creates or renames a branch (`git switch -c`,
 `git checkout -b`, `git branch <name>`, `git worktree add -b`, `git branch -m`) and the project's
 CLAUDE.md has a `## Gemba` section, it denies a name that is not `<type>/<KEY>-<slug>` with type story,
-task, bug or spike. A command the parser cannot read asks with a generic reason. In every other case it
-prints nothing, so the normal permission flow is untouched. It never allows and never runs a branch command.
+task, bug or spike, and a new branch whose base is not `develop` (the start point, or the current branch
+when there is none; a rename has no base). A command the parser cannot read asks with a generic reason.
+In every other case it prints nothing, so the normal permission flow is untouched. It never allows.
 """
 import json
 import os
@@ -29,29 +30,40 @@ PREFIX = "Gemba rule (branches): "
 
 
 def creations(command):
-    """The (name, start) of every branch the git command creates or renames; start is None when it has none."""
+    """The (name, start, renamed) of every branch the git command creates or renames; start is None when it
+    has none."""
     flags = {name for name, _ in command.options}
     if command.subcommand in ("switch", "checkout"):
         names = ("-c", "-C", "--create", "--force-create") if command.subcommand == "switch" else ("-b", "-B")
         name = next((value for option, value in command.options if option in names), None)
-        return [(name, command.args[0] if command.args else None)] if name else []
+        return [(name, command.args[0] if command.args else None, False)] if name else []
     if command.subcommand == "worktree":
         if command.args[:1] != ["add"]:
             return []
         name = next((value for option, value in command.options if option in ("-b", "-B")), None)
         start = command.args[2] if len(command.args) > 2 else None
-        return [(name, start)] if name else []
+        return [(name, start, False)] if name else []
     if command.subcommand == "branch" and command.args:
         if flags & {"-m", "-M", "--move"}:
-            return [(command.args[-1], None)]
+            return [(command.args[-1], None, True)]
         if not flags & BRANCH_MODES:
-            return [(command.args[0], command.args[1] if len(command.args) > 1 else None)]
+            return [(command.args[0], command.args[1] if len(command.args) > 1 else None, False)]
     return []
 
 
 def wrong(name):
     return (f"{PREFIX}the branch name '{name}' is not <type>/<KEY>-<slug> with type story, task, bug or spike. "
             f"Name it story/ABC-12-short-slug from develop.")
+
+
+def off_develop(start, folder):
+    """What is wrong with the base of the new branch, or None when it is develop."""
+    if start is not None:
+        return None if start == "develop" else f"the branch starts from '{start}', not from develop"
+    current = git_commands.current_branch(folder)
+    if current == "develop":
+        return None
+    return f"the branch starts from '{current or 'a detached HEAD'}', not from develop"
 
 
 def emit(decision, why):
@@ -68,10 +80,16 @@ def decide(event):
     found = git_commands.git_commands(command, cwd)
     seen = False
     for git_command in found:
-        for name, _start in creations(git_command):
+        for name, start, renamed in creations(git_command):
             seen = True
-            if git_commands.in_gemba_project(git_command.folder, cwd) and not NAME.fullmatch(name):
+            if not git_commands.in_gemba_project(git_command.folder, cwd):
+                continue
+            if not NAME.fullmatch(name):
                 emit("deny", wrong(name))
+                return
+            problem = None if renamed else off_develop(start, git_command.folder)
+            if problem:
+                emit("deny", f"{PREFIX}{problem}. Create it from develop: git switch -c {name} develop.")
                 return
     if seen:
         return
