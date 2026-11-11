@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 from test_confirm_push_hook import GEMBA_CLAUDE_MD, git, make_repo
@@ -94,13 +95,13 @@ class PassesAValidName(HookTestCase):
         for name in ("story/ABC-12-login", "task/ABC-3-add-tests", "bug/AB2-45-fix-the-crash", "spike/ABC-9-try-x2"):
             with self.subTest(name=name):
                 self.passes(f"git switch -c {name} develop")
-                self.passes(f"git branch -m {name}")
+                self.passes(f"git branch -c develop {name}")
 
     def test_commands_that_do_not_create_or_rename_a_branch_print_nothing(self):
         for command in ("git branch", "git branch --show-current", "git branch -a", "git branch -vv",
                         "git branch --list feature/*", "git branch -d feature/login", "git branch -D feature/login",
                         "git branch --contains abc123", "git branch -u origin/develop",
-                        "git branch --set-upstream-to=origin/develop", "git branch -c old feature/login",
+                        "git branch --set-upstream-to=origin/develop",
                         "git checkout develop", "git checkout feature/login", "git switch feature/login",
                         "git checkout -- file.txt", "git worktree add ../w develop", "git worktree list",
                         "git commit -m 'fix branch handling'", "git status"):
@@ -142,6 +143,11 @@ class AsksWhenItCannotRead(HookTestCase):
                 self.assertTrue(reason.startswith("Gemba rule (branches): "), reason)
                 self.assertIn("could not read", reason)
 
+    def test_a_wrapped_creation_after_another_command_asks_and_a_commit_message_does_not(self):
+        self.asked("git status; bash -c 'git branch badname'")
+        self.passes("git commit -m 'fix branch handling'")
+        self.passes("git status; bash -c 'git branch --show-current'")
+
     def test_a_wrapped_command_that_does_not_create_a_branch_prints_nothing(self):
         for command in ("bash -c 'git branch --show-current'", "bash -c 'git status'", "sudo git branch -a"):
             with self.subTest(command=command):
@@ -166,8 +172,9 @@ class AsksWhenItCannotRead(HookTestCase):
         sitecustomize_dir = os.path.join(self.repo, "boom")
         os.mkdir(sitecustomize_dir)
         with open(os.path.join(sitecustomize_dir, "git_commands.py"), "w", encoding="utf-8") as f:
-            f.write("def git_commands(*a, **k):\n    raise RuntimeError('boom')\n"
-                    "def mentions(*a, **k):\n    raise RuntimeError('boom')\n")
+            with open(os.path.join(ROOT, "hooks", "git_commands.py"), encoding="utf-8") as real:
+                f.write(real.read())
+            f.write("\n\ndef git_commands(*a, **k):\n    raise RuntimeError('boom')\n")
         hooks = os.path.join(sitecustomize_dir, "branch_rules.py")
         with open(SCRIPT, encoding="utf-8") as f, open(hooks, "w", encoding="utf-8") as g:
             g.write(f.read())
@@ -179,9 +186,46 @@ class AsksWhenItCannotRead(HookTestCase):
         self.assertIsNone(decision(run("git status")))
 
 
+class FallbacksMatchTheSameCreations(HookTestCase):
+    def standalone(self, command):
+        """The hook alone in a folder: its parser module cannot be imported."""
+        folder = tempfile.mkdtemp(dir=self.repo)
+        hook = os.path.join(folder, "branch_rules.py")
+        with open(SCRIPT, encoding="utf-8") as f, open(hook, "w", encoding="utf-8") as g:
+            g.write(f.read())
+        event = {"tool_name": "Bash", "cwd": self.repo, "tool_input": {"command": command}}
+        return subprocess.run([sys.executable, hook], input=json.dumps(event), capture_output=True, text=True)
+
+    def crashing(self, command):
+        folder = tempfile.mkdtemp(dir=self.repo)
+        with open(os.path.join(ROOT, "hooks", "git_commands.py"), encoding="utf-8") as real, \
+                open(os.path.join(folder, "git_commands.py"), "w", encoding="utf-8") as f:
+            f.write(real.read() + "\n\ndef git_commands(*a, **k):\n    raise RuntimeError('boom')\n")
+        with open(SCRIPT, encoding="utf-8") as f, open(os.path.join(folder, "branch_rules.py"), "w", encoding="utf-8") as g:
+            g.write(f.read())
+        event = {"tool_name": "Bash", "cwd": self.repo, "tool_input": {"command": command}}
+        return subprocess.run([sys.executable, os.path.join(folder, "branch_rules.py")], input=json.dumps(event),
+                              capture_output=True, text=True)
+
+    CREATIONS = ("git switch -c x", "git checkout -b x", "git branch x", "git branch -m x", "git branch -c old x",
+                 "git worktree add -b x ../w", "git switch --orphan x", "git branch -f x develop",
+                 "git checkout --orphan x")
+    OTHERS = ("git status", "git branch -a", "git branch --show-current", "git branch -d x", "git switch develop")
+
+    def test_the_import_error_and_the_crash_ask_for_the_same_creations(self):
+        for command in self.CREATIONS:
+            with self.subTest(command=command):
+                self.assertEqual(decision(self.standalone(command))["permissionDecision"], "ask")
+                self.assertEqual(decision(self.crashing(command))["permissionDecision"], "ask")
+        for command in self.OTHERS:
+            with self.subTest(command=command):
+                self.assertIsNone(decision(self.standalone(command)))
+                self.assertIsNone(decision(self.crashing(command)))
+
+
 class BlocksABaseThatIsNotDevelop(HookTestCase):
     def test_a_start_point_that_is_not_develop_is_denied_in_every_form(self):
-        for start in ("main", "HEAD", "origin/develop", "story/ABC-1-a", "abc1234"):
+        for start in ("main", "origin/develop", "story/ABC-1-a", "abc1234"):
             for command in (f"git switch -c story/ABC-2-b {start}", f"git checkout -b story/ABC-2-b {start}",
                             f"git branch story/ABC-2-b {start}",
                             f"git worktree add -b story/ABC-2-b ../w {start}"):
@@ -241,6 +285,110 @@ class PassesDevelopAsBase(HookTestCase):
         git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
         self.passes("git branch -m story/ABC-1-b")
         self.passes("git branch -M story/ABC-1-a story/ABC-1-b")
+
+
+class TheBaseIsTheTrackedBranch(HookTestCase):
+    def test_a_switch_to_develop_before_the_creation_makes_develop_the_base(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        self.passes("git switch develop && git switch -c story/ABC-2-b")
+        self.passes("git checkout develop && git checkout -b story/ABC-2-b")
+        self.passes("git checkout develop; git branch story/ABC-2-b")
+        self.passes("git switch develop && git worktree add -b story/ABC-2-b ../w")
+        self.denied("git switch -c story/ABC-2-b")
+
+    def test_a_switch_away_from_develop_before_the_creation_makes_it_the_wrong_base(self):
+        git(self.repo, "branch", "story/ABC-1-a")
+        self.assertIn("story/ABC-1-a", self.denied("git switch story/ABC-1-a && git switch -c story/ABC-2-b"))
+
+    def test_a_cd_before_the_command_is_followed(self):
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        git(other, "checkout", "-q", "-b", "task/ABC-5-x")
+        self.denied(f"cd {other} && git switch -c story/ABC-2-b")
+        self.passes(f"cd {self.repo} && git switch -c story/ABC-2-b", other)
+
+    def test_a_folder_or_a_branch_that_cannot_be_told_asks(self):
+        self.asked("cd $SOMEWHERE && git switch -c story/ABC-2-b")
+        self.asked("git switch - && git switch -c story/ABC-2-b")
+
+    def test_head_and_at_are_develop_only_when_the_tracked_branch_is_develop(self):
+        self.passes("git switch -c story/ABC-2-b HEAD")
+        self.passes("git switch -c story/ABC-2-b @")
+        self.passes("git worktree add -b story/ABC-2-b ../w HEAD")
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        self.denied("git switch -c story/ABC-2-b HEAD")
+        self.denied("git switch -c story/ABC-2-b @")
+        self.passes("git switch develop && git switch -c story/ABC-2-b HEAD")
+
+    def test_the_other_spellings_of_the_local_develop_pass(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        for command in ("git switch -c story/ABC-2-b refs/heads/develop", "git branch story/ABC-2-b refs/heads/develop",
+                        "git worktree add -b story/ABC-2-b ../w refs/heads/develop"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+    def test_origin_develop_is_denied_and_the_reason_says_the_rule_is_the_local_develop(self):
+        reason = self.denied("git switch -c story/ABC-2-b origin/develop")
+        self.assertIn("origin/develop", reason)
+        self.assertIn("local develop", reason)
+
+    def test_a_worktree_with_the_lock_and_a_reason_passes(self):
+        self.passes("git worktree add --lock --reason wip -b spike/ABC-1-x ../w develop")
+        self.denied("git worktree add --lock --reason wip -b spike/ABC-1-x ../w main")
+
+
+class CopiesOrphansAndRenames(HookTestCase):
+    def test_a_copy_is_checked_by_its_new_name(self):
+        for flag in ("-c", "-C", "--copy"):
+            for command in (f"git branch {flag} old feature/login", f"git branch {flag} feature/login"):
+                with self.subTest(command=command):
+                    self.assertIn("feature/login", self.denied(command))
+
+    def test_a_copy_is_based_on_the_old_branch_or_the_current_one(self):
+        self.passes("git branch -c develop story/ABC-2-b")
+        self.passes("git branch --copy story/ABC-2-b")
+        self.assertIn("main", self.denied("git branch -c main story/ABC-2-b"))
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        self.assertIn("story/ABC-1-a", self.denied("git branch -C story/ABC-2-b"))
+        self.passes("git branch -c develop story/ABC-2-b")
+
+    def test_an_orphan_branch_is_checked_by_name_and_denied_as_not_from_develop(self):
+        for command in ("git switch --orphan feature/x", "git checkout --orphan feature/x"):
+            with self.subTest(command=command):
+                self.assertIn("feature/x", self.denied(command))
+        for command in ("git switch --orphan story/ABC-2-b", "git checkout --orphan story/ABC-2-b",
+                        "git checkout --orphan story/ABC-2-b develop"):
+            with self.subTest(command=command):
+                reason = self.denied(command)
+                self.assertIn("orphan", reason)
+                self.assertIn("develop", reason)
+
+    def test_renaming_develop_or_main_away_is_denied(self):
+        git(self.repo, "branch", "main")
+        for command in ("git branch -m develop story/ABC-2-b", "git branch -M main story/ABC-2-b",
+                        "git branch --move develop story/ABC-2-b", "git branch -m story/ABC-2-b"):
+            with self.subTest(command=command):
+                self.assertIn("rename", self.denied(command))
+        git(self.repo, "checkout", "-q", "main")
+        self.assertIn("main", self.denied("git branch -m story/ABC-2-b"))
+
+    def test_renaming_another_branch_still_passes(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        self.passes("git branch -m story/ABC-1-b")
+        self.passes("git branch -m story/ABC-1-a story/ABC-1-b")
+        self.passes("git branch -m task/ABC-1-a task/ABC-1-b")
+
+
+class TheReasonSuggestsTheSameForm(HookTestCase):
+    def test_each_form_is_suggested_back(self):
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-a")
+        for command, suggestion in (
+                ("git worktree add -b story/ABC-2-b ../w", "git worktree add -b story/ABC-2-b <path> develop"),
+                ("git checkout -b story/ABC-2-b", "git checkout -b story/ABC-2-b develop"),
+                ("git branch story/ABC-2-b", "git branch story/ABC-2-b develop"),
+                ("git switch -c story/ABC-2-b", "git switch -c story/ABC-2-b develop")):
+            with self.subTest(command=command):
+                self.assertIn(suggestion, self.denied(command))
 
 
 class RegisteredInThePlugin(unittest.TestCase):

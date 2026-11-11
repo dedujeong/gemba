@@ -1,53 +1,73 @@
 #!/usr/bin/env python3
 """PreToolUse hook: the branches of a project with setup follow the branch rules.
 
-Reads the hook event from stdin. When a Bash command creates or renames a branch (`git switch -c`,
-`git checkout -b`, `git branch <name>`, `git worktree add -b`, `git branch -m`) and the project's
-CLAUDE.md has a `## Gemba` section, it denies a name that is not `<type>/<KEY>-<slug>` with type story,
-task, bug or spike, and a new branch whose base is not `develop` (the start point, or the current branch
-when there is none; a rename has no base). A command the parser cannot read asks with a generic reason.
-In every other case it prints nothing, so the normal permission flow is untouched. It never allows.
+Reads the hook event from stdin. When a Bash command creates, copies or renames a branch (`git switch -c`,
+`git checkout -b`, `git branch <name>`, `git branch -c|-m`, `git worktree add -b`, `--orphan`) and the
+project's CLAUDE.md has a `## Gemba` section, it denies a name that is not `<type>/<KEY>-<slug>` with type
+story, task, bug or spike, a new branch whose base is not the local `develop` (the start point, or the branch
+checked out when the command runs, as the shared parser tracks it; an orphan branch has none), and the
+rename of `develop` or `main` away. A folder or a branch the parser cannot follow, and a creation hidden in
+a wrapper, ask. In every other case it prints nothing, so the normal permission flow is untouched. It never
+allows.
 """
 import json
 import os
 import re
 import sys
+from collections import namedtuple
 
-try:
-    import git_commands
-except ImportError:  # a crash here would not block, so main() asks for any command that creates a branch
-    git_commands = None
+git_commands = None  # imported by main() once the command is known to create a branch
 
 NAME = re.compile(r"(story|task|bug|spike)/[A-Z][A-Z0-9]*-\d+-[a-z0-9]+(-[a-z0-9]+)*")
-BRANCH_MODES = {"-d", "-D", "--delete", "-m", "-M", "--move", "-c", "-C", "--copy", "-l", "--list", "-a", "--all",
-                "-r", "--remotes", "-v", "-vv", "--verbose", "--contains", "--no-contains", "--merged",
-                "--no-merged", "--show-current", "-u", "--set-upstream-to", "--unset-upstream",
-                "--edit-description", "--points-at", "--sort", "--format"}
-CREATING = (r"\bgit\b.*\b(switch\s+(-c|-C|--create|--force-create)|checkout\s+-[bB]"
-            r"|worktree\s+add\b.*\s-[bB]\b|branch\s+-[mM]\b)")
-CREATING_BRANCH_WORD = r"\bgit\b.*\bbranch\s+[^-\s]"
+PROTECTED = ("main", "develop")
+DEVELOP = ("develop", "refs/heads/develop")
+CURRENT = ("HEAD", "@")
+BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose",
+                "--contains", "--no-contains", "--merged", "--no-merged", "--show-current", "-u",
+                "--set-upstream-to", "--unset-upstream", "--edit-description", "--points-at", "--sort", "--format"}
+# Any command that creates, copies or renames a branch, as one pattern: the cheap test that skips every other
+# command before the import, the test of a wrapped creation and the fallback when the parser fails.
+CREATING = re.compile(
+    r"\bgit\b.*(?<![\w-])(?:"
+    r"(?:switch|checkout)\s(?:.*\s)?-(?:[a-zA-Z]*[cCbB]|-create|-force-create|-orphan)(?![\w-])"
+    r"|worktree\s+add\s(?:.*\s)?-[bB](?![\w-])"
+    r"|branch\s+(?:-[fqt]\S*\s+|--(?:force|track|quiet)\s+)*[^-\s]"
+    r"|branch\s(?:.*\s)?(?:-[a-zA-Z]*[mMcC]|--move|--copy)(?![\w-])"
+    r")", re.DOTALL)
 PREFIX = "Gemba rule (branches): "
+SUGGESTED = {"worktree": "git worktree add -b {name} <path> develop", "checkout": "git checkout -b {name} develop",
+             "branch": "git branch {name} develop", "switch": "git switch -c {name} develop"}
+BROKEN = PREFIX + "the branch hook could not read this command. Confirm that the branch is named <type>/<KEY>-<slug> and starts from develop."
+
+# kind: "create" (a start point, or None for the current branch), "copy" (start = the old branch), "orphan"
+# (no history) or "rename" (start = the old branch, None for the current one).
+Creation = namedtuple("Creation", "name start kind")
 
 
 def creations(command):
-    """The (name, start, renamed) of every branch the git command creates or renames; start is None when it
-    has none."""
-    flags = {name for name, _ in command.options}
+    """The Creation of every branch the git command creates, copies or renames."""
+    flags = git_commands.option_names(command)
+    options = dict(command.options)
     if command.subcommand in ("switch", "checkout"):
+        orphan = options.get("--orphan")
+        if orphan:
+            return [Creation(orphan, None, "orphan")]
         names = ("-c", "-C", "--create", "--force-create") if command.subcommand == "switch" else ("-b", "-B")
-        name = next((value for option, value in command.options if option in names), None)
-        return [(name, command.args[0] if command.args else None, False)] if name else []
+        name = next((value for option, value in command.options if option in names and value), None)
+        return [Creation(name, command.args[0] if command.args else None, "create")] if name else []
     if command.subcommand == "worktree":
         if command.args[:1] != ["add"]:
             return []
-        name = next((value for option, value in command.options if option in ("-b", "-B")), None)
-        start = command.args[2] if len(command.args) > 2 else None
-        return [(name, start, False)] if name else []
+        name = next((value for option, value in command.options if option in ("-b", "-B") and value), None)
+        return [Creation(name, command.args[2] if len(command.args) > 2 else None, "create")] if name else []
     if command.subcommand == "branch" and command.args:
+        old = command.args[0] if len(command.args) > 1 else None
         if flags & {"-m", "-M", "--move"}:
-            return [(command.args[-1], None, True)]
+            return [Creation(command.args[-1], old, "rename")]
+        if flags & {"-c", "-C", "--copy"}:
+            return [Creation(command.args[-1], old, "copy")]
         if not flags & BRANCH_MODES:
-            return [(command.args[0], command.args[1] if len(command.args) > 1 else None, False)]
+            return [Creation(command.args[0], command.args[1] if len(command.args) > 1 else None, "create")]
     return []
 
 
@@ -56,53 +76,82 @@ def wrong(name):
             f"Name it story/ABC-12-short-slug from develop.")
 
 
-def off_develop(start, folder):
-    """What is wrong with the base of the new branch, or None when it is develop."""
-    if start is not None:
-        return None if start == "develop" else f"the branch starts from '{start}', not from develop"
-    current = git_commands.current_branch(folder)
-    if current == "develop":
+def off_develop(creation, tracked):
+    """What is wrong with the base of the new branch (None when it is the local develop), or "ask" when the
+    tracked branch cannot be told and the base needs it."""
+    start = creation.start
+    if creation.kind == "orphan":
+        return "an orphan branch has no history from develop, it starts from nothing"
+    if start in DEVELOP:
         return None
-    return f"the branch starts from '{current or 'a detached HEAD'}', not from develop"
+    if start is None or start in CURRENT:
+        if tracked is None:
+            return "ask"
+        if tracked == "develop":
+            return None
+        return f"the branch starts from '{tracked or 'a detached HEAD'}', not from develop"
+    if start == "origin/develop":
+        return "the branch starts from 'origin/develop', and the rule is the local develop, not the remote one"
+    return f"the branch starts from '{start}', not from develop"
 
 
-def emit(decision, why):
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": decision,
-        "permissionDecisionReason": why,
-    }}))
+def how_to_start(creation, command, name):
+    form = "switch" if creation.kind == "orphan" else command.subcommand
+    return SUGGESTED[form].format(name=name)
+
+
+def hint_unknown():
+    return (PREFIX + "the folder or the branch this command runs on could not be told. Run it from a plain folder, "
+            "with one `cd` to a path or `-C`, so the hook can check the branch name and that it starts from develop.")
+
+
+def check(command, creation):
+    """A (decision, reason) for one creation, or None when it follows the rules."""
+    if not NAME.fullmatch(creation.name):
+        return "deny", wrong(creation.name)
+    if creation.kind == "rename":
+        old = creation.start if creation.start is not None else command.branch
+        if old is None:
+            return "ask", hint_unknown()
+        if old in PROTECTED:
+            return "deny", f"{PREFIX}this renames '{old}' away, and develop and main keep their names. Rename a work branch instead."
+        return None
+    tracked = command.branch
+    if creation.kind == "copy" and creation.start is not None:
+        creation = creation._replace(kind="create")  # the old branch is the start point
+    problem = off_develop(creation, tracked)
+    if problem == "ask":
+        return "ask", hint_unknown()
+    if problem:
+        return "deny", f"{PREFIX}{problem}. Create it from develop: {how_to_start(creation, command, creation.name)}."
+    return None
 
 
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
-    found = git_commands.git_commands(command, cwd)
-    seen = False
-    for git_command in found:
-        for name, start, renamed in creations(git_command):
-            seen = True
-            if not git_commands.in_gemba_project(git_command.folder, cwd):
+    asking = None
+    for git_command in git_commands.git_commands(command, cwd):
+        for creation in creations(git_command):
+            project = git_commands.project_of(git_command, cwd)
+            if project == "no":
                 continue
-            if not NAME.fullmatch(name):
-                emit("deny", wrong(name))
-                return
-            problem = None if renamed else off_develop(start, git_command.folder)
-            if problem:
-                emit("deny", f"{PREFIX}{problem}. Create it from develop: git switch -c {name} develop.")
-                return
-    if seen:
-        return
+            found = ("ask", hint_unknown()) if project == "unknown" else check(git_command, creation)
+            if found and found[0] == "deny":
+                return git_commands.emit(*found)
+            asking = asking or found
+    if asking:
+        return git_commands.emit(*asking)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
-    # keyword) hides the creation from it, so a command that looks like one asks with a generic reason.
-    looks_like = re.search(CREATING, command, re.DOTALL) or (not found and re.search(CREATING_BRANCH_WORD, command, re.DOTALL))
-    if looks_like and git_commands.has_gemba(cwd):
-        emit("ask", f"{PREFIX}this command creates or renames a branch in a way the hook could not read "
-                    "(a wrapper, a shell keyword or a quoted script). Confirm that the branch is named "
-                    "<type>/<KEY>-<slug> and starts from develop.")
+    # keyword) hides the creation from it, so any such segment that looks like one asks with a generic reason.
+    if git_commands.unparsed_mentions(command, CREATING) and git_commands.has_gemba(cwd):
+        git_commands.emit("ask", PREFIX + "this command creates, copies or renames a branch in a way the hook could not read "
+                          "(a wrapper, a shell keyword or a quoted script). Confirm that the branch is named "
+                          "<type>/<KEY>-<slug> and starts from develop.")
 
 
 def main():
+    global git_commands
     try:
         event = json.load(sys.stdin)
     except ValueError:
@@ -110,18 +159,23 @@ def main():
     if event.get("tool_name") != "Bash":
         return
     command = event.get("tool_input", {}).get("command", "")
-    if git_commands is None:
-        if re.search(CREATING, command, re.DOTALL):
-            emit("ask", f"{PREFIX}the branch hook could not load its parser. Confirm that the branch is named "
-                        "<type>/<KEY>-<slug> and starts from develop.")
-        return
+    if not CREATING.search(command):
+        return  # nothing creates a branch: skip the import and the parsing
     try:
-        decide(event)
-    except Exception:
-        # A crash exits non-zero and does not block, so the branch would be made unchecked: fail closed.
-        if re.search(CREATING, command, re.DOTALL) or re.search(CREATING_BRANCH_WORD, command, re.DOTALL):
-            emit("ask", f"{PREFIX}the branch hook could not read this command. Confirm that the branch is named "
-                        "<type>/<KEY>-<slug> and starts from develop.")
+        import git_commands
+    except ImportError:  # a crash here would not block: ask for any command that creates a branch
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "ask",
+            "permissionDecisionReason": PREFIX + "the branch hook could not load its parser. Confirm that the branch is named "
+                                                 "<type>/<KEY>-<slug> and starts from develop."}}))
+        return
+
+    def guarded(event):
+        try:
+            decide(event)
+        except Exception:  # the same creation pattern as the ImportError fallback: a crash does not block
+            git_commands.emit("ask", BROKEN)
+    git_commands.run_hook(guarded, ("branch",), BROKEN, event)
 
 
 if __name__ == "__main__":
