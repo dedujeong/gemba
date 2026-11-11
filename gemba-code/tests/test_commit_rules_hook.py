@@ -260,6 +260,57 @@ class TrackedBranch(CommitRulesCase):
         self.blocked('cd && git commit -m "add the export."')
 
 
+class ExactExemptions(CommitRulesCase):
+    def test_the_default_messages_of_git_merge_pass(self):
+        for message in ("Merge branch 'story/ABC-1-export'", "Merge branch 'story/ABC-1-export' into develop",
+                        "Merge remote-tracking branch 'origin/develop' into develop", "Merge remote-tracking branch 'origin/x'",
+                        "Merge tag 'v1.0.0' into develop", "Merge pull request #12 from acme/story-export"):
+            with self.subTest(message=message):
+                self.passes(f'git commit -m "{message}"')
+
+    def test_a_message_that_only_starts_like_a_merge_is_checked(self):
+        for message in ("Merge the export with the import.", "Merge ABC-12 now", "Merge branch story/x",
+                        "Merge branch 'x' into develop."):
+            with self.subTest(message=message):
+                self.blocked(f'git commit -m "{message}"')
+
+    def test_a_merge_message_with_a_body_is_blocked(self):
+        self.blocked("git commit -m \"Merge branch 'x' into develop\n\nBody\"")
+        self.blocked("git commit -m \"Merge branch 'x'\" -m \"Body\"")
+
+    def test_a_fixup_or_squash_message_must_be_one_line(self):
+        self.blocked('git commit -m "fixup! feat(export): add the export\n\nBody"')
+        self.blocked('git commit -m "squash! feat(export): add the export\n\nBody"')
+        self.passes('git commit -m "squash! feat(export): add the export"')
+
+    def test_initial_commit_is_exact(self):
+        self.blocked('git commit -m "Initial commit."')
+        self.blocked('git commit -m "Initial commit of the export"')
+        self.blocked('git commit -m "Initial commit\n\nBody"')
+
+
+class MessagesWithExpansions(CommitRulesCase):
+    def test_a_variable_asks(self):
+        self.asked('git commit -m "feat(export): add $NAME"')
+        self.asked('git commit -m "feat(export): add ${NAME}"')
+        self.asked("git commit -m 'feat(export): add $NAME'")
+
+    def test_a_command_substitution_or_a_backtick_asks(self):
+        self.asked('git commit -m "feat(export): add $(date)"')
+        self.asked('git commit -m "feat(export): add `date`"')
+
+
+class WrappedCommitFallback(CommitRulesCase):
+    def test_other_git_commands_that_only_name_a_commit_pass(self):
+        self.passes("git log --grep commit")
+        self.passes("git commit-graph write")
+        self.passes("git rev-parse HEAD^{commit}")
+        self.passes('git log --format="%H commit"')
+
+    def test_a_wrapped_commit_next_to_other_commands_still_asks(self):
+        self.asked("git status && bash -c 'git commit -m \"add the export\"'")
+
+
 class OtherCommitsOnProtectedBranches(CommitRulesCase):
     def test_revert_cherry_pick_and_am_are_blocked_on_develop_and_main(self):
         git(self.repo, "checkout", "-q", "develop")
@@ -276,7 +327,8 @@ class OtherCommitsOnProtectedBranches(CommitRulesCase):
     def test_finishing_or_leaving_the_operation_passes(self):
         git(self.repo, "checkout", "-q", "develop")
         for command in ("git revert --abort", "git revert --continue", "git cherry-pick --skip", "git cherry-pick --quit",
-                        "git am --abort", "git am --continue", "git am --skip", "git revert -n HEAD"):
+                        "git am --abort", "git am --continue", "git am --skip", "git revert -n HEAD",
+                        "git cherry-pick --no-commit abc1234"):
             with self.subTest(command=command):
                 self.passes(command)
 
@@ -289,6 +341,25 @@ class OtherCommitsOnProtectedBranches(CommitRulesCase):
         repo = make_repo(claude_md=None)
         self.addCleanup(subprocess.run, ["rm", "-rf", repo])
         self.passes("git revert HEAD", repo)
+
+
+class FixupThatOpensAnEditor(CommitRulesCase):
+    def test_fixup_amend_and_reword_ask(self):
+        self.assertIn("editor", self.asked("git commit --fixup=amend:HEAD"))
+        self.asked("git commit --fixup=reword:abc1234")
+        self.asked("git commit --fixup amend:abc1234")
+
+    def test_a_plain_fixup_still_passes(self):
+        self.passes("git commit --fixup=abc1234")
+
+
+class JiraKeyCase(CommitRulesCase):
+    def test_a_lowercase_key_of_the_project_is_blocked(self):
+        self.assertIn("Jira key", self.blocked('git commit -m "feat(export): add the export for abc-12"'))
+        self.assertIn("Jira key", self.blocked('git commit -m "feat(abc-12): add the export"'))
+
+    def test_a_word_with_another_prefix_passes(self):
+        self.passes('git commit -m "fix(export): read abcd-12 and utf-8"')
 
 
 class ProjectsWithoutGemba(CommitRulesCase):

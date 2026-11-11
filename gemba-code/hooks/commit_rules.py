@@ -20,6 +20,8 @@ except ImportError:  # a crash here would not block, so main() asks for any comm
 TYPES = ("build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test")
 HEADER = re.compile(r"(\w+)(?:\(([^)]*)\))?!?: \S.*", re.DOTALL)
 ANY_JIRA_KEY = r"[A-Z][A-Z0-9]+"
+MERGE = re.compile(r"Merge (?:branch|remote-tracking branch|tag|commit) '[^'\n]+'(?: of \S+)?(?: into \S*[^\s.])?"
+                   r"|Merge pull request #\d+ from \S+")
 REVERT = re.compile(r'Revert ".+"(\n\nThis reverts commit [0-9a-f]{7,40}\.)?')
 FORMAT = "`<type>(<scope>): <description>`"
 EXAMPLE = "for example `feat(hooks): block commit messages that break the commit format`"
@@ -27,6 +29,7 @@ EXAMPLE = "for example `feat(hooks): block commit messages that break the commit
 PROTECTED_BRANCHES = ("main", "develop")
 CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
 ENDS_THE_OPERATION = {"--abort", "--continue", "--skip", "--quit"}
+EDITOR_FIXUPS = ("amend:", "reword:")
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
 
@@ -44,7 +47,7 @@ def message_problem(message, project=None):
     """The reason a message breaks the rules, or None when it follows them. `project` is the Jira
     Project of the Gemba section: only its keys count, so words like UTF-8 are not taken for one."""
     message = message.rstrip("\n")
-    if message == "Initial commit" or message.startswith(("Merge ", "fixup! ", "squash! ")):
+    if message == "Initial commit" or MERGE.fullmatch(message) or re.fullmatch(r"(?:fixup|squash)! [^\n]+", message):
         return None
     if REVERT.fullmatch(message):
         return None
@@ -57,7 +60,7 @@ def message_problem(message, project=None):
     kind, scope = header.group(1), header.group(2)
     if kind not in TYPES:
         return rule(f"`{kind}` is not an allowed type", f"Use one of {', '.join(TYPES)}, {EXAMPLE}")
-    if re.search(rf"\b{re.escape(project) if project else ANY_JIRA_KEY}-\d+\b", message):
+    if re.search(rf"\b(?i:{re.escape(project)})-\d+\b" if project else rf"\b{ANY_JIRA_KEY}-\d+\b", message):
         return rule("the message has a Jira key", "Remove it: the branch and the work item link the commit, not the message")
     if scope is not None and not re.fullmatch(r"[a-z0-9-]+", scope):
         return rule(f"the scope `{scope}` is not in lowercase", "Write the scope in lowercase, one of the project's Jira components")
@@ -94,9 +97,11 @@ def message_decision(commit, project):
     names = {name for name, _ in commit.options}
     if names & MESSAGE_FROM_A_FILE:
         return "ask", unreadable("it comes from a file")
+    if any((value or "").startswith(EDITOR_FIXUPS) for name, value in commit.options if name == "--fixup"):
+        return "ask", unreadable("a fixup with amend: or reword: opens an editor")
     messages = [value or "" for name, value in commit.options if name in ("-m", "--message")]
-    if any("$(" in message or "`" in message for message in messages):
-        return "ask", unreadable("it comes from a substitution or a heredoc")
+    if any("$" in message or "`" in message for message in messages):
+        return "ask", unreadable("it has a variable, a substitution or a heredoc")
     if names & REUSES_A_MESSAGE:
         return None
     if not messages:
@@ -128,7 +133,6 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = None
-    commits = [found for found in git_commands.git_commands(command, cwd) if found.subcommand == "commit"]
     for commit in git_commands.git_commands(command, cwd):
         if commit.subcommand not in CREATES_COMMITS:
             continue
@@ -143,7 +147,7 @@ def decide(event):
         return git_commands.emit(*asking)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
-    if not commits and git_commands.mentions(command, "commit") and git_commands.has_gemba(cwd):
+    if git_commands.unparsed_mentions(command, "commit") and git_commands.has_gemba(cwd):
         git_commands.emit("ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)"))
 
 
