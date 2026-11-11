@@ -195,7 +195,7 @@ def main():
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
         return
-    git_commands.run_hook(decide, CREATES_COMMITS, BROKEN, event)
+    git_commands.run_hook(decide, CREATING_WORDS, BROKEN, event)
 
 
 if __name__ == "__main__":

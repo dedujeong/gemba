@@ -115,6 +115,21 @@ class MergeModePushes(HookCase):
         self.assertIsNone(decision(run_hook(repo, "git push origin task/x")))
 
 
+class RedirectionsAndHeredocs(HookCase):
+    def test_a_redirection_is_not_an_argument_of_the_push(self):
+        self.passes("git push origin develop 2>&1")
+        self.passes("git push origin develop 2>/dev/null")
+        self.denied("git push origin story/ABC-1-export 2>&1")
+
+
+class RedirectionsAndHeredocsInPullRequestMode(HookCase):
+    integration = "pull request"
+
+    def test_a_merge_written_in_a_heredoc_body_is_not_a_merge(self):
+        self.passes("cat > notes.md <<'EOF'\ngit merge story/ABC-1-x\nEOF")
+        self.denied("git merge story/ABC-1-x <<'EOF'\nbody\nEOF")
+
+
 class MissingOrInvalidMode(HookCase):
     integration = None
 

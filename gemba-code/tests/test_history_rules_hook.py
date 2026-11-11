@@ -227,6 +227,16 @@ class Rebases(HookCase):
         self.denied("git rebase -i --autosquash develop story/ABC-1-export", "rebase")
         self.passes("git rebase -i --autosquash develop story/ABC-2-other")
 
+    def test_a_rebase_never_hands_a_revision_that_starts_with_a_dash_to_git(self):
+        victim = os.path.join(self.repo, "victim.txt")
+        with open(victim, "w", encoding="utf-8") as f:
+            f.write("keep me")
+        self.denied("git rebase --autosquash --root -- --output=victim.txt", "rebase")
+        self.denied("git rebase --autosquash -- --output=victim.txt", "rebase")
+        self.denied("git rebase --autosquash develop -- --output=victim.txt", "rebase")
+        with open(victim, encoding="utf-8") as f:
+            self.assertEqual(f.read(), "keep me")
+
     def test_a_root_autosquash_rebase_passes_when_no_commit_of_head_is_on_a_remote(self):
         local = make_repo()
         self.addCleanup(subprocess.run, ["rm", "-rf", local])
