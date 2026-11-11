@@ -20,10 +20,13 @@ except ImportError:  # a crash here would not block, so main() asks for any comm
 
 PROTECTED = ("develop", "main")
 MERGE_ENDS = {"--abort", "--continue", "--quit"}
+REBASE_ENDS = {"--abort", "--continue", "--skip", "--quit", "--edit-todo", "--show-current-patch"}
 
 # What an operation looks like in the raw text of a command, for what the parser cannot read.
 RAW_OPERATIONS = (
     r"\bgit\b.*\bmerge\b",
+    r"\bgit\b.*\brebase\b",
+    r"\bgit\b.*\bpull\b.*(--rebase|\s-\w*r)",
 )
 
 
@@ -74,7 +77,42 @@ def merge_problem(merge):
     return None
 
 
-CHECKS = {"merge": merge_problem}
+def count(folder, *revisions):
+    """How many commits the revisions select, or None when git cannot tell."""
+    out = git_commands.git(folder, "rev-list", "--count", *revisions)
+    return int(out) if out.isdigit() else None
+
+
+def rebase_problem(rebase):
+    """The reason a rebase breaks the rules, or None. The only rebase allowed is `--autosquash`
+    over commits the remote does not have."""
+    names = {name for name, _ in rebase.options}
+    if names & REBASE_ENDS:
+        return None
+    todo = "Do not rebase: merge instead. The only rebase allowed is `git rebase -i --autosquash <upstream>` over commits that are not pushed"
+    if "--autosquash" not in names or "--no-autosquash" in names:
+        return rule("rebase", "a rebase rewrites history", todo)
+    upstream = rebase.args[0] if rebase.args else "@{u}"
+    head = rebase.args[1] if len(rebase.args) > 1 else "HEAD"
+    mine = count(rebase.folder, f"{upstream}..{head}")
+    not_pushed = count(rebase.folder, f"{upstream}..{head}", "--not", "--remotes")
+    if mine is None or not_pushed is None:
+        return rule("rebase", f"the commits to rebase on {upstream} could not be read", todo)
+    if mine != not_pushed:
+        return rule("rebase", "the rebase rewrites commits the remote already has", todo)
+    return None
+
+
+def pull_problem(pull):
+    """The reason a pull breaks the rules, or None: `git pull --rebase` is a rebase."""
+    for name, value in pull.options:
+        if name in ("--rebase", "-r") and value != "false":
+            return rule("rebase", "git pull --rebase rewrites history",
+                        "Pull without rebasing: `git pull` or `git merge --ff-only origin/<branch>`")
+    return None
+
+
+CHECKS = {"merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem}
 
 
 def decide(event):

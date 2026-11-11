@@ -2,6 +2,7 @@ import json
 import os
 import subprocess
 import sys
+import tempfile
 import unittest
 
 from test_confirm_push_hook import GEMBA_CLAUDE_MD, decision, git, make_repo
@@ -131,6 +132,76 @@ class Merges(HookCase):
     def test_a_command_that_is_not_a_merge_prints_nothing_when_the_hook_cannot_run_git(self):
         result = run_hook(self.repo, "git status", env={"PATH": ""})
         self.assertEqual((result.returncode, result.stdout), (0, ""))
+
+
+class Rebases(HookCase):
+    def setUp(self):
+        super().setUp()
+        bare = tempfile.mkdtemp()
+        self.addCleanup(subprocess.run, ["rm", "-rf", bare])
+        git(bare, "init", "-q", "--bare")
+        git(self.repo, "remote", "set-url", "origin", bare)
+        git(self.repo, "push", "-q", "origin", "develop")
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-1-export")
+        for name in ("one", "two"):
+            git(self.repo, "commit", "-q", "--allow-empty", "-m", name)
+
+    def test_a_rebase_is_denied_and_names_the_rule(self):
+        reason = self.denied("git rebase develop", "rebase")
+        self.assertIn("--autosquash", reason)
+
+    def test_an_interactive_rebase_without_autosquash_is_denied(self):
+        self.denied("git rebase -i develop", "rebase")
+        self.denied("git rebase --no-autosquash develop", "rebase")
+
+    def test_a_rebase_with_a_branch_name_or_onto_is_denied(self):
+        self.denied("git rebase --onto main develop story/ABC-1-export", "rebase")
+
+    def test_an_autosquash_rebase_over_commits_the_remote_does_not_have_passes(self):
+        self.passes("git rebase -i --autosquash develop", "git rebase --autosquash develop",
+                    "git -C . rebase --autosquash develop")
+
+    def test_an_autosquash_rebase_over_commits_the_remote_has_is_denied(self):
+        git(self.repo, "push", "-q", "origin", "story/ABC-1-export")
+        self.denied("git rebase -i --autosquash develop", "rebase")
+
+    def test_an_autosquash_rebase_over_some_commits_the_remote_has_is_denied(self):
+        git(self.repo, "push", "-q", "origin", "HEAD~1:refs/heads/story/ABC-1-export")
+        self.denied("git rebase -i --autosquash develop", "rebase")
+
+    def test_an_autosquash_rebase_whose_range_cannot_be_read_is_denied(self):
+        self.denied("git rebase -i --autosquash no-such-branch", "rebase")
+        self.denied("git rebase -i --autosquash", "rebase")
+
+    def test_an_autosquash_rebase_with_a_branch_name_reads_that_branch(self):
+        git(self.repo, "push", "-q", "origin", "story/ABC-1-export")
+        git(self.repo, "checkout", "-q", "-b", "story/ABC-2-other", "develop")
+        git(self.repo, "commit", "-q", "--allow-empty", "-m", "three")
+        self.denied("git rebase -i --autosquash develop story/ABC-1-export", "rebase")
+        self.passes("git rebase -i --autosquash develop story/ABC-2-other")
+
+    def test_ending_a_rebase_passes(self):
+        self.passes("git rebase --abort", "git rebase --continue", "git rebase --skip", "git rebase --quit")
+
+    def test_a_pull_that_rebases_is_denied(self):
+        for command in ("git pull --rebase", "git pull -r", "git pull --rebase=true origin develop",
+                        "git pull --rebase=interactive", "git pull origin develop --rebase", "git pull -rq"):
+            self.denied(command, "rebase")
+
+    def test_a_pull_that_does_not_rebase_passes(self):
+        self.passes("git pull", "git pull --no-rebase", "git pull --rebase=false", "git pull origin develop")
+
+    def test_a_rebase_the_parser_cannot_read_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git rebase develop'", "sudo git pull --rebase", "if true; then git rebase -i develop; fi"):
+            self.assertIn("could not read", self.asked(command), command)
+
+    def test_a_pull_the_parser_cannot_read_that_does_not_rebase_prints_nothing(self):
+        self.passes("bash -c 'git pull origin develop'")
+
+    def test_a_project_without_the_gemba_section_prints_nothing(self):
+        repo = make_repo(None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git rebase develop", "git pull --rebase", repo=repo)
 
 
 class RegisteredInThePlugin(unittest.TestCase):
