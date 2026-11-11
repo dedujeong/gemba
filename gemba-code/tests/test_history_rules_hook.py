@@ -103,6 +103,26 @@ class Merges(HookCase):
         self.denied("git merge --no-ff --ff-only story/ABC-1-export", "merges")
         self.passes("git merge --ff --no-ff story/ABC-1-export", "git merge --ff-only --no-ff story/ABC-1-export")
 
+    def test_a_pull_of_another_branch_into_develop_or_main_is_a_merge_and_follows_its_rules(self):
+        reason = self.denied("git pull origin story/ABC-1-export", "merges")
+        self.assertIn("--no-ff", reason)
+        self.denied("git pull origin refs/heads/story/ABC-1-export", "merges")
+        self.denied("git pull --ff-only origin story/ABC-1-export", "merges")
+        self.denied("git pull --squash", "merges")
+        self.denied("git pull --squash origin develop", "merges")
+        self.passes("git pull --no-ff --no-edit origin story/ABC-1-export")
+        self.on("main")
+        self.denied("git pull origin develop", "merges")
+        self.passes("git pull origin main", "git pull")
+
+    def test_a_pull_of_the_same_branch_or_into_another_branch_passes(self):
+        self.passes("git pull", "git pull origin develop", "git pull --ff-only origin develop", "git pull upstream develop")
+        self.on("story/ABC-2-import")
+        self.passes("git pull origin develop", "git pull --squash origin develop")
+
+    def test_a_pull_after_a_switch_the_hook_cannot_follow_asks(self):
+        self.assertIn("could not be told", self.asked("git switch - && git pull"))
+
     def test_a_merge_that_is_aborted_continued_or_quit_passes(self):
         self.passes("git merge --abort", "git merge --continue", "git merge --quit")
 
@@ -258,6 +278,17 @@ class Rebases(HookCase):
         self.passes("git pull")
         self.passes("git -c pull.rebase=true -c pull.rebase=false pull")
 
+    def test_a_bare_config_key_means_true(self):
+        self.denied("git -c pull.rebase pull", "rebase")
+        self.denied("git -c branch.story/ABC-1-export.rebase pull", "rebase")
+        self.passes("git -c pull.rebase pull --no-rebase")
+
+    def test_the_rebase_option_value_uses_the_boolean_spellings_of_git(self):
+        for value in ("false", "no", "off", "0", "FALSE"):
+            self.passes(f"git pull --rebase={value}")
+        for value in ("true", "yes", "on", "1", "merges", "interactive", "ON"):
+            self.denied(f"git pull --rebase={value}", "rebase")
+
     def test_a_pull_with_a_config_that_does_not_rebase_passes(self):
         git(self.repo, "config", "pull.rebase", "false")
         self.passes("git pull", "git -c pull.rebase=false pull")
@@ -297,6 +328,14 @@ class ForcePushes(HookCase):
                         "git push origin --delete refs/heads/main", "git push origin :refs/heads/develop",
                         "git push --delete origin story/ABC-1-export develop", "git push origin :story/ABC-1-export :main"):
             self.assertIn("lose", self.denied(command, "history"), command)
+
+    def test_deleting_a_version_tag_on_the_remote_is_denied(self):
+        for command in ("git push origin --delete v0.3.1", "git push origin :refs/tags/gemba-code--v0.1.0", "git push origin :v0.3.1",
+                        "git push -d origin refs/tags/v1.2.3", "git push origin --delete gemba-product--v0.1.0"):
+            self.assertIn("version", self.denied(command, "tags"), command)
+
+    def test_deleting_other_remote_tags_passes(self):
+        self.passes("git push origin --delete wip", "git push origin :refs/tags/wip", "git push origin :v1.2")
 
     def test_deleting_other_remote_branches_passes(self):
         self.passes("git push origin --delete story/ABC-1-export", "git push origin :story/ABC-1-export",

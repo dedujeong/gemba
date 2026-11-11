@@ -106,7 +106,7 @@ def configured_rebase(pull):
     for key in keys + ["pull.rebase"]:
         given = [value for name, value in pull.config if name.lower() == key.lower()]
         if given:
-            return given[-1]
+            return "true" if given[-1] is None else given[-1]
         value = git_commands.git(pull.folder, "config", "--get", key)
         if value:
             return value
@@ -118,7 +118,7 @@ def pull_problem(pull):
     rebasing = None  # the last of --rebase, -r and --no-rebase on the command line wins
     for name, value in pull.options:
         if name in ("--rebase", "-r"):
-            rebasing = (value or "true").lower() not in ("false", "no", "0")
+            rebasing = value is None or value.lower() in REBASING_VALUES
         elif name == "--no-rebase":
             rebasing = False
     if rebasing is None:
@@ -126,7 +126,9 @@ def pull_problem(pull):
     if rebasing:
         return rule("rebase", "git pull that rebases rewrites history",
                     "Pull without rebasing: `git pull --no-rebase` or `git merge --ff-only origin/<branch>`")
-    return None
+    # Without a rebase a pull is a merge of what it fetches: of another branch it follows the merge rules.
+    branches = [arg.removeprefix("refs/heads/") for arg in pull.args[1:]]
+    return merge_problem(pull._replace(subcommand="merge", args=[f"origin/{name}" for name in branches]))
 
 
 FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror"}
@@ -141,6 +143,10 @@ def push_problem(push):
     names = git_commands.option_names(push)
     refspecs = push.args[1:]  # the first argument is the remote
     deleted = refspecs if names & {"--delete", "-d"} else [arg[1:] for arg in refspecs if arg.startswith(":")]
+    releases = [name for name in deleted if VERSION_TAG.fullmatch(name.removeprefix("refs/tags/"))]
+    if releases:
+        return rule("tags", f"deleting the version tag {', '.join(releases)} on the remote loses a release",
+                    "Keep the tag; a version tag is never deleted")
     lost = [name for name in deleted if name.removeprefix("refs/heads/") in PROTECTED]
     if lost:
         return rule("history", f"deleting {', '.join(lost)} on the remote loses the history of the project",
@@ -213,7 +219,7 @@ def decide(event):
         project = git_commands.project_of(git_command, cwd)
         if project == "no":
             continue
-        if project == "unknown" or (git_command.subcommand == "merge" and git_command.branch is None):
+        if project == "unknown" or (git_command.subcommand in ("merge", "pull") and git_command.branch is None):
             asking = True  # a folder or a branch the parser could not follow: ask, do not decide
             continue
         problem = check(git_command)
