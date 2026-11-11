@@ -372,6 +372,56 @@ class ReviewFindingsPullRequestMode(HookCase):
         self.assertIn("could not read", self.asked("cd $SOMEWHERE && git push origin task/x"))
 
 
+class SecondRoundMergeMode(HookCase):
+    def test_branches_is_an_alias_of_all(self):
+        self.denied("git push --branches origin")
+        self.denied("git push origin --branches")
+
+    def test_glob_refspecs_push_work_branches(self):
+        for refspec in ("refs/heads/*", "*:*", "refs/heads/*:refs/heads/*", "story/*"):
+            self.denied(f"git push origin '{refspec}'")
+        self.passes("git push origin 'refs/tags/*'")
+
+    def test_matching_or_a_configured_refspec_pushes_every_matching_branch(self):
+        git(self.repo, "config", "push.default", "matching")
+        self.denied("git push")
+        self.denied("git push origin")
+        git(self.repo, "config", "--unset", "push.default")
+        self.passes("git push")
+        git(self.repo, "config", "remote.origin.push", "refs/heads/*:refs/heads/*")
+        self.denied("git push")
+        self.denied("git push origin")
+        git(self.repo, "config", "remote.origin.push", "develop")
+        self.passes("git push")
+        self.passes("git push origin")
+
+
+class SecondRoundPullRequestMode(HookCase):
+    integration = "pull request"
+
+    def test_branches_is_an_alias_of_all(self):
+        self.denied("git push --branches origin")
+
+    def test_glob_refspecs_that_can_match_develop_or_main_are_denied(self):
+        for refspec in ("refs/heads/*", "*:*", "refs/heads/*:refs/heads/*", "dev*", "ma?n"):
+            self.denied(f"git push origin '{refspec}'")
+        self.passes("git push origin 'story/*'")
+        self.passes("git push origin 'refs/heads/story/*:refs/heads/story/*'")
+
+    def test_matching_or_a_configured_refspec_pushes_every_matching_branch(self):
+        git(self.repo, "checkout", "-q", "-b", "task/ABC-2-x")
+        self.passes("git push")
+        git(self.repo, "config", "push.default", "matching")
+        self.denied("git push")
+        self.denied("git push origin")
+        git(self.repo, "config", "--unset", "push.default")
+        git(self.repo, "config", "remote.origin.push", "refs/heads/*:refs/heads/*")
+        self.denied("git push")
+        git(self.repo, "config", "remote.origin.push", "task/ABC-2-x")
+        self.passes("git push")
+
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

@@ -9,6 +9,7 @@ acts on is the one the command has checked out when it runs. It prints nothing f
 so `confirm_push.py` still asks about every push. It never allows and never changes anything: it only runs
 `git` to read the repository.
 """
+import fnmatch
 import json
 import re
 import os
@@ -28,18 +29,33 @@ UNREADABLE = ("Gemba rule (integration): this command contains a git push or a m
 UNKNOWN = object()  # a branch the hook cannot tell
 
 
+def configured_pushes(push):
+    """What a push without refspecs writes because of the configuration: "matching" for `push.default=matching`,
+    the refspecs of `remote.<name>.push` (of the remote it names, or of any remote when it names none), or None.
+    One `git config --get-regexp` call."""
+    remote = push.args[0] if push.args and not dict(push.options).get("--repo") else None
+    refspecs = []
+    for line in git_commands.git(push.folder, "config", "--get-regexp", r"^(push\.default|remote\..*\.push)$").splitlines():
+        key, _, value = line.partition(" ")
+        if key == "push.default" and value.strip().lower() == "matching":
+            return "matching"
+        if key.startswith("remote.") and (remote is None or key == f"remote.{remote}.push"):
+            refspecs.append(value.strip())
+    return refspecs or None
+
+
 def is_a_tag(folder, name):
     return bool(git_commands.git(folder, "rev-parse", "--verify", "--quiet", f"refs/tags/{name}"))
 
 
 def pushed_branches(push):
     """The branches a `git push` writes, UNKNOWN when it depends on a branch the hook cannot tell. Tag pushes and
-    deletions write none. `--all` and `--mirror` are reported as `all branches`. `--repo <remote>` takes the
+    deletions write none. `--all`, `--branches` and `--mirror` are reported as `all branches`. `--repo <remote>` takes the
     remote, so then every positional is a refspec."""
     flags = git_commands.option_names(push)
     if flags & {"--delete", "-d"}:
         return []
-    if flags & {"--all", "--mirror"}:
+    if flags & {"--all", "--branches", "--mirror"}:
         return ["all branches"]
     names = dict(push.options)
     refspecs = push.args if names.get("--repo") else push.args[1:]
@@ -47,6 +63,12 @@ def pushed_branches(push):
     if not refspecs:
         if "--tags" in flags:
             return []
+        configured = configured_pushes(push)
+        if configured is not None:
+            if configured == "matching":
+                return ["all branches"]
+            refspecs = configured
+    if not refspecs:
         return UNKNOWN if tracked is None else ([tracked] if tracked else [])
     branches = []
     skip_next = False
@@ -99,7 +121,7 @@ def push_problem(push, mode):
                     " Merge the branch locally into develop and push develop.")
     else:
         main = ["develop and main" if branch == "all branches" else branch
-                for branch in branches if branch in MAIN_BRANCHES or branch == "all branches"]
+                for branch in branches if branch == "all branches" or any(fnmatch.fnmatchcase(m, branch) for m in MAIN_BRANCHES)]
         if main:
             return (f"Gemba rule (integration: pull request): develop and main are not pushed ({', '.join(main)})."
                     " Push the work branch and open a pull request; the maintainer merges it.")
