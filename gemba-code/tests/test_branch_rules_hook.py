@@ -427,6 +427,22 @@ class CopiesOrphansAndRenames(HookTestCase):
         self.passes("git branch -m task/ABC-1-a task/ABC-1-b")
 
 
+class WorktreesWithoutADashB(HookTestCase):
+    def test_the_branch_named_after_the_path_is_checked_like_a_creation(self):
+        reason = self.denied("git worktree add ../feature-login")
+        self.assertIn("feature-login", reason)
+        self.assertIn("<type>/<KEY>-<slug>", reason)
+        self.assertIn("feature-login", self.denied("git worktree add .claude/worktrees/feature-login/"))
+
+    def test_a_commit_ish_a_detached_worktree_or_an_existing_branch_is_not_a_creation(self):
+        git(self.repo, "branch", "existing")
+        for command in ("git worktree add ../w develop", "git worktree add ../w main", "git worktree add --detach ../w",
+                        "git worktree add -d ../w", "git worktree add ../existing", "git worktree add -f ../w HEAD",
+                        "git worktree list", "git worktree remove ../w"):
+            with self.subTest(command=command):
+                self.passes(command)
+
+
 class ForcedUpdatesOfAnExistingBranch(HookTestCase):
     def test_a_forced_update_of_an_existing_branch_is_not_a_creation(self):
         git(self.repo, "branch", "feature/old")

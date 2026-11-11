@@ -57,6 +57,18 @@ def updates(command, cwd, name, forced):
     return bool(forced and name and folder and git_commands.is_branch(folder, name))
 
 
+def dwim_worktree(command, cwd, flags):
+    """`git worktree add <path>` with no -b, no commit-ish and no --detach creates a branch named after the last
+    component of the path from the current branch, unless that name is already a branch (git checks it out)."""
+    if len(command.args) != 2 or flags & {"-d", "--detach"}:
+        return []
+    name = os.path.basename(command.args[1].rstrip("/"))
+    folder = command.folder or cwd
+    if not name or (folder and git_commands.is_branch(folder, name)):
+        return []
+    return [Creation(name, None, "create")]
+
+
 def creations(command, cwd=None):
     """The Creation of every branch the git command creates, copies or renames."""
     flags = git_commands.option_names(command)
@@ -74,9 +86,11 @@ def creations(command, cwd=None):
         if command.args[:1] != ["add"]:
             return []
         name = next((value for option, value in command.options if option in ("-b", "-B") and value), None)
+        if not name:
+            return dwim_worktree(command, cwd, flags)
         if updates(command, cwd, name, "-B" in flags):
             return []
-        return [Creation(name, command.args[2] if len(command.args) > 2 else None, "create")] if name else []
+        return [Creation(name, command.args[2] if len(command.args) > 2 else None, "create")]
     if command.subcommand == "branch" and command.args:
         old = command.args[0] if len(command.args) > 1 else None
         if flags & {"-m", "-M", "--move"}:
