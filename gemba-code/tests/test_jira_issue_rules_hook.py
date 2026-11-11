@@ -340,9 +340,47 @@ class FieldValues(HookCase):
                 self.assertIn("YYYY-MM-DD", reason)
         self.passes(direct({**VERSION, "duedate": "2026-12-31"}, issue_type="Epic"))
 
-    def test_an_epic_with_any_timetracking_is_denied(self):
-        reason = self.denied(direct({**EPIC, "timetracking": {"remainingEstimate": "1h"}}, issue_type="Epic"))
+    def test_an_epic_with_an_original_estimate_is_denied(self):
+        reason = self.denied(direct({**EPIC, "timetracking": {"originalEstimate": "1h"}}, issue_type="Epic"))
         self.assertIn("has an estimate", reason)
+
+
+class SecondReview(HookCase):
+    def test_a_work_type_that_cannot_be_read_asks(self):
+        for kind in ({"id": "10000"}, {}, 10000, ["Epic"]):
+            with self.subTest(kind=kind):
+                reason = self.asked(call_direct({"projectKey": "ABC", "issueType": kind,
+                                                  "additional_fields": dict(GOOD)}))
+                self.assertIn("work type", reason)
+        self.asked(call_direct({"projectKey": "ABC", "additional_fields": dict(GOOD)}))
+
+    def test_executeWrite_without_usable_inputs_asks_about_the_project(self):
+        for inputs in (None, [], 12, "[]", "null"):
+            with self.subTest(inputs=inputs):
+                call = call_write(inputs)
+                if inputs is None:
+                    del call[1]["inputs"]
+                self.assertIn("could not tell the project", self.asked(call))
+
+    def test_the_estimate_is_a_non_empty_original_estimate_or_a_positive_number(self):
+        base = {k: v for k, v in GOOD.items() if k != "timetracking"}
+        for extra in ({"timetracking": {"originalEstimate": "3h"}}, {"timetracking": {"originalEstimate": 3}},
+                      {"timetracking": {"originalEstimateSeconds": 10800}}, {"timeoriginalestimate": 10800}):
+            with self.subTest(extra=extra):
+                self.passes(direct({**base, **extra}))
+        for extra in ({"timetracking": {}}, {"timetracking": {"originalEstimate": " "}},
+                      {"timetracking": {"originalEstimate": 0}}, {"timetracking": {"originalEstimateSeconds": 0}},
+                      {"timetracking": {"remainingEstimate": "1h"}}, {"timeoriginalestimate": 0},
+                      {"timeoriginalestimate": "x"}):
+            with self.subTest(extra=extra):
+                self.assertIn("is missing an estimate", self.denied(direct({**base, **extra})))
+
+    def test_an_epic_estimate_uses_the_same_predicate(self):
+        for extra in ({"timetracking": {"originalEstimateSeconds": 10800}}, {"timeoriginalestimate": 10800},
+                      {"timetracking": {"originalEstimate": "3h"}}):
+            with self.subTest(extra=extra):
+                self.assertIn("has an estimate", self.denied(direct({**EPIC, **extra}, issue_type="Epic")))
+        self.passes(direct({**EPIC, "timetracking": {}}, issue_type="Epic"))
 
 
 class FailsClosed(unittest.TestCase):

@@ -50,6 +50,14 @@ def load(value):
     return value
 
 
+def lenient(value):
+    """Like load, but anything that is not a JSON object is an empty one, so the call still ends in an ask."""
+    try:
+        return load(value)
+    except Unreadable:
+        return {}
+
+
 def create_arguments(event):
     """The arguments of a createJiraIssue call, direct or inside executeWrite, or None for any other call."""
     name = event.get("tool_name") or ""
@@ -57,7 +65,7 @@ def create_arguments(event):
     if name.endswith("__createJiraIssue"):
         return tool_input
     if name.endswith("__executeWrite") and tool_input.get("name") == "createJiraIssue":
-        return tool_input.get("inputs")
+        return tool_input.get("inputs") or {}
     return None
 
 
@@ -84,7 +92,11 @@ def project_key(args):
 
 
 def issue_type(args):
-    return named(field(args, "issueType") or field(args, "issuetype") or field(args, "issueTypeName"))
+    value = field(args, "issueType") or field(args, "issuetype") or field(args, "issueTypeName")
+    kind = named(value)
+    if not kind:
+        raise Unreadable("the hook could not tell the work type of the issue.")
+    return kind
 
 
 def component_names(args):
@@ -124,16 +136,27 @@ def valid_due_date(value):
     return True
 
 
-def original_estimate(args):
-    value = field(args, "timetracking")
-    return named(value.get("originalEstimate")) if isinstance(value, dict) else ""
+def positive(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
+
+
+def has_estimate(args):
+    """An original estimate given as text or a positive number, in seconds, or as timeoriginalestimate."""
+    tracking = field(args, "timetracking")
+    if isinstance(tracking, dict):
+        original = tracking.get("originalEstimate")
+        if positive(original) or (isinstance(original, str) and original.strip()):
+            return True
+        if positive(tracking.get("originalEstimateSeconds")):
+            return True
+    return positive(field(args, "timeoriginalestimate"))
 
 
 def epic_problems(args):
     found = []
     if component_names(args):
         found.append(("has a component, which an Epic must not have", "Remove additional_fields.components"))
-    if field(args, "timetracking"):
+    if has_estimate(args):
         found.append(("has an estimate, which an Epic must not have", "Remove additional_fields.timetracking"))
     if not field(args, "duedate"):
         found.append(("is missing a due date", 'Add additional_fields.duedate "<YYYY-MM-DD>"'))
@@ -151,7 +174,7 @@ def other_problems(args):
         if name != name.lower():
             found.append((f'has the component "{name}", which is not lowercase',
                           f'Use additional_fields.components [{{"name": "{name.lower()}"}}] (lowercase)'))
-    if not original_estimate(args):
+    if not has_estimate(args):
         found.append(("is missing an estimate", 'Add additional_fields.timetracking {"originalEstimate": "<estimate>"}'))
     return found
 
@@ -177,7 +200,7 @@ def decide(event, args):
     mine = git_commands.gemba_field(cwd, "Jira Project")
     if not mine:  # no Gemba section, or none with a Jira Project: not a Gemba project
         return
-    args = load(args)
+    args = args if isinstance(args, dict) else lenient(args)
     key = project_key(args)
     if not key:
         raise Unreadable("the hook could not tell the project of the issue.")
