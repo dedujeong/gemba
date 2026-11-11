@@ -475,11 +475,13 @@ class SecondRoundPullRequestMode(HookCase):
 
 
 class RegisteredInThePlugin(unittest.TestCase):
-    def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
+    def test_the_dispatcher_registered_for_bash_runs_the_script_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
             entries = [e for e in json.load(f)["hooks"]["PreToolUse"] if e.get("matcher") == "Bash"]
         commands = [h["command"] for e in entries for h in e["hooks"] if h["type"] == "command"]
-        self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/integration_rules.py"', commands)
+        self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/bash_rules.py"', commands)
+        with open(os.path.join(ROOT, "hooks", "bash_rules.py"), encoding="utf-8") as f:
+            self.assertIn('"integration_rules"', f.read())
 
 
 if __name__ == "__main__":
