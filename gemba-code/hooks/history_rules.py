@@ -1,0 +1,124 @@
+#!/usr/bin/env python3
+"""PreToolUse hook: the history rules of the method, for a project with setup.
+
+Reads the hook event from stdin. When a Bash command does an operation that rewrites or loses
+history (a merge that is not a `--no-ff` merge with Git's message, a rebase, a force push, the
+forced deletion of a branch that is not a Spike's, a tag that is not a version) and the project's
+CLAUDE.md has a `## Gemba` section, it prints a `deny` decision whose reason names the rule and
+what to do. A command the parser cannot read asks instead, with a generic reason. In every other
+case it prints nothing, so the normal permission flow is untouched. It never runs anything but `git`.
+"""
+import json
+import os
+import re
+import sys
+
+try:
+    import git_commands
+except ImportError:  # a crash here would not block, so main() asks for any command that looks like one of the operations
+    git_commands = None
+
+PROTECTED = ("develop", "main")
+MERGE_ENDS = {"--abort", "--continue", "--quit"}
+
+# What an operation looks like in the raw text of a command, for what the parser cannot read.
+RAW_OPERATIONS = (
+    r"\bgit\b.*\bmerge\b",
+)
+
+
+def looks_like_an_operation(command):
+    return any(re.search(pattern, command, re.DOTALL) for pattern in RAW_OPERATIONS)
+
+
+def deny(why):
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "deny",
+        "permissionDecisionReason": why,
+    }}))
+
+
+def ask(why):
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": "PreToolUse",
+        "permissionDecision": "ask",
+        "permissionDecisionReason": why,
+    }}))
+
+
+def rule(name, wrong, todo):
+    return f"Gemba rule ({name}): {wrong}. {todo}."
+
+
+def merge_problem(merge):
+    """The reason a merge breaks the rules, or None."""
+    names = {name for name, _ in merge.options}
+    if names & MERGE_ENDS:
+        return None
+    target = git_commands.current_branch(merge.folder)
+    if target not in PROTECTED:
+        return None
+    if "--squash" in names:
+        return rule("merges", f"a squash merge into {target} loses the history of the branch",
+                    "Merge with `git merge --no-ff <branch>` and Git's default message")
+    updates_from_remote = all(arg in (f"origin/{target}", "@{u}", "@{upstream}") for arg in merge.args)
+    if updates_from_remote:
+        return None
+    if "--no-ff" not in names:
+        return rule("merges", f"a merge into {target} without --no-ff",
+                    "Merge with `git merge --no-ff <branch>` so the branch stays in the history")
+    if names & {"-m", "--message", "-F", "--file"}:
+        return rule("merges", f"a merge into {target} with its own message",
+                    "Merge with `git merge --no-ff <branch>` and keep Git's default message")
+    return None
+
+
+CHECKS = {"merge": merge_problem}
+
+
+def decide(event):
+    cwd = event.get("cwd") or os.getcwd()
+    command = event.get("tool_input", {}).get("command", "")
+    found = git_commands.git_commands(command, cwd)
+    parsed = False
+    for git_command in found:
+        check = CHECKS.get(git_command.subcommand)
+        if check is None:
+            continue
+        parsed = True
+        if not git_commands.in_gemba_project(git_command.folder, cwd):
+            continue
+        problem = check(git_command)
+        if problem:
+            deny(problem)
+            return
+    # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
+    # keyword) hides the operation from it, so a command that looks like one asks with a generic reason.
+    if not parsed and looks_like_an_operation(command) and git_commands.has_gemba(cwd):
+        ask("history rules: this command has a git operation the hook could not read (a wrapper, a shell"
+            " keyword or a quoted script). Confirm that it does not rewrite or lose history.")
+
+
+def main():
+    try:
+        event = json.load(sys.stdin)
+    except ValueError:
+        return
+    if event.get("tool_name") != "Bash":
+        return
+    command = event.get("tool_input", {}).get("command", "")
+    if git_commands is None:
+        if looks_like_an_operation(command):
+            ask("history rules: the hook could not load its parser. Confirm that this command does not rewrite or lose history.")
+        return
+    try:
+        decide(event)
+    except Exception:
+        # A crash exits non-zero and does not block, so the operation would run unchecked: fail closed.
+        if looks_like_an_operation(command):
+            ask("history rules: the hook could not read the repository. Confirm that this command does not rewrite or lose history.")
+
+
+if __name__ == "__main__":
+    main()

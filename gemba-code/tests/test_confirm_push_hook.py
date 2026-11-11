@@ -242,7 +242,7 @@ class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
         entries = [e for e in self.pre_tool_use() if e.get("matcher") == "Bash"]
         commands = [h["command"] for e in entries for h in e["hooks"] if h["type"] == "command"]
-        self.assertEqual(commands, ['python3 "${CLAUDE_PLUGIN_ROOT}/hooks/confirm_push.py"'])
+        self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/confirm_push.py"', commands)
 
     def test_the_session_start_hook_is_still_there(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

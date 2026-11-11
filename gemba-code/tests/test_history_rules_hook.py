@@ -1,0 +1,145 @@
+import json
+import os
+import subprocess
+import sys
+import unittest
+
+from test_confirm_push_hook import GEMBA_CLAUDE_MD, decision, git, make_repo
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+SCRIPT = os.path.join(ROOT, "hooks", "history_rules.py")
+
+
+def run_hook(repo, command, tool="Bash", env=None):
+    """Runs the hook the way Claude Code does: JSON on stdin, in the project."""
+    event = {"hook_event_name": "PreToolUse", "tool_name": tool, "tool_input": {"command": command}, "cwd": repo}
+    return subprocess.run([sys.executable, SCRIPT], input=json.dumps(event), cwd=repo,
+                          capture_output=True, text=True, env=env)
+
+
+class HookCase(unittest.TestCase):
+    def setUp(self):
+        self.repo = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", self.repo])
+
+    def outcome(self, command, repo=None):
+        result = run_hook(repo or self.repo, command)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return decision(result)
+
+    def denied(self, command, rule, repo=None):
+        out = self.outcome(command, repo)
+        self.assertIsNotNone(out, "the hook printed nothing for: " + command)
+        self.assertEqual(out["hookEventName"], "PreToolUse")
+        self.assertEqual(out["permissionDecision"], "deny", command)
+        self.assertIn(f"Gemba rule ({rule})", out["permissionDecisionReason"], command)
+        return out["permissionDecisionReason"]
+
+    def asked(self, command, repo=None):
+        out = self.outcome(command, repo)
+        self.assertIsNotNone(out, "the hook printed nothing for: " + command)
+        self.assertEqual(out["permissionDecision"], "ask", command)
+        return out["permissionDecisionReason"]
+
+    def passes(self, *commands, repo=None):
+        for command in commands:
+            result = run_hook(repo or self.repo, command)
+            self.assertEqual((result.returncode, result.stdout), (0, ""), command)
+
+
+class Merges(HookCase):
+    def on(self, branch):
+        git(self.repo, "checkout", "-q", "-B", branch)
+
+    def test_a_merge_into_develop_without_no_ff_is_denied_and_names_the_rule(self):
+        reason = self.denied("git merge story/ABC-1-export", "merges")
+        self.assertIn("--no-ff", reason)
+
+    def test_a_merge_into_main_without_no_ff_is_denied(self):
+        self.on("main")
+        self.denied("git merge develop", "merges")
+
+    def test_a_fast_forward_only_merge_of_a_branch_is_denied(self):
+        self.denied("git merge --ff-only story/ABC-1-export", "merges")
+
+    def test_a_squash_merge_is_denied_even_with_no_ff(self):
+        self.denied("git merge --squash story/ABC-1-export", "merges")
+        self.denied("git merge --no-ff --squash story/ABC-1-export", "merges")
+
+    def test_a_merge_with_its_own_message_is_denied(self):
+        for command in ("git merge --no-ff -m 'my merge' story/ABC-1-export",
+                        "git merge --no-ff --message='my merge' story/ABC-1-export",
+                        "git merge --no-ff -F msg.txt story/ABC-1-export",
+                        "git merge --no-ff --file msg.txt story/ABC-1-export"):
+            self.denied(command, "merges")
+
+    def test_a_merge_with_no_ff_and_the_default_message_passes(self):
+        self.passes("git merge --no-ff story/ABC-1-export", "git merge --no-ff --no-edit story/ABC-1-export")
+
+    def test_the_merge_is_read_in_a_compound_command_and_with_git_global_options(self):
+        self.denied("git status && git merge story/ABC-1-export", "merges")
+        self.denied("git -C . merge story/ABC-1-export", "merges")
+
+    def test_a_merge_into_another_branch_passes(self):
+        self.on("story/ABC-2-import")
+        self.passes("git merge develop", "git merge --squash develop", "git merge -m x develop")
+
+    def test_a_merge_that_is_aborted_continued_or_quit_passes(self):
+        self.passes("git merge --abort", "git merge --continue", "git merge --quit")
+
+    def test_bringing_develop_up_to_date_with_its_remote_passes(self):
+        self.passes("git merge origin/develop", "git merge --ff-only origin/develop", "git merge --ff-only @{u}",
+                    "git merge --ff-only", "git pull", "git pull origin develop", "git pull --ff-only")
+
+    def test_bringing_main_up_to_date_passes_but_merging_the_other_remote_branch_does_not(self):
+        self.on("main")
+        self.passes("git merge --ff-only origin/main")
+        self.denied("git merge origin/develop", "merges")
+
+    def test_a_squash_is_denied_even_against_the_remote_branch(self):
+        self.denied("git merge --squash origin/develop", "merges")
+
+    def test_the_folder_of_dash_c_decides_the_branch(self):
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        git(other, "checkout", "-q", "-b", "story/ABC-3-x")
+        self.passes(f"git -C {other} merge develop")
+        git(other, "checkout", "-q", "develop")
+        self.denied(f"git -C {other} merge story/ABC-1-export", "merges")
+
+    def test_a_project_without_the_gemba_section_prints_nothing(self):
+        repo = make_repo(None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git merge story/ABC-1-export", "bash -c 'git merge x'", repo=repo)
+
+    def test_a_tool_that_is_not_bash_prints_nothing(self):
+        result = run_hook(self.repo, "git merge story/ABC-1-export", tool="Read")
+        self.assertEqual((result.returncode, result.stdout), (0, ""))
+
+    def test_a_merge_the_parser_cannot_read_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git merge story/ABC-1-export'", "sudo git merge story/ABC-1-export",
+                        "if true; then git merge story/ABC-1-export; fi"):
+            reason = self.asked(command)
+            self.assertIn("could not read", reason, command)
+
+    def test_a_merge_still_asks_when_the_hook_cannot_run_git(self):
+        result = run_hook(self.repo, "git merge story/ABC-1-export", env={"PATH": ""})
+        out = decision(result)
+        self.assertIsNotNone(out)
+        self.assertEqual(out["permissionDecision"], "ask")
+
+    def test_a_command_that_is_not_a_merge_prints_nothing_when_the_hook_cannot_run_git(self):
+        result = run_hook(self.repo, "git status", env={"PATH": ""})
+        self.assertEqual((result.returncode, result.stdout), (0, ""))
+
+
+class RegisteredInThePlugin(unittest.TestCase):
+    def test_the_script_is_registered_as_its_own_bash_hook_before_the_tool_runs(self):
+        with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
+            entries = json.load(f)["hooks"]["PreToolUse"]
+        commands = [h["command"] for e in entries if e.get("matcher") == "Bash" for h in e["hooks"]]
+        self.assertIn('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/history_rules.py"', commands)
+
+
+if __name__ == "__main__":
+    unittest.main()
