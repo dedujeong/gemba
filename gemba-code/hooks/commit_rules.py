@@ -19,7 +19,6 @@ except ImportError:  # a crash here would not block, so main() asks for any comm
 
 TYPES = ("build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test")
 HEADER = re.compile(r"(\w+)(?:\(([^)]*)\))?!?: \S.*", re.DOTALL)
-ANY_JIRA_KEY = r"[A-Z][A-Z0-9]+"
 MERGE = re.compile(r"Merge (?:branch|remote-tracking branch|tag|commit) '[^'\n]+'(?: of \S+)?(?: into \S*[^\s.])?"
                    r"|Merge pull request #\d+ from \S+")
 REVERT = re.compile(r'Revert ".+"(\n\nThis reverts commit [0-9a-f]{7,40}\.)?')
@@ -28,8 +27,10 @@ EXAMPLE = "for example `feat(hooks): block commit messages that break the commit
 
 PROTECTED_BRANCHES = ("main", "develop")
 CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
-ENDS_THE_OPERATION = {"--abort", "--continue", "--skip", "--quit"}
+ENDS_WITHOUT_A_COMMIT = {"--abort", "--quit"}
 EDITOR_FIXUPS = ("amend:", "reword:")
+# Any git command that creates a commit; a script that mentions one in a place the parser cannot read asks.
+CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:commit|revert|cherry-pick|am)(?![\w-])", re.DOTALL)
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
 
@@ -60,8 +61,10 @@ def message_problem(message, project=None):
     kind, scope = header.group(1), header.group(2)
     if kind not in TYPES:
         return rule(f"`{kind}` is not an allowed type", f"Use one of {', '.join(TYPES)}, {EXAMPLE}")
-    if re.search(rf"\b(?i:{re.escape(project)})-\d+\b" if project else rf"\b{ANY_JIRA_KEY}-\d+\b", message):
+    if project and re.search(rf"\b(?i:{re.escape(project)})-\d+\b", message):
         return rule("the message has a Jira key", "Remove it: the branch and the work item link the commit, not the message")
+    if scope == "":
+        return rule("the scope is empty", "Name the scope, one of the project's Jira components, or remove the parentheses")
     if scope is not None and not re.fullmatch(r"[a-z0-9-]+", scope):
         return rule(f"the scope `{scope}` is not in lowercase", "Write the scope in lowercase, one of the project's Jira components")
     if message.endswith("."):
@@ -78,7 +81,7 @@ def messages_problem(messages, project=None):
     return message_problem(messages[0], project)
 
 
-def branch_problem(commit):
+def branch_problem(commit, merging=None):
     """A (decision, reason) when the commit cannot land on the branch it runs on, or None. A folder or a
     branch the parser could not follow (a `cd` it cannot read, `switch -`) asks."""
     if commit.folder is None or commit.branch is None:
@@ -86,7 +89,9 @@ def branch_problem(commit):
                            "Run it from a plain folder, with one `cd` to a path or `-C`, so the hook can check that it is not main or develop")
     if commit.branch not in PROTECTED_BRANCHES:
         return None
-    if git_commands.git(commit.folder, "rev-parse", "-q", "--verify", "MERGE_HEAD"):
+    if merging is None:
+        merging = bool(git_commands.git(commit.folder, "rev-parse", "-q", "--verify", "MERGE_HEAD"))
+    if merging:
         return None  # concluding a merge
     return "deny", rule(f"the current branch is `{commit.branch}`, and nothing is committed on main or develop",
                         "Create a branch for the work item (`story/`, `task/`, `bug/` or `spike/`, then its key and a short name) and commit there")
@@ -102,9 +107,9 @@ def message_decision(commit, project):
     messages = [value or "" for name, value in commit.options if name in ("-m", "--message")]
     if any("$" in message or "`" in message for message in messages):
         return "ask", unreadable("it has a variable, a substitution or a heredoc")
-    if names & REUSES_A_MESSAGE:
-        return None
     if not messages:
+        if names & REUSES_A_MESSAGE:
+            return None
         return "ask", unreadable("the commit would open an editor")
     problem = messages_problem(messages, project)
     return ("deny", problem) if problem else None
@@ -114,15 +119,15 @@ def creates_no_commit(commit):
     names = {name for name, _ in commit.options}
     if commit.subcommand == "commit":
         return False
-    return bool(ENDS_THE_OPERATION & names) or (commit.subcommand != "am" and bool({"-n", "--no-commit"} & names))
+    return bool(ENDS_WITHOUT_A_COMMIT & names) or (commit.subcommand != "am" and bool({"-n", "--no-commit"} & names))
 
 
-def commit_problem(commit, folder):
+def commit_problem(commit, folder, merging=None):
     """A (decision, reason) for a commit, revert, cherry-pick or am that breaks a rule or cannot be read, or
     None. A denial wins over a question."""
     if creates_no_commit(commit):
         return None
-    found = [branch_problem(commit)]
+    found = [branch_problem(commit, merging)]
     if commit.subcommand == "commit":
         found.append(message_decision(commit, git_commands.gemba_field(folder, "Jira Project")))
     found = [item for item in found if item]
@@ -133,13 +138,17 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = None
+    merging = {}  # repository -> True after a `git merge` earlier in this command, False after merge --abort/--quit
     for commit in git_commands.git_commands(command, cwd):
+        key = git_commands.repository_key(commit.folder) if commit.folder else None
+        if commit.subcommand == "merge" and key:
+            merging[key] = not ({"--abort", "--quit"} & {name for name, _ in commit.options})
         if commit.subcommand not in CREATES_COMMITS:
             continue
         folder = commit.folder or cwd  # an unknown folder: the session's project decides whether the rules apply
         if not git_commands.in_gemba_project(folder, cwd):
             continue
-        found = commit_problem(commit, folder)
+        found = commit_problem(commit, folder, merging.get(key))
         if found and found[0] == "deny":
             return git_commands.emit(*found)
         asking = asking or found
@@ -147,7 +156,7 @@ def decide(event):
         return git_commands.emit(*asking)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, "commit") and git_commands.has_gemba(cwd):
+    if git_commands.unparsed_mentions(command, CREATING_WORDS) and git_commands.has_gemba(cwd):
         git_commands.emit("ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)"))
 
 
@@ -160,7 +169,7 @@ def main():
         return
     command = event.get("tool_input", {}).get("command", "")
     if git_commands is None:
-        if re.search(r"\bgit\b.*\bcommit\b", command, re.DOTALL):
+        if CREATING_WORDS.search(command):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse", "permissionDecision": "ask",
                 "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
@@ -169,7 +178,7 @@ def main():
         decide(event)
     except Exception:
         # A crash exits non-zero and does not block, so the commit would run unchecked: fail closed.
-        if git_commands.mentions(command, "commit"):
+        if CREATING_WORDS.search(command):
             git_commands.emit("ask", "Gemba rule (commits): the hook could not check this commit. Confirm the commit message follows the commit rules.")
 
 

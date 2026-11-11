@@ -326,11 +326,20 @@ class OtherCommitsOnProtectedBranches(CommitRulesCase):
 
     def test_finishing_or_leaving_the_operation_passes(self):
         git(self.repo, "checkout", "-q", "develop")
-        for command in ("git revert --abort", "git revert --continue", "git cherry-pick --skip", "git cherry-pick --quit",
-                        "git am --abort", "git am --continue", "git am --skip", "git revert -n HEAD",
+        for command in ("git revert --abort", "git cherry-pick --quit", "git am --abort", "git revert -n HEAD",
                         "git cherry-pick --no-commit abc1234"):
             with self.subTest(command=command):
                 self.passes(command)
+
+    def test_continuing_or_skipping_creates_a_commit_so_it_is_blocked(self):
+        git(self.repo, "checkout", "-q", "develop")
+        for command in ("git revert --continue", "git cherry-pick --continue", "git cherry-pick --skip", "git am --continue",
+                        "git am --skip"):
+            with self.subTest(command=command):
+                self.blocked(command)
+
+    def test_continuing_on_a_work_branch_passes(self):
+        self.passes("git cherry-pick --continue")
 
     def test_on_a_work_branch_they_pass(self):
         for command in ("git revert HEAD", "git revert --no-edit HEAD", "git cherry-pick abc1234", "git am patch.mbox"):
@@ -360,6 +369,73 @@ class JiraKeyCase(CommitRulesCase):
 
     def test_a_word_with_another_prefix_passes(self):
         self.passes('git commit -m "fix(export): read abcd-12 and utf-8"')
+
+
+class SecondReview(CommitRulesCase):
+    def test_messages_are_checked_even_with_options_that_reuse_one(self):
+        self.blocked('git commit --no-edit -m "add the export"')
+        self.blocked('git commit --amend --no-edit -m "add the export."')
+        self.blocked('git commit --fixup=abc1234 -m "add the export"')
+        self.blocked('git commit -C HEAD -m "add the export"')
+        self.blocked('git commit --squash HEAD -m "add the export"')
+        self.passes('git commit --amend -m "feat(export): add the export"')
+
+    def merge_in_progress(self):
+        with open(os.path.join(self.repo, "m.txt"), "w", encoding="utf-8") as f:
+            f.write("m")
+        git(self.repo, "add", "m.txt")
+        git(self.repo, "commit", "-q", "-m", "feat: add m")
+        git(self.repo, "checkout", "-q", "develop")
+
+    def test_a_merge_earlier_in_the_command_counts_as_in_progress(self):
+        self.merge_in_progress()
+        self.passes('git merge --no-ff --no-commit story/ABC-1-export && git commit --no-edit')
+        self.passes("git merge --no-commit story/ABC-1-export && git commit -m \"Merge branch 'story/ABC-1-export' into develop\"")
+
+    def test_a_merge_abort_earlier_in_the_command_counts_as_none(self):
+        self.merge_in_progress()
+        git(self.repo, "merge", "-q", "--no-ff", "--no-commit", "story/ABC-1-export")
+        self.blocked('git merge --abort && git commit -m "feat: x"')
+        self.blocked('git merge --quit && git commit -m "feat: x"')
+
+    def test_a_merge_in_another_repository_does_not_count(self):
+        self.merge_in_progress()
+        other = make_repo()
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        self.blocked(f'git -C {other} merge x && git commit -m "feat: x"')
+
+    def test_without_a_jira_project_no_key_is_checked(self):
+        repo = make_repo(claude_md="## Gemba\n\n- Integration: merge\n")
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        git(repo, "checkout", "-q", "-b", "story/ABC-1-export")
+        self.passes('git commit -m "feat(export): add the export for ABC-12"', repo)
+        self.assertIsNotNone(self.outcome('git commit -m "feat(export): add the export."', repo))
+
+    def test_an_empty_scope_has_its_own_reason(self):
+        self.assertIn("scope is empty", self.blocked('git commit -m "feat(): add the export"'))
+
+    def test_wrapped_revert_cherry_pick_and_am_ask_too(self):
+        for command in ("bash -c 'git revert HEAD'", "sudo git cherry-pick abc1234", "bash -c 'git am x.mbox'"):
+            with self.subTest(command=command):
+                self.asked(command)
+        self.passes("bash -c 'git commit-graph write'")
+        self.passes("bash -c 'git log --grep ham'")
+
+    def test_a_missing_parser_asks_for_revert_cherry_pick_and_am(self):
+        import shutil
+        import tempfile
+        folder = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, folder)
+        script = os.path.join(folder, "commit_rules.py")
+        shutil.copy(SCRIPT, script)
+
+        def run(command):
+            event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": self.repo}
+            return subprocess.run([sys.executable, script], input=json.dumps(event), capture_output=True, text=True)
+
+        for command in ("git revert HEAD", "git cherry-pick abc", "git am x.mbox"):
+            self.assertEqual(json.loads(run(command).stdout)["hookSpecificOutput"]["permissionDecision"], "ask")
+        self.assertEqual(run("git commit-graph write").stdout.strip(), "")
 
 
 class ProjectsWithoutGemba(CommitRulesCase):
