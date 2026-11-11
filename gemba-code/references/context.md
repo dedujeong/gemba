@@ -40,6 +40,8 @@ How a branch reaches `develop` depends on `Integration` in the Gemba section:
 
 In both: never squash, and never rebase a branch onto `develop` or `main`; to bring in new work from `develop`, merge it into the branch. Prevents: lost history and rewritten commits that someone else already has.
 
+In a project with setup, every `git push` asks the maintainer first, with the branch and the remote. If the maintainer declines, nothing is pushed: do not retry it with another command, another remote or another tool (`gh`, the GitHub API or an MCP server), and say what was left unpushed. Prevents: work reaching the remote without the maintainer seeing it.
+
 ## Commits
 
 - One line, with no body or footer: `<type>(<scope>): <description>`. Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`. The scope is optional and is one of the project's Jira components, in lowercase. A breaking change adds `!` before the colon and its description says what breaks. The only exceptions are the merge commit and a repository's `Initial commit`. Prevents: a history nobody can read or filter.
