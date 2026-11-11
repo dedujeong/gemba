@@ -383,6 +383,50 @@ class SecondReview(HookCase):
         self.passes(direct({**EPIC, "timetracking": {}}, issue_type="Epic"))
 
 
+class SourcePrecedence(HookCase):
+    def test_a_rest_fields_object_is_the_only_source_of_the_issue_fields(self):
+        flat = {"projectKey": "ABC", "issueType": "Story", "additional_fields": dict(GOOD)}
+        reason = self.denied(call_write({**flat, "fields": {"issuetype": {"name": "Story"}}}))
+        for word in ("fields.fixVersions", "fields.components", "fields.timetracking"):
+            self.assertIn(word, reason)
+        self.assertNotIn("additional_fields", reason)
+
+    def test_the_work_type_comes_from_the_rest_fields_when_they_are_present(self):
+        inputs = {"projectKey": "ABC", "issueType": "Epic", "fields": {"issuetype": {"name": "Story"}, **GOOD}}
+        self.passes(call_write(inputs))
+        inputs = {"projectKey": "ABC", "issueType": "Story", "fields": {"issuetype": {"name": "Epic"}, **GOOD}}
+        reason = self.denied(call_write(inputs))
+        self.assertIn("Remove fields.components", reason)
+        self.assertIn('Add fields.duedate "<YYYY-MM-DD>"', reason)
+        self.assertIn("Remove fields.timetracking", reason)
+
+    def test_every_hint_of_a_rest_payload_names_fields(self):
+        reason = self.denied(rest({"components": [{"name": "Hooks"}]}))
+        self.assertIn('Add fields.fixVersions [{"name": "<version>"}]', reason)
+        self.assertIn('Use fields.components [{"name": "hooks"}] (lowercase)', reason)
+        self.assertIn('Add fields.timetracking {"originalEstimate": "<estimate>"}', reason)
+        self.assertIn('Use fields.duedate', self.denied(rest({**VERSION, "duedate": "x"}, issue_type="Epic")))
+
+    def test_without_a_fields_object_the_hints_name_additional_fields(self):
+        reason = self.denied(direct(None))
+        self.assertIn("additional_fields.fixVersions", reason)
+        self.assertIsNone(re.search(r"(?<![_a-z])fields\.", reason))
+
+    def test_a_flat_project_of_another_project_is_not_checked_even_if_the_rest_is_malformed(self):
+        for extra in ({"additional_fields": "{bad"}, {"fields": "{bad"}, {"fields": [1]}, {"issueType": {"id": "1"}}):
+            with self.subTest(extra=extra):
+                self.passes(call_write({"projectKey": "OTHER", **extra}))
+                self.passes(call_direct({"project": {"key": "OTHER"}, **extra}))
+
+    def test_a_malformed_payload_of_the_gemba_project_asks(self):
+        for extra in ({"additional_fields": "{bad"}, {"fields": "{bad"}):
+            with self.subTest(extra=extra):
+                self.asked(call_write({"projectKey": "ABC", "issueType": "Story", **extra}))
+
+    def test_the_project_inside_the_rest_fields_is_used_when_there_is_no_flat_one(self):
+        self.passes(call_write({"fields": {"project": {"key": "OTHER"}, "issuetype": {"name": "Story"}}}))
+
+
 class FailsClosed(unittest.TestCase):
     def alone(self, tool_name, tool_input):
         """Runs a copy of the script with no git_commands next to it, so its import fails."""

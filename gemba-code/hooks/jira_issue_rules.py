@@ -76,54 +76,76 @@ def named(value):
     return value.strip() if isinstance(value, str) else ""
 
 
-def field(args, key):
-    """A field given in additional_fields, flat in the arguments or inside a REST-style `fields` object."""
-    for source in (load(args.get("additional_fields")), args, load(args.get("fields"))):
-        if source.get(key) not in (None, "", [], {}):
-            return source[key]
-    return None
-
-
-def project_key(args):
-    value = field(args, "projectKey") or field(args, "project")
+def key_of(value):
+    """The text of a project given as a key or as {"key": ..}."""
     if isinstance(value, dict):
         value = value.get("key")
     return value.strip() if isinstance(value, str) else ""
 
 
-def issue_type(args):
-    value = field(args, "issueType") or field(args, "issuetype") or field(args, "issueTypeName")
-    kind = named(value)
-    if not kind:
-        raise Unreadable("the hook could not tell the work type of the issue.")
-    return kind
+class Issue:
+    """The fields of the call, read from one place only: the REST-style `fields` object when the call has
+    one, otherwise additional_fields and then the flat arguments. `prefix` names that place in the hints."""
 
+    def __init__(self, flat):
+        rest = flat.get("fields")
+        if rest not in (None, "", [], {}):
+            self.sources, self.prefix = [load(rest)], "fields"
+        else:
+            self.sources, self.prefix = [load(flat.get("additional_fields")), flat], "additional_fields"
 
-def component_names(args):
-    """The names of the components that are present; one given only by id has the name ''."""
-    value = field(args, "components")
-    names = []
-    for item in value if isinstance(value, list) else []:
-        if named(item):
-            names.append(named(item))
-        elif isinstance(item, dict) and str(item.get("id") or "").strip():
-            names.append("")  # present, but its case cannot be checked
-    return names
+    def get(self, *keys):
+        for source in self.sources:
+            for key in keys:
+                if source.get(key) not in (None, "", [], {}):
+                    return source[key]
+        return None
 
+    def kind(self):
+        kind = named(self.get("issueType", "issuetype", "issueTypeName"))
+        if not kind:
+            raise Unreadable("the hook could not tell the work type of the issue.")
+        return kind
 
-def has_fix_versions(args):
-    """True when fixVersions is a list whose every entry has a name or an id, or is a non-empty string."""
-    value = field(args, "fixVersions")
-    if not isinstance(value, list) or not value:
-        return False
-    for item in value:
-        if isinstance(item, dict):
-            item = item.get("name") or item.get("id")
-        if isinstance(item, int) and not isinstance(item, bool):
-            item = str(item)
-        if not isinstance(item, str) or not item.strip():
+    def component_names(self):
+        """The names of the components that are present; one given only by id has the name ''."""
+        value = self.get("components")
+        names = []
+        for item in value if isinstance(value, list) else []:
+            if named(item):
+                names.append(named(item))
+            elif isinstance(item, dict) and str(item.get("id") or "").strip():
+                names.append("")  # present, but its case cannot be checked
+        return names
+
+    def has_fix_versions(self):
+        """True when fixVersions is a list whose every entry has a name or an id, or is a non-empty string."""
+        value = self.get("fixVersions")
+        if not isinstance(value, list) or not value:
             return False
-    return True
+        for item in value:
+            if isinstance(item, dict):
+                item = item.get("name") or item.get("id")
+            if isinstance(item, int) and not isinstance(item, bool):
+                item = str(item)
+            if not isinstance(item, str) or not item.strip():
+                return False
+        return True
+
+    def has_estimate(self):
+        """An original estimate given as text or a positive number, in seconds, or as timeoriginalestimate."""
+        tracking = self.get("timetracking")
+        if isinstance(tracking, dict):
+            original = tracking.get("originalEstimate")
+            if positive(original) or (isinstance(original, str) and original.strip()):
+                return True
+            if positive(tracking.get("originalEstimateSeconds")):
+                return True
+        return positive(self.get("timeoriginalestimate"))
+
+
+def positive(value):
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
 
 
 def valid_due_date(value):
@@ -136,56 +158,43 @@ def valid_due_date(value):
     return True
 
 
-def positive(value):
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and value > 0
-
-
-def has_estimate(args):
-    """An original estimate given as text or a positive number, in seconds, or as timeoriginalestimate."""
-    tracking = field(args, "timetracking")
-    if isinstance(tracking, dict):
-        original = tracking.get("originalEstimate")
-        if positive(original) or (isinstance(original, str) and original.strip()):
-            return True
-        if positive(tracking.get("originalEstimateSeconds")):
-            return True
-    return positive(field(args, "timeoriginalestimate"))
-
-
-def epic_problems(args):
+def epic_problems(issue):
     found = []
-    if component_names(args):
-        found.append(("has a component, which an Epic must not have", "Remove additional_fields.components"))
-    if has_estimate(args):
-        found.append(("has an estimate, which an Epic must not have", "Remove additional_fields.timetracking"))
-    if not field(args, "duedate"):
-        found.append(("is missing a due date", 'Add additional_fields.duedate "<YYYY-MM-DD>"'))
-    elif not valid_due_date(field(args, "duedate")):
-        found.append(("has a due date that is not in the form YYYY-MM-DD", 'Use additional_fields.duedate "<YYYY-MM-DD>"'))
+    at = issue.prefix
+    if issue.component_names():
+        found.append(("has a component, which an Epic must not have", f"Remove {at}.components"))
+    if issue.has_estimate():
+        found.append(("has an estimate, which an Epic must not have", f"Remove {at}.timetracking"))
+    due = issue.get("duedate")
+    if not due:
+        found.append(("is missing a due date", f'Add {at}.duedate "<YYYY-MM-DD>"'))
+    elif not valid_due_date(due):
+        found.append(("has a due date that is not in the form YYYY-MM-DD", f'Use {at}.duedate "<YYYY-MM-DD>"'))
     return found
 
 
-def other_problems(args):
+def other_problems(issue):
     found = []
-    names = component_names(args)
+    at = issue.prefix
+    names = issue.component_names()
     if not names:
-        found.append(("is missing a component", 'Add additional_fields.components [{"name": "<component>"}]'))
+        found.append(("is missing a component", f'Add {at}.components [{{"name": "<component>"}}]'))
     for name in names:
         if name != name.lower():
             found.append((f'has the component "{name}", which is not lowercase',
-                          f'Use additional_fields.components [{{"name": "{name.lower()}"}}] (lowercase)'))
-    if not has_estimate(args):
-        found.append(("is missing an estimate", 'Add additional_fields.timetracking {"originalEstimate": "<estimate>"}'))
+                          f'Use {at}.components [{{"name": "{name.lower()}"}}] (lowercase)'))
+    if not issue.has_estimate():
+        found.append(("is missing an estimate", f'Add {at}.timetracking {{"originalEstimate": "<estimate>"}}'))
     return found
 
 
-def problems(args):
+def problems(issue, kind):
     """What the issue lacks or has wrong, as (clause about the issue, how to fix it) pairs."""
     found = []
-    if not has_fix_versions(args):
-        found.append(("is missing a fix version", 'Add additional_fields.fixVersions [{"name": "<version>"}]'))
-    rules = epic_problems if issue_type(args).lower() == "epic" else other_problems
-    return found + rules(args)
+    if not issue.has_fix_versions():
+        found.append(("is missing a fix version", f'Add {issue.prefix}.fixVersions [{{"name": "<version>"}}]'))
+    rules = epic_problems if kind.lower() == "epic" else other_problems
+    return found + rules(issue)
 
 
 def sentence(kind, found):
@@ -200,15 +209,20 @@ def decide(event, args):
     mine = git_commands.gemba_field(cwd, "Jira Project")
     if not mine:  # no Gemba section, or none with a Jira Project: not a Gemba project
         return
-    args = args if isinstance(args, dict) else lenient(args)
-    key = project_key(args)
+    flat = lenient(args)
+    key = key_of(flat.get("projectKey") or flat.get("project"))
+    if key and key.lower() != mine.lower():
+        return  # another project: nothing else is parsed
+    issue = Issue(flat)
+    key = key or key_of(issue.get("projectKey", "project"))
     if not key:
         raise Unreadable("the hook could not tell the project of the issue.")
     if key.lower() != mine.lower():
         return
-    found = problems(args)
+    kind = issue.kind()
+    found = problems(issue, kind)
     if found:
-        output("deny", sentence(issue_type(args), found))
+        output("deny", sentence(kind, found))
 
 
 def main():
