@@ -15,6 +15,8 @@ import json
 import os
 import re
 import sys
+
+import fallback_words  # before git_commands: it still loads when the parser does not
 from collections import namedtuple
 
 git_commands = None  # imported by main() once the command is known to create a branch
@@ -26,9 +28,6 @@ CURRENT = ("HEAD", "@")
 BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose",
                 "--contains", "--no-contains", "--merged", "--no-merged", "--show-current", "-u",
                 "--set-upstream-to", "--unset-upstream", "--edit-description", "--points-at", "--sort", "--format"}
-# The cheap test that skips every command with no git word that can make a branch, before the import; the parsed
-# `creations()` decide what is one.
-MENTIONS = re.compile(r"\bgit\b.*(?<![\w-])(?:branch|switch|checkout|worktree)(?![\w-])", re.DOTALL)
 # A clear creation form, for a command the parser cannot read (a wrapper, a quoted script) and for the fallbacks
 # when the parser does not load or crashes. `git branch` takes any leading options, except those of a mode
 # that lists, deletes or edits.
@@ -182,7 +181,10 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     asking = None
-    for git_command in git_commands.git_commands(command, cwd):
+    hidden = False
+    walk = git_commands.needs_walk(command, ("branch", "switch", "checkout", "worktree"))
+    for git_command in git_commands.git_commands(command, cwd) if walk else ():
+        hidden = hidden or git_commands.hides_subcommand(git_command, cwd)
         for creation in creations(git_command, cwd):
             project = git_commands.project_of(git_command, cwd)
             if project == "no":
@@ -193,9 +195,12 @@ def decide(event):
             asking = asking or found
     if asking:
         return git_commands.emit(*asking)
+    if hidden:
+        return git_commands.emit("ask", PREFIX + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the creation from it, so any such segment that looks like one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, CREATING) and git_commands.has_gemba(cwd):
+    if (git_commands.unparsed_mentions(command, CREATING) or git_commands.unparsed_hides_subcommand(command)) \
+            and git_commands.has_gemba(cwd):
         git_commands.emit("ask", PREFIX + "this command creates, copies or renames a branch in a way the hook could not read "
                           "(a wrapper, a shell keyword or a quoted script). Confirm that the branch is named "
                           "<type>/<KEY>-<slug> and starts from develop.")
@@ -210,12 +215,12 @@ def main():
     if event.get("tool_name") != "Bash":
         return
     command = event.get("tool_input", {}).get("command", "")
-    if not MENTIONS.search(command):
-        return  # nothing mentions a command that makes a branch: skip the import and the parsing
+    if not fallback_words.mentions_git(command):
+        return  # no git at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for a clear creation
-        if CREATING.search(command):
+        if fallback_words.relevant(command, CREATING):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse", "permissionDecision": "ask",
                 "permissionDecisionReason": PREFIX + "the branch hook could not load its parser. Confirm that the branch "
@@ -225,7 +230,7 @@ def main():
     try:
         decide(event)
     except Exception:  # a crash exits non-zero, which does not block: ask for a clear creation, one layer only
-        if CREATING.search(command):
+        if fallback_words.relevant(command, CREATING):
             git_commands.emit("ask", BROKEN)
 
 

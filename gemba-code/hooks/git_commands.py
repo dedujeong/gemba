@@ -39,6 +39,16 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
   (or takes `event`), ignores everything but Bash, calls `decide(event)` and, if it raises, asks with
   `reason` when the command matches `relevant`, the hook's own pattern (a hook that crashes does not block: fail closed). A
   hook keeps inline only the branch for the module failing to import.
+- `hides_subcommand(command, cwd)`: True when a GitCommand's subcommand cannot be trusted: it comes from a variable or a
+  substitution (`$P`, `${P}`, `$(...)`, a backtick) or it is not a git builtin (`BUILTINS`: an alias, also one defined
+  with `-c alias.<name>=...`, or an external `git-<name>`), so the hook cannot tell which rules it breaks. A hook asks with
+  `HIDDEN_SUBCOMMAND` once, unless the command runs outside a project with setup.
+- `needs_walk(command, subcommands)`: the cheap test before `git_commands(command, cwd)`: a git command of the
+  command is one of the subcommands or not a literal builtin. It runs no git. `unparsed_hides_subcommand(command)`:
+  the same hidden subcommand inside a wrapper segment. An alias is expanded by `git_commands` (from
+  `-c alias.<n>=...` or `git config --get alias.<n>`, one level) and judged as its expansion; a `!shell` alias, an
+  unreadable one or an alias of an alias stays as the alias name, which is not a builtin, so it is asked about.
+  `fallback_words.py` holds the pre-filter words the hooks read before this module loads.
 - `word_pattern(*words)`: the compiled regex `git ... <word>` (whole words, not `commit-graph`).
 - Redirections are not part of a command: the operator and its target word (`2>&1`, `2>/dev/null`, `> f`,
   `>> f`, `< f`, `&> f`, `<<< text`, `<<WORD`) are dropped before the words are read, and so is the body of a
@@ -61,8 +71,11 @@ import subprocess
 import sys
 from collections import namedtuple
 
+import fallback_words
+
 SEPARATORS = "();<>|&\n"
-GLOBAL_OPTIONS_WITH_A_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path"}
+GLOBAL_OPTIONS_WITH_A_VALUE = {"-C", "-c", "--git-dir", "--work-tree", "--namespace", "--exec-path",
+                                "--attr-source", "--config-env", "--super-prefix", "--list-cmds"}
 
 # The options that take a value, per subcommand: the parser cannot tell `-m msg` from `-a msg` without it.
 OPTIONS_WITH_A_VALUE = {
@@ -81,6 +94,28 @@ OPTIONS_WITH_A_VALUE = {
     "pull": {"-s", "--strategy", "-X", "--strategy-option", "--depth", "--deepen", "--shallow-since",
              "--shallow-exclude", "-j", "--jobs", "--upstream-pack", "-o", "--server-option"},
 }
+
+# The git builtins (porcelain and plumbing). A subcommand outside this set is an alias or an external command.
+BUILTINS = frozenset("""add am annotate apply archive bisect blame branch bugreport bundle cat-file check-attr check-ignore
+check-mailmap check-ref-format checkout checkout-index cherry cherry-pick citool clean clone column commit commit-graph
+commit-tree config count-objects credential describe diagnose diff diff-files diff-index diff-tree difftool fast-export
+fast-import fetch fetch-pack filter-branch fmt-merge-msg for-each-ref for-each-repo format-patch fsck gc get-tar-commit-id
+grep gui hash-object help hook index-pack init interpret-trailers log ls-files ls-remote ls-tree mailinfo mailsplit maintenance
+merge merge-base merge-file merge-index merge-tree mergetool mktag mktree multi-pack-index mv name-rev notes pack-objects
+pack-redundant pack-refs patch-id prune prune-packed pull push range-diff read-tree rebase reflog refs remote repack replace
+replay request-pull rerere reset restore rev-list rev-parse revert rm send-email shell shortlog show show-branch show-index
+show-ref sparse-checkout stage stash status stripspace submodule switch symbolic-ref tag unpack-file unpack-objects
+update-index update-ref update-server-info var verify-commit verify-pack verify-tag version whatchanged worktree write-tree
+init-db upload-pack receive-pack upload-archive send-pack daemon http-backend http-fetch http-push credential-cache
+credential-cache--daemon credential-store merge-recursive merge-ours merge-octopus merge-resolve merge-subtree instaweb
+imap-send quiltimport remote-http remote-https remote-ftp remote-ftps remote-fd remote-ext lost-found sh-i18n sh-setup
+mergetool--lib fsmonitor--daemon scalar archimport cvsexportcommit cvsimport cvsserver svn p4""".split())
+
+# Programs that run another command: the git inside them is the one that runs.
+WRAPPERS = frozenset("sudo doas time command env nice nohup exec ! then do else if while until".split())
+
+HIDDEN_SUBCOMMAND = ("the git subcommand comes from a variable or is not a git builtin (an alias or an external command),"
+                     " so the hook cannot tell which rules it breaks. Confirm it.")
 
 GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config git_dir unresolved",
                         defaults=(None, (), None, False))
@@ -283,6 +318,12 @@ def parse(words):
     return GitCommand(folder, words[i], options, args, config=tuple(config), git_dir=git_dir)
 
 
+def hides_subcommand(command, cwd):
+    """True when the subcommand of a GitCommand is a variable or not a git builtin (an alias that could not be
+    expanded, an external command), in a project with setup. `project_of` runs only for those."""
+    return command.subcommand not in BUILTINS and project_of(command, cwd) != "no"
+
+
 def option_names(command):
     """The set of option names of a GitCommand."""
     return {name for name, _ in command.options}
@@ -439,6 +480,11 @@ def git_commands(command, cwd=None):
         git_command = parse(words)
         if git_command is None:
             continue
+        if git_command.subcommand not in BUILTINS:
+            where = _repository_folder(git_command, base, lost, env, cwd)[0] if cwd is not None else None
+            expanded = _expand_alias(words, git_command, where)
+            if expanded:
+                words, git_command = expanded
         folder, unresolved = _repository_folder(git_command, base, lost, env, cwd)
         branch = None
         if cwd is not None and folder is not None:
@@ -451,6 +497,45 @@ def git_commands(command, cwd=None):
                 branches[key] = switched
         found.append(git_command._replace(folder=folder, branch=branch, unresolved=unresolved))
     return found
+
+
+@functools.lru_cache(maxsize=None)
+def _configured_alias(folder, name):
+    return git(folder, "config", "--get", "--end-of-options", "alias." + name)
+
+
+def _expand_alias(words, command, folder):
+    """(words, GitCommand) of the command with its alias replaced by what it stands for, or None when it cannot be
+    expanded: not an alias, a `!shell` alias, a value that cannot be split, or an alias of another alias (only one
+    level is followed). The alias comes from `-c alias.<name>=...` on the command line, else from the git config
+    of the folder."""
+    name = command.subcommand
+    if re.search(r"[$`]", name):
+        return None
+    value = next((value for key, value in reversed(command.config) if key.lower() == "alias." + name.lower()), None)
+    if value is None and folder:
+        value = _configured_alias(folder, name)
+    if not value or value.startswith("!"):
+        return None
+    try:
+        expansion = shlex.split(value)
+    except ValueError:
+        return None
+    at = next(i for i, word in enumerate(words) if os.path.basename(word) == "git") + 1
+    while words[at] != name or words[at - 1] in GLOBAL_OPTIONS_WITH_A_VALUE:
+        at += 1
+    new_words = words[:at] + expansion + words[at + 1:]
+    expanded = parse(new_words)
+    if expanded is None or expanded.subcommand not in BUILTINS:
+        return None
+    return new_words, expanded
+
+
+def needs_walk(command, subcommands):
+    """True when the command has a git command that may matter to a hook: one of its `subcommands`, or one that is
+    not a literal builtin (a variable, an alias that is not on the command line). Reads no repository, so a hook
+    skips the walk of the others (`git status`, `git log`) without running git."""
+    return any(found.subcommand in subcommands or found.subcommand not in BUILTINS for found in git_commands(command))
 
 
 @functools.lru_cache(maxsize=None)
@@ -469,8 +554,27 @@ def unparsed_mentions(command, pattern):
     elif isinstance(pattern, (tuple, list)):
         pattern = word_pattern(*pattern)
     if _words(command) is None:
-        return pattern.search(command) is not None
-    return any(pattern.search(" ".join(words)) for words in segments(command) if parse(words) is None)
+        return pattern.search(fallback_words.normalize(command)) is not None
+    return any(pattern.search(fallback_words.normalize(" ".join(words))) for words in segments(command)
+               if parse(words) is None)
+
+
+def unparsed_hides_subcommand(command):
+    """True when a segment that is not a parseable git command has a git command (after a wrapper such as `sudo`
+    or `time`, or inside `bash -c`) whose subcommand is a variable, an alias on its command line or not a git builtin."""
+    if _words(command) is None:
+        return fallback_words.hides_subcommand(command)
+    for words in segments(command):
+        if parse(words) is not None:
+            continue
+        if fallback_words.hides_subcommand(" ".join(words)):
+            return True
+        if words[0] in WRAPPERS:
+            start = next((i for i, word in enumerate(words[1:6], start=1) if os.path.basename(word) == "git"), None)
+            inner = parse(words[start:]) if start else None
+            if inner is not None and inner.subcommand not in BUILTINS:
+                return True
+    return False
 
 
 def mentions(command, subcommand):

@@ -14,6 +14,7 @@ class AsksEvenWhenTheSharedModuleCannotBeImported(unittest.TestCase):
         self.addCleanup(shutil.rmtree, alone)
         script = os.path.join(alone, "confirm_push.py")
         shutil.copy(SCRIPT, script)
+        shutil.copy(os.path.join(os.path.dirname(SCRIPT), "fallback_words.py"), alone)
         repo = make_repo()
         self.addCleanup(shutil.rmtree, repo)
         event = '{"hook_event_name": "PreToolUse", "tool_name": "Bash", "tool_input": {"command": "git push origin develop"}, "cwd": "%s"}' % repo

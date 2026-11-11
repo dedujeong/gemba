@@ -480,6 +480,7 @@ class SecondReview(CommitRulesCase):
         self.addCleanup(shutil.rmtree, folder)
         script = os.path.join(folder, "commit_rules.py")
         shutil.copy(SCRIPT, script)
+        shutil.copy(os.path.join(os.path.dirname(SCRIPT), "fallback_words.py"), folder)
 
         def run(command):
             event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": self.repo}
@@ -533,6 +534,7 @@ class Robustness(CommitRulesCase):
         self.addCleanup(shutil.rmtree, folder)
         script = os.path.join(folder, "commit_rules.py")
         shutil.copy(SCRIPT, script)
+        shutil.copy(os.path.join(os.path.dirname(SCRIPT), "fallback_words.py"), folder)
 
         def run(command):
             event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": self.repo}

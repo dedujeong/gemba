@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -224,6 +225,7 @@ class AsksWhenItCannotRead(HookTestCase):
                 f.write(real.read())
             f.write("\n\ndef git_commands(*a, **k):\n    raise RuntimeError('boom')\n")
         hooks = os.path.join(sitecustomize_dir, "branch_rules.py")
+        shutil.copy(os.path.join(ROOT, "hooks", "fallback_words.py"), sitecustomize_dir)
         with open(SCRIPT, encoding="utf-8") as f, open(hooks, "w", encoding="utf-8") as g:
             g.write(f.read())
 
@@ -239,6 +241,7 @@ class FallbacksMatchTheSameCreations(HookTestCase):
         """The hook alone in a folder: its parser module cannot be imported."""
         folder = tempfile.mkdtemp(dir=self.repo)
         hook = os.path.join(folder, "branch_rules.py")
+        shutil.copy(os.path.join(ROOT, "hooks", "fallback_words.py"), folder)
         with open(SCRIPT, encoding="utf-8") as f, open(hook, "w", encoding="utf-8") as g:
             g.write(f.read())
         event = {"tool_name": "Bash", "cwd": self.repo, "tool_input": {"command": command}}
@@ -249,6 +252,7 @@ class FallbacksMatchTheSameCreations(HookTestCase):
         with open(os.path.join(ROOT, "hooks", "git_commands.py"), encoding="utf-8") as real, \
                 open(os.path.join(folder, "git_commands.py"), "w", encoding="utf-8") as f:
             f.write(real.read() + "\n\ndef git_commands(*a, **k):\n    raise RuntimeError('boom')\n")
+        shutil.copy(os.path.join(ROOT, "hooks", "fallback_words.py"), folder)
         with open(SCRIPT, encoding="utf-8") as f, open(os.path.join(folder, "branch_rules.py"), "w", encoding="utf-8") as g:
             g.write(f.read())
         event = {"tool_name": "Bash", "cwd": self.repo, "tool_input": {"command": command}}

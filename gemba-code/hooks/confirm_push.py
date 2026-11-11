@@ -11,6 +11,8 @@ import os
 import re
 import sys
 
+import fallback_words  # before git_commands: it still loads when the parser does not
+
 git_commands = None  # imported by main() once the command is known to mention a push
 MENTIONS_A_PUSH = re.compile(r"\bgit\b.*\bpush\b", re.DOTALL)
 BROKEN = "git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote."
@@ -46,16 +48,23 @@ WRAPPED = ("git push: this command contains a git push the hook could not read (
 def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
-    for push in (found for found in git_commands.git_commands(command, cwd) if found.subcommand == "push"):
+    hidden = False
+    for push in git_commands.git_commands(command, cwd) if git_commands.needs_walk(command, ("push",)) else ():
+        hidden = hidden or git_commands.hides_subcommand(push, cwd)
+        if push.subcommand != "push":
+            continue
         project = git_commands.project_of(push, cwd)
         if project == "unknown":  # a cd the parser could not follow
             return git_commands.emit("ask", "git push: the hook could not tell which folder this push runs in."
                                             " Confirm before anything reaches the remote.")
         if project == "yes":
             return git_commands.emit("ask", reason(push))
+    if hidden:
+        return git_commands.emit("ask", "git push: " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the push from it, so any such segment that mentions one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, "push") and git_commands.has_gemba(cwd):
+    if (git_commands.unparsed_mentions(command, "push") or git_commands.unparsed_hides_subcommand(command)) \
+            and git_commands.has_gemba(cwd):
         git_commands.emit("ask", WRAPPED)
 
 
@@ -67,16 +76,19 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    if not MENTIONS_A_PUSH.search(event.get("tool_input", {}).get("command", "")):
-        return  # not a push of any kind: skip the import and the parsing
+    command = event.get("tool_input", {}).get("command", "")
+    if not fallback_words.mentions_git(command):
+        return  # no git at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions a push
+        if not fallback_words.relevant(command, MENTIONS_A_PUSH):
+            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
         return
-    git_commands.run_hook(decide, MENTIONS_A_PUSH, BROKEN, event)
+    git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, MENTIONS_A_PUSH), BROKEN, event)
 
 
 if __name__ == "__main__":

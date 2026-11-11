@@ -12,6 +12,8 @@ import os
 import re
 import sys
 
+import fallback_words  # before git_commands: it still loads when the parser does not
+
 git_commands = None  # imported by main() once the command is known to mention a commit
 
 TYPES = ("build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test")
@@ -156,7 +158,10 @@ def decide(event):
     command = event.get("tool_input", {}).get("command", "")
     asking = None
     merging = {}  # repository -> True after a `git merge --no-commit/--squash` earlier in this command, False after a merge that commits or --abort/--quit
-    for commit in git_commands.git_commands(command, cwd):
+    hidden = False
+    walk = git_commands.needs_walk(command, CREATES_COMMITS + ("merge",))
+    for commit in git_commands.git_commands(command, cwd) if walk else ():
+        hidden = hidden or git_commands.hides_subcommand(commit, cwd)
         key = git_commands.repository_key(commit.folder) if commit.folder else None
         names = git_commands.option_names(commit)
         if commit.subcommand == "merge" and key and "--continue" not in names:
@@ -172,9 +177,12 @@ def decide(event):
         asking = asking or found
     if asking:
         return git_commands.emit(*asking)
+    if hidden:
+        return git_commands.emit("ask", "Gemba rule (commits): " + git_commands.HIDDEN_SUBCOMMAND)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, CREATES_COMMITS) and git_commands.has_gemba(cwd):
+    if (git_commands.unparsed_mentions(command, CREATES_COMMITS) or git_commands.unparsed_hides_subcommand(command)) \
+            and git_commands.has_gemba(cwd):
         git_commands.emit("ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)"))
 
 
@@ -186,16 +194,19 @@ def main():
         return
     if event.get("tool_name") != "Bash":
         return
-    if not CREATING_WORDS.search(event.get("tool_input", {}).get("command", "")):
-        return  # no commit, revert, cherry-pick or am anywhere: skip the import and the parsing
+    command = event.get("tool_input", {}).get("command", "")
+    if not fallback_words.mentions_git(command):
+        return  # no git at all: skip the import and the parsing
     try:
         import git_commands
     except ImportError:  # a crash here would not block: ask for any command that mentions a commit
+        if not fallback_words.relevant(command, CREATING_WORDS):
+            return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
         return
-    git_commands.run_hook(decide, CREATING_WORDS, BROKEN, event)
+    git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, CREATING_WORDS), BROKEN, event)
 
 
 if __name__ == "__main__":
