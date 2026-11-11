@@ -28,9 +28,6 @@ CURRENT = ("HEAD", "@")
 BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose",
                 "--contains", "--no-contains", "--merged", "--no-merged", "--show-current", "-u",
                 "--set-upstream-to", "--unset-upstream", "--edit-description", "--points-at", "--sort", "--format"}
-# The cheap test that skips every command with no git word that can make a branch, before the import; the parsed
-# `creations()` decide what is one.
-MENTIONS = re.compile(r"\bgit\b.*(?<![\w-])(?:branch|switch|checkout|worktree)(?![\w-])", re.DOTALL)
 # A clear creation form, for a command the parser cannot read (a wrapper, a quoted script) and for the fallbacks
 # when the parser does not load or crashes. `git branch` takes any leading options, except those of a mode
 # that lists, deletes or edits.
