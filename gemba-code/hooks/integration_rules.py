@@ -259,7 +259,7 @@ def main():
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": UNREADABLE}}))
         return
-    git_commands.run_hook(decide, GIT_WORDS, UNREADABLE, event)
+    git_commands.run_hook(decide, RELEVANT, UNREADABLE, event)
 
 
 if __name__ == "__main__":
