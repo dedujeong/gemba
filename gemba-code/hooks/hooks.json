@@ -21,6 +21,15 @@
         ]
       },
       {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/commit_rules.py\""
+          }
+        ]
+      },
+      {
         "matcher": "mcp__.*__(createJiraIssue|executeWrite)",
         "hooks": [
           {

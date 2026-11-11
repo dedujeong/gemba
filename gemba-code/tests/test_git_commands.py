@@ -1,14 +1,20 @@
+import contextlib
+import io
+import json
 import os
+import re
+import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "hooks"))
 
 import git_commands  # noqa: E402
-from git_commands import GitCommand, git_commands as commands_of, mentions, parse, segments  # noqa: E402
+from git_commands import GitCommand, emit, git_commands as commands_of, mentions, parse, segments, unparsed_mentions  # noqa: E402
 
 
 def only(command):
@@ -243,6 +249,311 @@ class RepoHelpersTest(unittest.TestCase):
     def test_current_branch(self):
         run(self.repo, "checkout", "-q", "-b", "task/ABC-1-x")
         self.assertEqual(git_commands.current_branch(self.repo), "task/ABC-1-x")
+
+
+class NewValueOptionsTest(unittest.TestCase):
+    def test_worktree_reason_takes_a_value(self):
+        found = parse(["git", "worktree", "lock", "--reason", "why", "../wt"])
+        self.assertEqual((found.options, found.args), ([("--reason", "why")], ["lock", "../wt"]))
+
+    def test_tag_listing_options_take_a_value(self):
+        found = parse(["git", "tag", "--contains", "abc", "--sort", "v:refname", "--format", "%(refname)", "-l"])
+        self.assertEqual(found.options, [("--contains", "abc"), ("--sort", "v:refname"), ("--format", "%(refname)"), ("-l", None)])
+        self.assertEqual(found.args, [])
+        for name in ("--cleanup", "--no-contains", "--points-at", "--merged", "--no-merged"):
+            with self.subTest(name=name):
+                self.assertEqual(parse(["git", "tag", name, "x", "v1"]).options, [(name, "x")])
+
+
+def init_repo(branch="main"):
+    folder = tempfile.mkdtemp()
+    folder = os.path.realpath(folder)
+    run(folder, "init", "-q", "-b", branch)
+    run(folder, "config", "user.email", "t@example.com")
+    run(folder, "config", "user.name", "T")
+    run(folder, "commit", "-q", "--allow-empty", "-m", "start")
+    return folder
+
+
+class ContextTrackingTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = init_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+        run(self.repo, "branch", "develop")
+        os.makedirs(os.path.join(self.repo, "sub"))
+        self.other = init_repo("other-main")
+        self.addCleanup(shutil.rmtree, self.other)
+
+    def folders(self, command, cwd=None):
+        return [c.folder for c in commands_of(command, cwd or self.repo)]
+
+    def branches(self, command, cwd=None):
+        return [c.branch for c in commands_of(command, cwd or self.repo)]
+
+    def test_the_branch_field_defaults_to_none_and_parse_keeps_working(self):
+        self.assertIsNone(parse(["git", "status"]).branch)
+        self.assertEqual(GitCommand(None, "status", [], []).branch, None)
+        self.assertIsNone(commands_of("git status")[0].branch)
+
+    def test_the_first_command_gets_the_real_branch_of_its_folder(self):
+        self.assertEqual(self.branches("git status"), ["main"])
+        self.assertEqual(self.branches(f"git -C {self.other} status"), ["other-main"])
+
+    def test_a_detached_head_has_an_empty_branch(self):
+        run(self.repo, "checkout", "-q", "--detach")
+        self.assertEqual(self.branches("git status"), [""])
+
+    def test_cd_changes_the_folder_of_the_later_commands(self):
+        self.assertEqual(self.folders("cd sub && git status"), [os.path.join(self.repo, "sub")])
+        self.assertEqual(self.folders(f"cd {self.other} && git status"), [self.other])
+        self.assertEqual(self.branches(f"cd {self.other} && git status"), ["other-main"])
+
+    def test_cd_is_relative_to_the_current_folder(self):
+        found = self.folders("cd sub && cd .. && git status")
+        self.assertEqual(found, [self.repo])
+
+    def test_a_dash_c_folder_is_relative_to_the_folder_after_cd(self):
+        self.assertEqual(self.folders(f"cd {self.repo} && git -C sub status"), [os.path.join(self.repo, "sub")])
+
+    def test_commands_before_the_cd_keep_the_old_folder(self):
+        self.assertEqual(self.folders(f"git status; cd {self.other}; git status"), [self.repo, self.other])
+
+    def test_cd_alone_or_dash_makes_the_folder_unknown(self):
+        self.assertEqual(self.folders("cd && git status"), [None])
+        self.assertEqual(self.folders("cd - && git status"), [None])
+        self.assertEqual(self.branches("cd && git status"), [None])
+
+    def test_a_cd_with_a_variable_makes_the_folder_unknown(self):
+        self.assertEqual(self.folders("cd $DIR && git status"), [None])
+
+    def test_an_absolute_dash_c_folder_is_known_after_an_unknown_cd(self):
+        self.assertEqual(self.folders(f"cd && git -C {self.other} status"), [self.other])
+        self.assertEqual(self.folders("cd && git -C sub status"), [None])
+
+    def test_a_cd_inside_a_subshell_ends_with_it(self):
+        self.assertEqual(self.folders(f"(cd {self.other} && git status) && git log"), [self.other, self.repo])
+
+    def test_a_cd_in_a_pipeline_or_in_the_background_does_not_change_the_folder(self):
+        self.assertEqual(self.folders(f"cd {self.other} | git status"), [self.repo])
+        self.assertEqual(self.folders(f"cd {self.other} & git status"), [self.repo])
+
+    def test_switch_and_checkout_set_the_branch_of_later_commands(self):
+        self.assertEqual(self.branches("git switch develop && git commit -m x"), ["main", "develop"])
+        self.assertEqual(self.branches("git checkout develop && git commit -m x"), ["main", "develop"])
+        self.assertEqual(self.branches("git switch develop; git status; git switch main; git status"),
+                         ["main", "develop", "develop", "main"])
+
+    def test_creating_a_branch_sets_it_to_the_new_name(self):
+        self.assertEqual(self.branches("git switch -c story/A-1-x && git commit -m x"), ["main", "story/A-1-x"])
+        self.assertEqual(self.branches("git switch -C story/A-1-x develop && git commit -m x"), ["main", "story/A-1-x"])
+        self.assertEqual(self.branches("git checkout -b story/A-1-x && git commit -m x"), ["main", "story/A-1-x"])
+        self.assertEqual(self.branches("git checkout -B story/A-1-x develop && git commit -m x"), ["main", "story/A-1-x"])
+
+    def test_a_path_checkout_keeps_the_branch(self):
+        self.assertEqual(self.branches("git checkout -- develop && git status"), ["main", "main"])
+        self.assertEqual(self.branches("git checkout . && git status"), ["main", "main"])
+        self.assertEqual(self.branches("git checkout sub && git status"), ["main", "main"])
+        self.assertEqual(self.branches("git checkout develop -- sub && git status"), ["main", "main"])
+
+    def test_switching_to_the_previous_branch_makes_it_unknown(self):
+        self.assertEqual(self.branches("git switch - && git status"), ["main", None])
+        self.assertEqual(self.branches("git checkout - && git status"), ["main", None])
+
+    def test_a_detached_switch_has_an_empty_branch(self):
+        self.assertEqual(self.branches("git switch --detach HEAD && git status"), ["main", ""])
+
+    def test_a_switch_applies_to_the_folder_it_runs_in(self):
+        found = self.branches(f"git -C {self.other} switch -c x && git status && git -C {self.other} status")
+        self.assertEqual(found, ["other-main", "main", "x"])
+
+    def test_a_switch_after_a_cd_applies_to_that_folder(self):
+        found = self.branches(f"cd {self.other} && git switch -c x && git status && cd {self.repo} && git status")
+        self.assertEqual(found, ["other-main", "x", "main"])
+
+    def test_the_branch_is_read_once_per_folder(self):
+        with mock.patch.object(git_commands, "current_branch", return_value="b") as read:
+            commands_of("git status && git log && git -C /elsewhere log && git status", self.repo)
+        self.assertEqual(read.call_count, 2)
+
+    def test_without_cwd_the_branch_is_not_read(self):
+        self.assertEqual([c.branch for c in commands_of("git switch -c x && git status")], [None, None])
+
+    def test_an_unreadable_command_gives_no_commands(self):
+        self.assertEqual(commands_of('git commit -m "unbalanced', self.repo), [])
+
+
+class UnparsedMentionsTest(unittest.TestCase):
+    def test_a_wrapped_command_is_found(self):
+        self.assertTrue(unparsed_mentions("bash -c 'git push --force'", "push"))
+        self.assertTrue(unparsed_mentions('sudo git commit -m "x"', "commit"))
+        self.assertTrue(unparsed_mentions("if true; then git push; fi", "push"))
+
+    def test_the_arguments_of_a_parsed_command_are_not_searched(self):
+        self.assertFalse(unparsed_mentions('git commit -m "fix the merge"', "merge"))
+        self.assertFalse(unparsed_mentions("git log --grep commit", "commit"))
+        self.assertFalse(unparsed_mentions("git commit-graph write", "commit"))
+        self.assertFalse(unparsed_mentions("git rev-parse HEAD^{commit}", "commit"))
+        self.assertFalse(unparsed_mentions('git commit -m "git push now"', "push"))
+
+    def test_a_wrapped_command_next_to_a_parsed_one_is_found(self):
+        self.assertTrue(unparsed_mentions("git status && bash -c 'git push --force'", "push"))
+
+    def test_a_hyphenated_name_is_not_the_subcommand(self):
+        self.assertFalse(unparsed_mentions("bash -c 'git commit-graph write'", "commit"))
+
+    def test_a_compiled_pattern_is_used_as_it_is(self):
+        pattern = re.compile(r"\bgit\b.*--force")
+        self.assertTrue(unparsed_mentions("bash -c 'git push --force'", pattern))
+        self.assertFalse(unparsed_mentions("git push --force", pattern))
+
+    def test_an_unreadable_command_is_searched_whole(self):
+        self.assertTrue(unparsed_mentions('git commit -m "unbalanced', "commit"))
+        self.assertTrue(unparsed_mentions("echo 'x; git push", "push"))
+        self.assertFalse(unparsed_mentions('git status "unbalanced', "push"))
+
+
+class EmitTest(unittest.TestCase):
+    def test_prints_the_pretooluse_decision(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            emit("deny", "because")
+        self.assertEqual(json.loads(out.getvalue()), {"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "deny", "permissionDecisionReason": "because"}})
+
+
+class SecondReviewTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = init_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+        run(self.repo, "branch", "develop")
+        os.makedirs(os.path.join(self.repo, "sub"))
+
+    def branches(self, command):
+        return [c.branch for c in commands_of(command, self.repo)]
+
+    def test_the_tracked_branch_belongs_to_the_repository_not_the_folder(self):
+        self.assertEqual(self.branches("git switch develop && git -C sub status"), ["main", "develop"])
+        self.assertEqual(self.branches("git switch develop && cd sub && git status"), ["main", "develop"])
+        self.assertEqual(self.branches("cd sub && git switch develop && cd .. && git status"), ["main", "develop"])
+
+    def test_another_repository_keeps_its_own_branch(self):
+        other = init_repo("other-main")
+        self.addCleanup(shutil.rmtree, other)
+        self.assertEqual(self.branches(f"git switch develop && git -C {other} status"), ["main", "other-main"])
+
+    def test_track_options_are_flags(self):
+        self.assertEqual(parse(["git", "checkout", "-t", "origin/x"]), GitCommand(None, "checkout", [("-t", None)], ["origin/x"]))
+        self.assertEqual(parse(["git", "checkout", "--track", "origin/x"]).options, [("--track", None)])
+        self.assertEqual(parse(["git", "switch", "--track=direct", "origin/x"]).options, [("--track", "direct")])
+        self.assertEqual(parse(["git", "switch", "--track", "origin/x"]).args, ["origin/x"])
+
+    def test_tracking_a_remote_branch_checks_out_the_local_branch(self):
+        self.assertEqual(self.branches("git checkout -t origin/feat && git status"), ["main", "feat"])
+        self.assertEqual(self.branches("git checkout --track origin/story/A-1-x && git status"), ["main", "story/A-1-x"])
+        self.assertEqual(self.branches("git switch --track origin/feat && git status"), ["main", "feat"])
+        self.assertEqual(self.branches("git switch -t origin/develop && git status"), ["main", "develop"])
+
+    def test_a_new_name_wins_over_the_tracked_one(self):
+        self.assertEqual(self.branches("git checkout -b mine -t origin/develop && git status"), ["main", "mine"])
+
+    def test_the_claude_md_is_read_once_per_repository(self):
+        with open(os.path.join(self.repo, "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("## Gemba\n\n- Jira Project: ABC\n")
+        self.assertEqual(git_commands.gemba_field(self.repo, "Jira Project"), "ABC")
+        with mock.patch.object(git_commands, "git", side_effect=AssertionError("git ran")), \
+                mock.patch("builtins.open", side_effect=AssertionError("file read")):
+            self.assertEqual(git_commands.gemba_field(self.repo, "Jira Project"), "ABC")
+            self.assertTrue(git_commands.has_gemba(self.repo))
+
+    def test_a_changed_claude_md_is_read_again(self):
+        path = os.path.join(self.repo, "CLAUDE.md")
+        self.assertFalse(git_commands.has_gemba(self.repo))
+        with open(path, "w", encoding="utf-8") as f:
+            f.write("## Gemba\n")
+        self.assertTrue(git_commands.has_gemba(self.repo))
+
+    def test_the_repository_key_is_the_same_from_every_folder_of_it(self):
+        self.assertEqual(git_commands.repository_key(self.repo), git_commands.repository_key(os.path.join(self.repo, "sub")))
+        other = init_repo()
+        self.addCleanup(shutil.rmtree, other)
+        self.assertNotEqual(git_commands.repository_key(self.repo), git_commands.repository_key(other))
+
+
+class SimplifiedHelpersTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = init_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+
+    def test_option_names(self):
+        self.assertEqual(git_commands.option_names(parse(["git", "commit", "-am", "x", "--amend"])), {"-a", "-m", "--amend"})
+
+    def test_is_branch(self):
+        self.assertTrue(git_commands.is_branch(self.repo, "main"))
+        self.assertFalse(git_commands.is_branch(self.repo, "nope"))
+
+    def test_word_pattern_matches_whole_words_only(self):
+        pattern = git_commands.word_pattern("commit", "am")
+        self.assertTrue(pattern.search("bash -c git am x"))
+        self.assertTrue(pattern.search("sudo git commit"))
+        self.assertFalse(pattern.search("git commit-graph"))
+        self.assertFalse(pattern.search("git log --grep ham"))
+
+    def test_unparsed_mentions_takes_a_tuple_of_words(self):
+        self.assertTrue(unparsed_mentions("bash -c 'git am x'", ("commit", "am")))
+        self.assertFalse(unparsed_mentions("git am x", ("commit", "am")))
+
+    def test_project_of(self):
+        with open(os.path.join(self.repo, "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("## Gemba\n")
+        outside = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, outside)
+        here = GitCommand(self.repo, "push", [], [])
+        self.assertEqual(git_commands.project_of(here, self.repo), "yes")
+        self.assertEqual(git_commands.project_of(GitCommand(outside, "push", [], []), outside), "no")
+        self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), self.repo), "unknown")
+        self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), outside), "no")
+
+    def test_failures_of_the_repo_reads_are_cached_too(self):
+        outside = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, outside)
+        self.assertEqual(git_commands.toplevel(outside), outside)
+        self.assertEqual(git_commands.repository_key(outside), os.path.normpath(outside))
+        with mock.patch.object(git_commands, "git", side_effect=AssertionError("git ran")):
+            self.assertEqual(git_commands.toplevel(outside), outside)
+            self.assertEqual(git_commands.repository_key(outside), os.path.normpath(outside))
+
+    def test_a_command_is_tokenized_once(self):
+        command = "git switch x && bash -c 'git push' && git status #" + self.repo
+        git_commands._words.cache_clear()
+        with mock.patch.object(git_commands.shlex, "shlex", wraps=git_commands.shlex.shlex) as lexer:
+            commands_of(command, self.repo)
+            unparsed_mentions(command, "push")
+            list(segments(command))
+        self.assertEqual(lexer.call_count, 1)
+
+    def run_hook(self, event, decide):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            git_commands.run_hook(decide, ("commit", "am"), "broken", event)
+        return out.getvalue()
+
+    def test_run_hook_calls_decide_for_bash_only(self):
+        calls = []
+        bash = {"tool_name": "Bash", "tool_input": {"command": "git commit"}}
+        self.run_hook(bash, calls.append)
+        self.run_hook({"tool_name": "Edit", "tool_input": {}}, calls.append)
+        self.assertEqual(calls, [bash])
+
+    def test_run_hook_fails_closed_when_decide_crashes_and_the_command_mentions_a_word(self):
+        def crash(event):
+            raise RuntimeError("boom")
+        out = self.run_hook({"tool_name": "Bash", "tool_input": {"command": "git am x"}}, crash)
+        self.assertEqual(json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"], "broken")
+        self.assertEqual(self.run_hook({"tool_name": "Bash", "tool_input": {"command": "git commit-graph write"}}, crash), "")
+
+    def test_run_hook_reads_the_event_from_stdin_and_ignores_bad_input(self):
+        with mock.patch.object(sys, "stdin", io.StringIO("not json")):
+            git_commands.run_hook(lambda event: self.fail("called"), ("commit",), "broken")
 
 
 if __name__ == "__main__":
