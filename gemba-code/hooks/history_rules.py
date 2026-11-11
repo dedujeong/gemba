@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: the history rules of the method, for a project with setup.
 
-Reads the hook event from stdin. When a Bash command does an operation that rewrites or loses
+Reads the hook event from stdin (alone, or through `bash_rules.py`, which calls `decide(event)`
+for the answer `(decision, reason)` or None). When a Bash command does an operation that rewrites or loses
 history (a merge that is not a `--no-ff` merge with Git's message, a rebase, a force push, the
 forced deletion of a branch that is not a Spike's, a tag that is not a version) and the project's
 CLAUDE.md has a `## Gemba` section, it prints a `deny` decision whose reason names the rule and
@@ -17,15 +18,13 @@ import fallback_words  # before git_commands: it still loads when the parser doe
 
 git_commands = None  # imported by main() once the command is known to mention an operation
 
-PROTECTED = ("develop", "main")
+PROTECTED = fallback_words.PROTECTED_BRANCHES
 FAST_FORWARD_OPTIONS = ("--ff", "--no-ff", "--ff-only")
 MERGE_ENDS = {"--abort", "--continue", "--quit"}
 REBASE_ENDS = {"--abort", "--continue", "--skip", "--quit", "--edit-todo", "--show-current-patch"}
-OPERATIONS = ("merge", "rebase", "pull", "push", "branch", "tag")
-# Any git command with one of the operations, as whole words: the cheap test that skips every other command.
-OPERATION_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s)(?![\w-])" % "|".join(OPERATIONS), re.DOTALL)
-BROKEN = ("Gemba rule (history): the hook could not read the repository. "
-          "Confirm that this command does not rewrite or lose history.")
+OPERATIONS = fallback_words.OPERATIONS
+OPERATION_WORDS = fallback_words.OPERATION_WORDS  # any git command with one of the operations: the cheap test that skips the others
+BROKEN = fallback_words.RULES["history_rules"].broken
 UNKNOWN = ("Gemba rule (history): the folder or the branch this command runs on could not be told. Run it from a plain "
            "folder, with one `cd` to a path or `-C`, so the hook can check that it does not rewrite or lose history.")
 WRAPPED = ("Gemba rule (history): this command has a git operation the hook could not read (a wrapper, a shell"
@@ -229,16 +228,16 @@ def decide(event):
             continue
         problem = check(git_command)
         if problem:
-            return git_commands.emit("deny", problem)
+            return "deny", problem
     if asking:
-        return git_commands.emit("ask", UNKNOWN)
+        return "ask", UNKNOWN
     if hidden:
-        return git_commands.emit("ask", "Gemba rule (history): " + git_commands.HIDDEN_SUBCOMMAND)
+        return "ask", "Gemba rule (history): " + git_commands.HIDDEN_SUBCOMMAND
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the operation from it, so a segment that looks like one asks with a generic reason.
     if (git_commands.unparsed_mentions(command, WRAPPED_OPERATIONS) or git_commands.unparsed_hides_subcommand(command)) \
             and git_commands.has_gemba(cwd):
-        git_commands.emit("ask", WRAPPED)
+        return "ask", WRAPPED
 
 
 def main():
@@ -259,7 +258,7 @@ def main():
             return
         print(json.dumps({"hookSpecificOutput": {
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
-            "permissionDecisionReason": "Gemba rule (history): the hook could not load its parser. Confirm that this command does not rewrite or lose history."}}))
+            "permissionDecisionReason": fallback_words.RULES["history_rules"].unloaded}}))
         return
     git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, OPERATION_WORDS), BROKEN, event)
 

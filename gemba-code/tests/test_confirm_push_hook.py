@@ -256,10 +256,12 @@ class RegisteredInThePlugin(unittest.TestCase):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
             return json.load(f)["hooks"]["PreToolUse"]
 
-    def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
+    def test_the_dispatcher_registered_for_bash_runs_the_script_before_the_tool_runs(self):
         entries = [e for e in self.pre_tool_use() if e.get("matcher") == "Bash"]
         commands = [h["command"] for e in entries for h in e["hooks"] if h["type"] == "command"]
-        self.assertEqual(commands.count('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/confirm_push.py"'), 1)
+        self.assertEqual(commands.count('python3 "${CLAUDE_PLUGIN_ROOT}/hooks/bash_rules.py"'), 1)
+        with open(os.path.join(ROOT, "hooks", "bash_rules.py"), encoding="utf-8") as f:
+            self.assertIn('"confirm_push"', f.read())
 
     def test_the_session_start_hook_is_still_there(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

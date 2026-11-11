@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: the branches of a project with setup follow the branch rules.
 
-Reads the hook event from stdin. When a Bash command creates, copies or renames a branch (`git switch -c`,
+Reads the hook event from stdin (alone, or through `bash_rules.py`, which calls `decide(event)`
+for the answer `(decision, reason)` or None). When a Bash command creates, copies or renames a branch (`git switch -c`,
 `git checkout -b`, `git branch <name>`, `git branch -c|-m`, `git worktree add [-b]`, `--orphan`; not the forced
 update of a branch that exists, which the history hook governs) and the
 project's CLAUDE.md has a `## Gemba` section, it denies a name that is not `<type>/<KEY>-<slug>` with type
@@ -22,7 +23,7 @@ from collections import namedtuple
 git_commands = None  # imported by main() once the command is known to create a branch
 
 NAME = re.compile(r"(story|task|bug|spike)/[A-Z][A-Z0-9]*-\d+-[a-z0-9]+(-[a-z0-9]+)*")
-PROTECTED = ("main", "develop")
+PROTECTED = fallback_words.PROTECTED_BRANCHES
 DEVELOP = ("develop", "refs/heads/develop")
 CURRENT = ("HEAD", "@")
 BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose",
@@ -31,19 +32,11 @@ BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--
 # A clear creation form, for a command the parser cannot read (a wrapper, a quoted script) and for the fallbacks
 # when the parser does not load or crashes. `git branch` takes any leading options, except those of a mode
 # that lists, deletes or edits.
-_BRANCH_MODE = (r"-[dDlarvu]\S*|--(?:delete|list|all|remotes|verbose|show-current|contains|no-contains|merged"
-                r"|no-merged|set-upstream-to|unset-upstream|edit-description|points-at|sort|format)(?![\w-])")
-CREATING = re.compile(
-    r"\bgit\b.*(?<![\w-])(?:"
-    r"(?:switch|checkout)\s(?:.*\s)?-(?:[a-zA-Z]*[cCbB]|-create|-force-create|-orphan)(?![\w-])"
-    r"|worktree\s+add\s(?:.*\s)?-[bB](?![\w-])"
-    rf"|branch\s+(?:(?!{_BRANCH_MODE})-\S*\s+)*[^-\s]"
-    r"|branch\s(?:.*\s)?(?:-[a-zA-Z]*[mMcC]|--move|--copy)(?![\w-])"
-    r")", re.DOTALL)
+CREATING = fallback_words.BRANCH_CREATING
 PREFIX = "Gemba rule (branches): "
 SUGGESTED = {"worktree": "git worktree add -b {name} <path> develop", "checkout": "git checkout -b {name} develop",
              "branch": "git branch {name} develop", "switch": "git switch -c {name} develop"}
-BROKEN = PREFIX + "the branch hook could not read this command. Confirm that the branch is named <type>/<KEY>-<slug> and starts from develop."
+BROKEN = fallback_words.RULES["branch_rules"].broken
 
 # kind: "create" (a start point, or None for the current branch), "copy" (start = the old branch), "orphan"
 # (no history) or "rename" (start = the old branch, None for the current one).
@@ -191,19 +184,19 @@ def decide(event):
                 continue
             found = ("ask", hint_unknown()) if project == "unknown" else check(git_command, creation, cwd)
             if found and found[0] == "deny":
-                return git_commands.emit(*found)
+                return found
             asking = asking or found
     if asking:
-        return git_commands.emit(*asking)
+        return asking
     if hidden:
-        return git_commands.emit("ask", PREFIX + git_commands.HIDDEN_SUBCOMMAND)
+        return "ask", PREFIX + git_commands.HIDDEN_SUBCOMMAND
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the creation from it, so any such segment that looks like one asks with a generic reason.
     if (git_commands.unparsed_mentions(command, CREATING) or git_commands.unparsed_hides_subcommand(command)) \
             and git_commands.has_gemba(cwd):
-        git_commands.emit("ask", PREFIX + "this command creates, copies or renames a branch in a way the hook could not read "
-                          "(a wrapper, a shell keyword or a quoted script). Confirm that the branch is named "
-                          "<type>/<KEY>-<slug> and starts from develop.")
+        return "ask", (PREFIX + "this command creates, copies or renames a branch in a way the hook could not read "
+                       "(a wrapper, a shell keyword or a quoted script). Confirm that the branch is named "
+                       "<type>/<KEY>-<slug> and starts from develop.")
 
 
 def main():
@@ -223,15 +216,17 @@ def main():
         if fallback_words.relevant(command, CREATING):
             print(json.dumps({"hookSpecificOutput": {
                 "hookEventName": "PreToolUse", "permissionDecision": "ask",
-                "permissionDecisionReason": PREFIX + "the branch hook could not load its parser. Confirm that the branch "
-                                                     "is named <type>/<KEY>-<slug> and starts from develop."}}))
+                "permissionDecisionReason": fallback_words.RULES["branch_rules"].unloaded}}))
         return
 
     try:
-        decide(event)
+        found = decide(event)
     except Exception:  # a crash exits non-zero, which does not block: ask for a clear creation, one layer only
         if fallback_words.relevant(command, CREATING):
             git_commands.emit("ask", BROKEN)
+    else:
+        if found:
+            git_commands.emit(*found)
 
 
 if __name__ == "__main__":

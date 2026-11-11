@@ -493,11 +493,13 @@ class TheReasonSuggestsTheSameForm(HookTestCase):
 
 
 class RegisteredInThePlugin(unittest.TestCase):
-    def test_the_script_is_registered_for_bash_before_the_tool_runs(self):
+    def test_the_dispatcher_registered_for_bash_runs_the_script_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
             entries = json.load(f)["hooks"]["PreToolUse"]
         commands = [(entry["matcher"], hook["command"]) for entry in entries for hook in entry["hooks"]]
-        self.assertIn(("Bash", 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/branch_rules.py"'), commands)
+        self.assertIn(("Bash", 'python3 "${CLAUDE_PLUGIN_ROOT}/hooks/bash_rules.py"'), commands)
+        with open(os.path.join(ROOT, "hooks", "bash_rules.py"), encoding="utf-8") as f:
+            self.assertIn('"branch_rules"', f.read())
 
 
 if __name__ == "__main__":

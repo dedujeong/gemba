@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """PreToolUse hook: a project with setup only pushes and merges what its `Integration` mode allows.
 
-Reads the hook event from stdin. In a project whose CLAUDE.md has a `## Gemba` section it denies the
+Reads the hook event from stdin (alone, or through `bash_rules.py`, which calls `decide(event)`
+for the answer `(decision, reason)` or None). In a project whose CLAUDE.md has a `## Gemba` section it denies the
 `git push`, the local `git merge` (or `git pull` of another branch) into develop or main and the
 `gh pr merge` that break the `Integration` mode, and asks (generic reason) for a push or merge it cannot
 read. The mode is the one of the repository the command runs in, and the branch a bare push or a merge
@@ -20,14 +21,13 @@ import fallback_words  # before git_commands: it still loads when the parser doe
 git_commands = None  # imported by main() once the command is known to mention a push, a merge or a pull
 
 MODES = ("merge", "pull request")
-MAIN_BRANCHES = ("develop", "main")
+MAIN_BRANCHES = fallback_words.PROTECTED_BRANCHES
 GIT_WORDS = ("push", "merge", "pull")
 GH_PR_MERGE = re.compile(r"\bgh\b.*\bpr\b.*\bmerge\b", re.DOTALL)
-# The cheap test that skips every other command before the parser is imported.
+# The cheap test that skips every other command before the parser is imported. `fallback_words.RULES` holds the same
+# pattern for the dispatcher, which cannot import this script when it is broken (tests keep them equal).
 RELEVANT = re.compile(r"\bgit\b.*(?<![\w-])(?:%s)(?![\w-])|%s" % ("|".join(GIT_WORDS), GH_PR_MERGE.pattern), re.DOTALL)
-UNREADABLE = ("Gemba rule (integration): this command contains a git push or a merge the hook could not read (a wrapper,"
-              " a shell keyword, a folder or a branch it cannot tell or a quoted script), so it cannot check the"
-              " integration mode. Confirm it.")
+UNREADABLE = fallback_words.RULES["integration_rules"].broken
 NOT_A_NEW_TAG = {"-d", "--delete", "-l", "--list", "-v", "--verify"}  # `git tag` options that create no tag
 UNKNOWN = object()  # a branch the hook cannot tell
 
@@ -222,7 +222,7 @@ def decide(event):
         if problem is UNKNOWN:
             asking = True
         elif problem:
-            return git_commands.emit("deny", problem)
+            return "deny", problem
     in_project = git_commands.has_gemba(cwd)
     for words, folder, env in git_commands.segment_folders(command, cwd):
         is_plain = is_pr_merge(words)
@@ -234,12 +234,11 @@ def decide(event):
             asking = asking or (in_project and mode_of(cwd) != "merge")
         elif git_commands.has_gemba(folder):
             if is_plain and mode_of(folder) == "pull request":
-                return git_commands.emit(
-                    "deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
-                            " The maintainer merges the pull request.")
+                return ("deny", "Gemba rule (integration: pull request): gh pr merge is not run by Claude."
+                                " The maintainer merges the pull request.")
             asking = asking or (not is_plain and mode_of(folder) != "merge")  # a hidden one, like a hidden merge
     if asking or hidden:
-        return git_commands.emit("ask", UNREADABLE if asking else "Gemba rule (integration): " + git_commands.HIDDEN_SUBCOMMAND)
+        return "ask", UNREADABLE if asking else "Gemba rule (integration): " + git_commands.HIDDEN_SUBCOMMAND
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell keyword)
     # hides it, so a command that mentions one asks with a generic reason. A local merge, a pull or a pull
     # request merge is only a rule in pull request mode, so only there is a hidden one asked about.
@@ -248,7 +247,7 @@ def decide(event):
     hidden_push = git_commands.unparsed_mentions(command, "push")
     hidden_merge = git_commands.unparsed_mentions(command, ("merge", "pull"))
     if hidden_push or git_commands.unparsed_hides_subcommand(command) or (hidden_merge and mode_of(cwd) != "merge"):
-        git_commands.emit("ask", UNREADABLE)
+        return "ask", UNREADABLE
 
 
 def main():
@@ -268,7 +267,7 @@ def main():
         if not fallback_words.relevant(command, RELEVANT):
             return
         print(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": UNREADABLE}}))
+            "hookEventName": "PreToolUse", "permissionDecision": "ask", "permissionDecisionReason": fallback_words.RULES["integration_rules"].unloaded}}))
         return
     git_commands.run_hook(decide, lambda text: fallback_words.relevant(text, RELEVANT), UNREADABLE, event)
 
