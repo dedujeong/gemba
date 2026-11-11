@@ -250,7 +250,7 @@ def main():
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "Gemba rule (history): the hook could not load its parser. Confirm that this command does not rewrite or lose history."}}))
         return
-    git_commands.run_hook(decide, OPERATIONS, BROKEN, event)
+    git_commands.run_hook(decide, OPERATION_WORDS, BROKEN, event)
 
 
 if __name__ == "__main__":

@@ -76,7 +76,7 @@ def main():
             "hookEventName": "PreToolUse", "permissionDecision": "ask",
             "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
         return
-    git_commands.run_hook(decide, ("push",), BROKEN, event)
+    git_commands.run_hook(decide, MENTIONS_A_PUSH, BROKEN, event)
 
 
 if __name__ == "__main__":
