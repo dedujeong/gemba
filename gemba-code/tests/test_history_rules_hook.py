@@ -204,6 +204,34 @@ class Rebases(HookCase):
         self.passes("git rebase develop", "git pull --rebase", repo=repo)
 
 
+class ForcePushes(HookCase):
+    def test_a_force_push_is_denied_and_names_the_rule(self):
+        for command in ("git push --force origin develop", "git push -f origin develop", "git push origin develop -f",
+                        "git push --force-with-lease origin develop", "git push --force-with-lease=develop origin develop",
+                        "git push --force-if-includes origin develop", "git push -fu origin develop",
+                        "git push origin +develop", "git push origin +develop:develop", "git push origin HEAD --force",
+                        "git add . && git push -f", "git -C . push --force"):
+            reason = self.denied(command, "history")
+            self.assertIn("force", reason, command)
+
+    def test_a_push_that_does_not_force_prints_nothing(self):
+        self.passes("git push origin develop", "git push", "git push -u origin story/ABC-1-export",
+                    "git push origin develop:develop", "git push origin --delete story/ABC-1-export",
+                    "git push --tags", "git push origin 'v1+2'")
+
+    def test_a_force_push_the_parser_cannot_read_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git push --force origin develop'", "sudo git push -f", "sh -c 'git push origin +develop'"):
+            self.assertIn("could not read", self.asked(command), command)
+
+    def test_a_push_the_parser_cannot_read_that_does_not_force_prints_nothing(self):
+        self.passes("bash -c 'git push origin develop'")
+
+    def test_a_force_push_in_a_project_without_the_gemba_section_prints_nothing(self):
+        repo = make_repo(None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git push --force origin develop", repo=repo)
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_as_its_own_bash_hook_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

@@ -27,6 +27,7 @@ RAW_OPERATIONS = (
     r"\bgit\b.*\bmerge\b",
     r"\bgit\b.*\brebase\b",
     r"\bgit\b.*\bpull\b.*(--rebase|\s-\w*r)",
+    r"\bgit\b.*\bpush\b.*(--force|\s-\w*f|\s\+)",
 )
 
 
@@ -112,7 +113,19 @@ def pull_problem(pull):
     return None
 
 
-CHECKS = {"merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem}
+FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes"}
+
+
+def push_problem(push):
+    """The reason a push breaks the rules, or None: no force push, whatever its form."""
+    forced = any(name in FORCE_OPTIONS for name, _ in push.options) or any(arg.startswith("+") for arg in push.args)
+    if forced:
+        return rule("history", "a force push rewrites the history of the remote",
+                    "Push without --force, --force-with-lease or a `+` refspec; if the remote moved, merge it first")
+    return None
+
+
+CHECKS = {"merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
 
 
 def decide(event):
