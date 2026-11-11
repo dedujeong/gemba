@@ -100,9 +100,38 @@ class BlocksABadName(HookTestCase):
         self.denied("git status && git checkout -b feature/login")
 
 
+class TheKeyIsTheProjectKey(HookTestCase):
+    def test_a_key_that_is_not_the_jira_project_is_denied(self):
+        for command in ("git switch -c story/XYZ-1-a develop", "git branch task/AB-2-b develop",
+                        "git checkout -b bug/ABCD-3-c develop", "git worktree add -b spike/ABC2-4-d ../w develop"):
+            with self.subTest(command=command):
+                reason = self.denied(command)
+                self.assertIn("Jira Project", reason)
+                self.assertIn("ABC", reason)
+
+    def test_the_key_of_the_project_passes(self):
+        self.passes("git switch -c story/ABC-1-a develop")
+
+    def test_without_the_field_any_key_is_accepted(self):
+        other = make_repo(claude_md="## Gemba\n\n- Language: es-MX\n")
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        self.passes("git switch -c story/XYZ-1-a develop", other)
+        self.denied_in(other, "git switch -c feature/x develop")
+
+    def test_the_case_of_the_field_is_the_one_written(self):
+        other = make_repo(claude_md="## Gemba\n\n- Jira Project: Abc\n")
+        self.addCleanup(subprocess.run, ["rm", "-rf", other])
+        self.denied_in(other, "git switch -c story/ABC-1-a develop")
+
+    def denied_in(self, repo, command):
+        out = self.decide(command, repo)
+        self.assertIsNotNone(out, command)
+        self.assertEqual(out["permissionDecision"], "deny", command)
+
+
 class PassesAValidName(HookTestCase):
     def test_valid_names_of_the_four_types_print_nothing(self):
-        for name in ("story/ABC-12-login", "task/ABC-3-add-tests", "bug/AB2-45-fix-the-crash", "spike/ABC-9-try-x2"):
+        for name in ("story/ABC-12-login", "task/ABC-3-add-tests", "bug/ABC-45-fix-the-crash", "spike/ABC-9-try-x2"):
             with self.subTest(name=name):
                 self.passes(f"git switch -c {name} develop")
                 self.passes(f"git branch -c develop {name}")

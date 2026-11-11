@@ -111,10 +111,24 @@ def hint_unknown():
             "with one `cd` to a path or `-C`, so the hook can check the branch name and that it starts from develop.")
 
 
-def check(command, creation):
+def project_key(command, cwd):
+    """The `Jira Project` of the project's Gemba section (the folder of the command first, then the session's),
+    or None when it has no such field."""
+    for folder in (command.folder, cwd):
+        key = folder and git_commands.gemba_field(folder, "Jira Project")
+        if key:
+            return key
+    return None
+
+
+def check(command, creation, cwd=None):
     """A (decision, reason) for one creation, or None when it follows the rules."""
     if not NAME.fullmatch(creation.name):
         return "deny", wrong(creation.name)
+    key = project_key(command, cwd)
+    if key and not re.fullmatch(rf"[a-z]+/{re.escape(key)}-.*", creation.name):
+        return "deny", (f"{PREFIX}the key in the branch name '{creation.name}' is not the Jira Project key '{key}' of "
+                        f"this project. Name it story/{key}-12-short-slug from develop.")
     if creation.kind == "rename":
         old = creation.start if creation.start is not None else command.branch
         if old is None:
@@ -142,7 +156,7 @@ def decide(event):
             project = git_commands.project_of(git_command, cwd)
             if project == "no":
                 continue
-            found = ("ask", hint_unknown()) if project == "unknown" else check(git_command, creation)
+            found = ("ask", hint_unknown()) if project == "unknown" else check(git_command, creation, cwd)
             if found and found[0] == "deny":
                 return git_commands.emit(*found)
             asking = asking or found
