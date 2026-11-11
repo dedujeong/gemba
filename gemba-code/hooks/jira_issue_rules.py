@@ -69,11 +69,19 @@ def original_estimate(args):
     return named(value.get("originalEstimate")) if isinstance(value, dict) else ""
 
 
-def problems(args):
-    """What the issue lacks or has wrong, as (clause about the issue, how to fix it) pairs."""
+def epic_problems(args):
     found = []
-    if not field(args, "fixVersions"):
-        found.append(("is missing a fix version", 'Add additional_fields.fixVersions [{"name": "<version>"}]'))
+    if component_names(args):
+        found.append(("has a component, which an Epic must not have", "Remove additional_fields.components"))
+    if original_estimate(args) or field(args, "timetracking"):
+        found.append(("has an estimate, which an Epic must not have", "Remove additional_fields.timetracking"))
+    if not field(args, "duedate"):
+        found.append(("is missing a due date", 'Add additional_fields.duedate "<YYYY-MM-DD>"'))
+    return found
+
+
+def other_problems(args):
+    found = []
     names = component_names(args)
     if not names:
         found.append(("is missing a component", 'Add additional_fields.components [{"name": "<component>"}]'))
@@ -84,6 +92,15 @@ def problems(args):
     if not original_estimate(args):
         found.append(("is missing an estimate", 'Add additional_fields.timetracking {"originalEstimate": "<estimate>"}'))
     return found
+
+
+def problems(args):
+    """What the issue lacks or has wrong, as (clause about the issue, how to fix it) pairs."""
+    found = []
+    if not field(args, "fixVersions"):
+        found.append(("is missing a fix version", 'Add additional_fields.fixVersions [{"name": "<version>"}]'))
+    rules = epic_problems if issue_type(args).lower() == "epic" else other_problems
+    return found + rules(args)
 
 
 def sentence(kind, found):

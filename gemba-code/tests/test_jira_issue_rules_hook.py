@@ -186,6 +186,58 @@ class ComponentAndEstimate(HookCase):
         self.passes((tool, tool_input))
 
 
+EPIC = {**VERSION, "duedate": "2026-12-31"}
+
+
+class EpicFields(HookCase):
+    def test_an_epic_with_a_fix_version_and_a_due_date_passes_for_every_shape(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                self.passes(shape(dict(EPIC), issue_type="Epic"))
+
+    def test_an_epic_with_a_component_is_denied(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                reason = self.denied(shape({**EPIC, "components": [{"name": "hooks"}]}, issue_type="Epic"))
+                self.assertIn("Epic", reason)
+                self.assertIn("component", reason)
+                self.assertIn("must not", reason)
+                self.assertIn("Remove additional_fields.components", reason)
+                self.assertNotIn("duedate", reason)
+
+    def test_an_epic_with_an_estimate_is_denied(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                reason = self.denied(shape({**EPIC, "timetracking": {"originalEstimate": "3h"}}, issue_type="Epic"))
+                self.assertIn("estimate", reason)
+                self.assertIn("Remove additional_fields.timetracking", reason)
+
+    def test_an_epic_without_a_due_date_is_denied(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                reason = self.denied(shape(dict(VERSION), issue_type="Epic"))
+                self.assertIn("due date", reason)
+                self.assertIn('additional_fields.duedate "<YYYY-MM-DD>"', reason)
+
+    def test_an_epic_without_a_fix_version_is_still_denied(self):
+        self.assertIn("fixVersions", self.denied(direct({"duedate": "2026-12-31"}, issue_type="Epic")))
+
+    def test_an_epic_does_not_need_a_component_or_an_estimate(self):
+        reason = self.denied(direct(None, issue_type="Epic"))
+        self.assertNotIn("is missing a component", reason)
+        self.assertNotIn("is missing an estimate", reason)
+
+    def test_every_epic_problem_is_listed_in_one_reason(self):
+        fields = {"components": [{"name": "hooks"}], "timetracking": {"originalEstimate": "3h"}}
+        reason = self.denied(direct(fields, issue_type="epic"))
+        for word in ("fixVersions", "components", "timetracking", "duedate"):
+            self.assertIn(word, reason)
+
+    def test_a_due_date_on_another_type_is_not_checked(self):
+        self.passes(direct({**GOOD, "duedate": "2026-12-31"}))
+        self.passes(direct(dict(GOOD)))
+
+
 class FailsClosed(unittest.TestCase):
     def alone(self, tool_name, tool_input):
         """Runs a copy of the script with no git_commands next to it, so its import fails."""
