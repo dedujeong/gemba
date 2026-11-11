@@ -266,6 +266,35 @@ class BranchDeletion(HookCase):
         self.passes("git branch -D story/ABC-1-export", repo=repo)
 
 
+class Tags(HookCase):
+    def test_a_tag_that_is_not_a_version_is_denied_and_names_the_rule(self):
+        for command in ("git tag release", "git tag v1.0", "git tag 1.2.3", "git tag v1.2.3-rc1", "git tag V1.2.3",
+                        "git tag -a v1.2 -m 'x'", "git tag -m 'x' -a latest develop", "git tag -f v1", "git tag -s backup",
+                        "git tag gemba-code-v0.1.0", "git tag Gemba--v0.1.0", "git tag gemba--v0.1", "git tag gemba-product--v1.2.3.4",
+                        "git tag v1.2.3-rc1 develop", "git status && git tag wip", "git -C . tag wip"):
+            reason = self.denied(command, "tags")
+            self.assertIn("vX.Y.Z", reason, command)
+
+    def test_a_version_tag_passes(self):
+        self.passes("git tag v0.1.0", "git tag v10.20.30 main", "git tag -a v1.2.3 -m 'Release'", "git tag -m x -a v1.2.3",
+                    "git tag gemba-code--v0.1.0", "git tag gemba-product--v1.2.3 main", "git tag -a gemba-design--v0.0.1 -m 'x'",
+                    "git tag -f v1.2.3")
+
+    def test_listing_deleting_and_verifying_tags_print_nothing(self):
+        self.passes("git tag", "git tag -l", "git tag --list 'v*'", "git tag -l 'wip*'", "git tag -n", "git tag -d wip",
+                    "git tag --delete wip", "git tag -v wip", "git tag --verify wip", "git tag --contains develop",
+                    "git tag --points-at HEAD", "git tag --merged develop", "git tag --sort=-creatordate")
+
+    def test_a_tag_the_parser_cannot_read_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git tag wip'", "sudo git tag wip", "if true; then git tag wip; fi"):
+            self.assertIn("could not read", self.asked(command), command)
+
+    def test_a_tag_in_a_project_without_the_gemba_section_prints_nothing(self):
+        repo = make_repo(None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git tag wip", "bash -c 'git tag wip'", repo=repo)
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_as_its_own_bash_hook_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:

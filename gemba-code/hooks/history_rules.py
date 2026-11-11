@@ -29,6 +29,7 @@ RAW_OPERATIONS = (
     r"\bgit\b.*\bpull\b.*(--rebase|\s-\w*r)",
     r"\bgit\b.*\bpush\b.*(--force|\s-\w*f|\s\+)",
     r"\bgit\b.*\bbranch\b.*(--force|\s-\w*[Df])",
+    r"\bgit\b.*\btag\b",
 )
 
 
@@ -139,7 +140,22 @@ def branch_problem(branch):
     return None
 
 
-CHECKS = {"branch": branch_problem, "merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
+VERSION_TAG = re.compile(r"v\d+\.\d+\.\d+|[a-z0-9][a-z0-9-]*--v\d+\.\d+\.\d+")
+TAG_NOT_CREATING = {"-l", "--list", "-d", "--delete", "-v", "--verify", "-n", "--contains", "--no-contains",
+                    "--merged", "--no-merged", "--points-at", "--sort", "--format"}
+
+
+def tag_problem(tag):
+    """The reason a tag breaks the rules, or None: a tag is a version, `vX.Y.Z` or `<plugin>--vX.Y.Z`."""
+    if not tag.args or {name for name, _ in tag.options} & TAG_NOT_CREATING:
+        return None
+    if VERSION_TAG.fullmatch(tag.args[0]):
+        return None
+    return rule("tags", f"the tag {tag.args[0]} is not a version",
+                "Tag only versions, named vX.Y.Z or <plugin>--vX.Y.Z (for example gemba-product--v0.1.0)")
+
+
+CHECKS = {"tag": tag_problem, "branch": branch_problem, "merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
 
 
 def decide(event):
