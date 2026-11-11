@@ -27,9 +27,9 @@ Public API (everything a hook needs; nothing here runs anything but `git`):
 - `project_of(command, cwd)`: "yes" when the folder of the GitCommand is in a project with setup, "no" when it
   is not, "unknown" when the folder is None (a `cd` that cannot be followed) and the session's folder has
   setup. The one ladder every hook uses instead of testing `folder is None` itself.
-- `run_hook(decide, words, reason, event=None)`: the shared `main()` skeleton. Reads the event from stdin
+- `run_hook(decide, relevant, reason, event=None)`: the shared `main()` skeleton. Reads the event from stdin
   (or takes `event`), ignores everything but Bash, calls `decide(event)` and, if it raises, asks with
-  `reason` when the command mentions one of `words` (a hook that crashes does not block: fail closed). A
+  `reason` when the command matches `relevant`, the hook's own pattern (a hook that crashes does not block: fail closed). A
   hook keeps inline only the branch for the module failing to import.
 - `word_pattern(*words)`: the compiled regex `git ... <word>` (whole words, not `commit-graph`).
 - Redirections are not part of a command: the operator and its target word (`2>&1`, `2>/dev/null`, `> f`,
@@ -401,10 +401,11 @@ def emit(decision, reason):
     }}))
 
 
-def run_hook(decide, words, reason, event=None):
+def run_hook(decide, relevant, reason, event=None):
     """The shared `main()` of the hooks: reads the event from stdin (or takes `event`), ignores what is not a
     Bash command, calls `decide(event)` and fails closed. A crash of `decide` exits non-zero, which does not
-    block, so when the command mentions one of `words` it asks with `reason` instead."""
+    block, so when the command is one the hook checks it asks with `reason` instead. `relevant` is the hook's own
+    pattern (a compiled regex, searched in the command), a tuple of git words, or a callable taking the command."""
     if event is None:
         try:
             event = json.load(sys.stdin)
@@ -415,7 +416,10 @@ def run_hook(decide, words, reason, event=None):
     try:
         decide(event)
     except Exception:
-        if word_pattern(*words).search(event.get("tool_input", {}).get("command", "")):
+        command = event.get("tool_input", {}).get("command", "")
+        if isinstance(relevant, (tuple, list)):
+            relevant = word_pattern(*relevant)
+        if relevant(command) if callable(relevant) else relevant.search(command):
             emit("ask", reason)
 
 

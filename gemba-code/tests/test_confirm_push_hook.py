@@ -121,6 +121,23 @@ class AsksOnEveryPush(unittest.TestCase):
         self.assertEqual(refs.stdout, "", "the hook must not push anything to the remote")
 
 
+class RemoteFromTheCommand(unittest.TestCase):
+    def test_a_remote_that_starts_with_a_dash_is_never_handed_to_git(self):
+        sys.path.insert(0, os.path.join(ROOT, "hooks"))
+        import confirm_push
+        import git_commands
+        seen = []
+        real = git_commands.git
+        git_commands.git = lambda folder, *args: seen.append(args) or ""
+        self.addCleanup(setattr, git_commands, "git", real)
+        self.addCleanup(setattr, confirm_push, "git_commands", None)
+        confirm_push.git_commands = git_commands
+        push = git_commands.parse(["git", "push", "--", "--output=victim.txt"])
+        push = push._replace(folder=".")
+        confirm_push.reason(push)
+        self.assertFalse([args for args in seen if any(a.startswith("--output") for a in args)], seen)
+
+
 class FailsClosed(unittest.TestCase):
     def run_without_git(self, command):
         repo = make_repo()
