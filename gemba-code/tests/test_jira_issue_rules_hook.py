@@ -128,6 +128,64 @@ class FixVersion(HookCase):
         self.assertEqual((result.returncode, result.stdout), (0, ""))
 
 
+GOOD = {**VERSION, "components": [{"name": "hooks"}], "timetracking": {"originalEstimate": "3h"}}
+
+
+class ComponentAndEstimate(HookCase):
+    def test_a_complete_issue_passes_for_every_shape_and_type(self):
+        for shape in SHAPES:
+            for kind in ("Story", "Task", "Bug", "Spike"):
+                with self.subTest(shape=shape.__name__, kind=kind):
+                    self.passes(shape(dict(GOOD), issue_type=kind))
+
+    def test_an_issue_without_a_component_is_denied(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                fields = {k: v for k, v in GOOD.items() if k != "components"}
+                reason = self.denied(shape(fields))
+                self.assertIn("component", reason)
+                self.assertIn('additional_fields.components [{"name": "<component>"}]', reason)
+                self.assertNotIn("fixVersions [", reason)
+                self.assertNotIn("originalEstimate", reason)
+
+    def test_an_empty_component_list_is_denied(self):
+        self.denied(direct({**GOOD, "components": []}))
+
+    def test_an_issue_without_an_estimate_is_denied(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                fields = {k: v for k, v in GOOD.items() if k != "timetracking"}
+                reason = self.denied(shape(fields))
+                self.assertIn("estimate", reason)
+                self.assertIn('additional_fields.timetracking {"originalEstimate": "<estimate>"}', reason)
+
+    def test_a_timetracking_without_original_estimate_is_denied(self):
+        self.denied(direct({**GOOD, "timetracking": {"remainingEstimate": "1h"}}))
+
+    def test_a_component_in_uppercase_is_denied_and_the_reason_gives_the_lowercase_name(self):
+        for shape in SHAPES:
+            with self.subTest(shape=shape.__name__):
+                reason = self.denied(shape({**GOOD, "components": [{"name": "Hooks"}]}))
+                self.assertIn("Hooks", reason)
+                self.assertIn("lowercase", reason)
+                self.assertIn('"hooks"', reason)
+
+    def test_a_component_given_as_a_string_is_read_too(self):
+        self.passes(direct({**GOOD, "components": ["hooks"]}))
+        self.denied(direct({**GOOD, "components": ["HOOKS"]}))
+
+    def test_every_problem_is_listed_in_one_reason(self):
+        reason = self.denied(direct(None))
+        for word in ("fixVersions", "components", "timetracking"):
+            self.assertIn(word, reason)
+
+    def test_the_summary_and_the_description_are_never_read(self):
+        tool, tool_input = direct(dict(GOOD))
+        tool_input["summary"] = {"not": "a string"}
+        tool_input["description"] = 12
+        self.passes((tool, tool_input))
+
+
 class FailsClosed(unittest.TestCase):
     def alone(self, tool_name, tool_input):
         """Runs a copy of the script with no git_commands next to it, so its import fails."""

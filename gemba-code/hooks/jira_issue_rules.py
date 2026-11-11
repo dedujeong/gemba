@@ -59,22 +59,38 @@ def issue_type(args):
     return named(args.get("issueType") or args.get("issuetype"))
 
 
+def component_names(args):
+    value = field(args, "components")
+    return [named(item) for item in value] if isinstance(value, list) else []
+
+
+def original_estimate(args):
+    value = field(args, "timetracking")
+    return named(value.get("originalEstimate")) if isinstance(value, dict) else ""
+
+
 def problems(args):
+    """What the issue lacks or has wrong, as (clause about the issue, how to fix it) pairs."""
     found = []
     if not field(args, "fixVersions"):
-        found.append(("missing", "a fix version",
-                      'additional_fields.fixVersions [{"name": "<version>"}]'))
+        found.append(("is missing a fix version", 'Add additional_fields.fixVersions [{"name": "<version>"}]'))
+    names = component_names(args)
+    if not names:
+        found.append(("is missing a component", 'Add additional_fields.components [{"name": "<component>"}]'))
+    for name in names:
+        if name != name.lower():
+            found.append((f'has the component "{name}", which is not lowercase',
+                          f'Use additional_fields.components [{{"name": "{name.lower()}"}}] (lowercase)'))
+    if not original_estimate(args):
+        found.append(("is missing an estimate", 'Add additional_fields.timetracking {"originalEstimate": "<estimate>"}'))
     return found
 
 
 def sentence(kind, found):
-    missing = [(label, fix) for state, label, fix in found if state == "missing"]
-    parts = []
-    if missing:
-        parts.append("is missing " + ", ".join(label for label, _ in missing))
-    adds = "Add " + " and ".join(fix for _, fix in missing)
-    return (f"Gemba rule (issue fields): this {kind or 'issue'} " + " and ".join(parts) + f". {adds}"
-            " and call createJiraIssue again. This block comes from the Gemba Code plugin, not from Jira.")
+    clauses = "; ".join(clause for clause, _ in found)
+    fixes = ". ".join(fix for _, fix in found)
+    return (f"Gemba rule (issue fields): this {kind or 'issue'} {clauses}. {fixes}."
+            " Then call createJiraIssue again. This block comes from the Gemba Code plugin, not from Jira.")
 
 
 def decide(event, args):
