@@ -25,13 +25,19 @@ CURRENT = ("HEAD", "@")
 BRANCH_MODES = {"-d", "-D", "--delete", "-l", "--list", "-a", "--all", "-r", "--remotes", "-v", "-vv", "--verbose",
                 "--contains", "--no-contains", "--merged", "--no-merged", "--show-current", "-u",
                 "--set-upstream-to", "--unset-upstream", "--edit-description", "--points-at", "--sort", "--format"}
-# Any command that creates, copies or renames a branch, as one pattern: the cheap test that skips every other
-# command before the import, the test of a wrapped creation and the fallback when the parser fails.
+# The cheap test that skips every command with no git word that can make a branch, before the import; the parsed
+# `creations()` decide what is one.
+MENTIONS = re.compile(r"\bgit\b.*(?<![\w-])(?:branch|switch|checkout|worktree)(?![\w-])", re.DOTALL)
+# A clear creation form, for a command the parser cannot read (a wrapper, a quoted script) and for the fallbacks
+# when the parser does not load or crashes. `git branch` takes any leading options, except those of a mode
+# that lists, deletes or edits.
+_BRANCH_MODE = (r"-[dDlarvu]\S*|--(?:delete|list|all|remotes|verbose|show-current|contains|no-contains|merged"
+                r"|no-merged|set-upstream-to|unset-upstream|edit-description|points-at|sort|format)(?![\w-])")
 CREATING = re.compile(
     r"\bgit\b.*(?<![\w-])(?:"
     r"(?:switch|checkout)\s(?:.*\s)?-(?:[a-zA-Z]*[cCbB]|-create|-force-create|-orphan)(?![\w-])"
     r"|worktree\s+add\s(?:.*\s)?-[bB](?![\w-])"
-    r"|branch\s+(?:-[fqt]\S*\s+|--(?:force|track|quiet)\s+)*[^-\s]"
+    rf"|branch\s+(?:(?!{_BRANCH_MODE})-\S*\s+)*[^-\s]"
     r"|branch\s(?:.*\s)?(?:-[a-zA-Z]*[mMcC]|--move|--copy)(?![\w-])"
     r")", re.DOTALL)
 PREFIX = "Gemba rule (branches): "
@@ -159,21 +165,24 @@ def main():
     if event.get("tool_name") != "Bash":
         return
     command = event.get("tool_input", {}).get("command", "")
-    if not CREATING.search(command):
-        return  # nothing creates a branch: skip the import and the parsing
+    if not MENTIONS.search(command):
+        return  # nothing mentions a command that makes a branch: skip the import and the parsing
     try:
         import git_commands
-    except ImportError:  # a crash here would not block: ask for any command that creates a branch
-        print(json.dumps({"hookSpecificOutput": {
-            "hookEventName": "PreToolUse", "permissionDecision": "ask",
-            "permissionDecisionReason": PREFIX + "the branch hook could not load its parser. Confirm that the branch is named "
-                                                 "<type>/<KEY>-<slug> and starts from develop."}}))
+    except ImportError:  # a crash here would not block: ask for a clear creation
+        if CREATING.search(command):
+            print(json.dumps({"hookSpecificOutput": {
+                "hookEventName": "PreToolUse", "permissionDecision": "ask",
+                "permissionDecisionReason": PREFIX + "the branch hook could not load its parser. Confirm that the branch "
+                                                     "is named <type>/<KEY>-<slug> and starts from develop."}}))
         return
 
     try:
         decide(event)
     except Exception:  # a crash exits non-zero, which does not block: ask for a clear creation, one layer only
-        git_commands.emit("ask", BROKEN)
+        if CREATING.search(command):
+            git_commands.emit("ask", BROKEN)
+
 
 if __name__ == "__main__":
     main()

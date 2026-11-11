@@ -65,6 +65,16 @@ class BlocksABadName(HookTestCase):
             with self.subTest(command=command):
                 self.denied(command)
 
+    def test_a_branch_creation_with_any_leading_option_is_checked(self):
+        for option in ("--no-track", "--track=direct", "--track=inherit", "--create-reflog", "--recurse-submodules",
+                       "--no-color", "--color=never", "--no-create-reflog", "-t", "--no-recurse-submodules"):
+            for command in (f"git branch {option} feature/login", f"git branch {option} feature/login develop",
+                            f"git -C . branch {option} feature/login"):
+                with self.subTest(command=command):
+                    self.assertIn("feature/login", self.denied(command))
+            with self.subTest(option=option):
+                self.passes(f"git branch {option} story/ABC-2-b develop")
+
     def test_a_rename_is_checked_by_its_new_name(self):
         for command in ("git branch -m feature/login", "git branch -M old feature/login",
                         "git branch -m story/ABC-1-a feature/login"):
@@ -142,6 +152,15 @@ class AsksWhenItCannotRead(HookTestCase):
                 reason = self.asked(command)
                 self.assertTrue(reason.startswith("Gemba rule (branches): "), reason)
                 self.assertIn("could not read", reason)
+
+    def test_a_wrapped_creation_with_leading_options_asks_and_a_wrapped_listing_does_not(self):
+        for command in ("bash -c 'git branch --no-track feature/login'", "sudo git branch --track=direct x develop"):
+            with self.subTest(command=command):
+                self.asked(command)
+        for command in ("bash -c 'git branch --no-color'", "bash -c 'git branch --list x'", "sudo git branch -d x",
+                        "bash -c 'git branch --sort=-committerdate'", "bash -c 'git checkout develop'"):
+            with self.subTest(command=command):
+                self.passes(command)
 
     def test_a_wrapped_creation_after_another_command_asks_and_a_commit_message_does_not(self):
         self.asked("git status; bash -c 'git branch badname'")
