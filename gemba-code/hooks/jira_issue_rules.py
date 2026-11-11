@@ -13,23 +13,12 @@ import os
 import re
 import sys
 
-try:
-    import git_commands
-except ImportError:  # a crash here would not block, so main() asks for any createJiraIssue call
-    git_commands = None
-
-
-def output(decision, why):
-    print(json.dumps({"hookSpecificOutput": {
-        "hookEventName": "PreToolUse",
-        "permissionDecision": decision,
-        "permissionDecisionReason": why,
-    }}))
+git_commands = None  # imported by main() once the call is known to be a createJiraIssue
 
 
 def ask(why):
-    output("ask", f"Gemba rule (issue fields): {why} Confirm the issue has its fix version, component and estimate"
-                  " (an Epic: due date). This comes from the Gemba Code plugin, not from Jira.")
+    git_commands.emit("ask", f"Gemba rule (issue fields): {why} Confirm the issue has its fix version, component"
+                             " and estimate (an Epic: due date). This comes from the Gemba Code plugin, not from Jira.")
 
 
 class Unreadable(Exception):
@@ -222,10 +211,11 @@ def decide(event, args):
     kind = issue.kind()
     found = problems(issue, kind)
     if found:
-        output("deny", sentence(kind, found))
+        git_commands.emit("deny", sentence(kind, found))
 
 
 def main():
+    global git_commands
     try:
         event = json.load(sys.stdin)
         args = create_arguments(event)
@@ -233,8 +223,12 @@ def main():
         return
     if args is None:
         return
-    if git_commands is None:
-        ask("the hook that checks the fields of a new Jira issue could not load.")
+    try:
+        import git_commands
+    except ImportError:  # a crash here would not block: ask for any createJiraIssue call
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "ask",
+            "permissionDecisionReason": "Gemba rule (issue fields): the hook that checks the fields of a new Jira issue could not load. Confirm the issue has its fix version, component and estimate (an Epic: due date). This comes from the Gemba Code plugin, not from Jira."}}))
         return
     try:
         decide(event, args)
