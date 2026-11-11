@@ -53,8 +53,7 @@ def merge_problem(merge):
     if "--squash" in names:
         return rule("merges", f"a squash merge into {target} loses the history of the branch",
                     "Merge with `git merge --no-ff <branch>` and Git's default message")
-    updates_from_remote = all(arg in (f"origin/{target}", "@{u}", "@{upstream}") for arg in merge.args)
-    if updates_from_remote:
+    if git_commands.syncs_with_its_remote(merge):
         return None
     last = [name for name, _ in merge.options if name in FAST_FORWARD_OPTIONS]
     if not last or last[-1] != "--no-ff":
@@ -130,8 +129,7 @@ def pull_problem(pull):
         return rule("rebase", "git pull that rebases rewrites history",
                     "Pull without rebasing: `git pull --no-rebase` or `git merge --ff-only origin/<branch>`")
     # Without a rebase a pull is a merge of what it fetches: of another branch it follows the merge rules.
-    branches = [arg.removeprefix("refs/heads/") for arg in pull.args[1:]]
-    return merge_problem(pull._replace(subcommand="merge", args=[f"origin/{name}" for name in branches]))
+    return merge_problem(pull)  # the merge rules read a pull through `syncs_with_its_remote`
 
 
 FORCE_OPTIONS = {"--force", "-f", "--force-with-lease", "--force-if-includes", "--mirror"}
