@@ -50,7 +50,7 @@ def message_problem(message, project=None):
     """The reason a message breaks the rules, or None when it follows them. `project` is the Jira
     Project of the Gemba section: only its keys count, so words like UTF-8 are not taken for one."""
     message = message.rstrip("\n")
-    if message == "Initial commit" or MERGE.fullmatch(message) or re.fullmatch(r"(?:fixup|squash)! [^\n]+", message):
+    if message == "initial commit" or MERGE.fullmatch(message) or re.fullmatch(r"(?:fixup|squash)! [^\n]+", message):
         return None
     if REVERT.fullmatch(message):
         return None
