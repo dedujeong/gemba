@@ -29,10 +29,24 @@ def skill():
         return f.read()
 
 
-class InitRepository(unittest.TestCase):
+class TempFolder(unittest.TestCase):
     def setUp(self):
         self.folder = tempfile.mkdtemp()
         self.addCleanup(shutil.rmtree, self.folder)
+
+    def make_origin(self):
+        """A repository with main and a develop one commit ahead, to clone from."""
+        origin = os.path.join(self.folder, "origin")
+        os.mkdir(origin)
+        git(origin, "init", "-q", "-b", "main")
+        git(origin, "commit", "-q", "--allow-empty", "-m", "initial commit")
+        git(origin, "branch", "develop")
+        git(origin, "switch", "-q", "develop")
+        git(origin, "commit", "-q", "--allow-empty", "-m", "feat: add z")
+        return origin
+
+
+class InitRepository(TempFolder):
 
     def branches(self):
         return sorted(git(self.folder, "branch", "--format=%(refname:short)").split())
@@ -89,19 +103,10 @@ class InitRepository(unittest.TestCase):
         self.assertEqual(self.branches(), ["master"])
 
 
-class ClonesAndIdentity(unittest.TestCase):
-    def setUp(self):
-        self.folder = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.folder)
+class ClonesAndIdentity(TempFolder):
 
     def test_a_clone_gets_its_local_main_and_develop_from_the_remote_ones(self):
-        origin = os.path.join(self.folder, "origin")
-        os.mkdir(origin)
-        git(origin, "init", "-q", "-b", "main")
-        git(origin, "commit", "-q", "--allow-empty", "-m", "initial commit")
-        git(origin, "branch", "develop")
-        git(origin, "switch", "-q", "develop")
-        git(origin, "commit", "-q", "--allow-empty", "-m", "feat: add z")
+        origin = self.make_origin()
         clone = os.path.join(self.folder, "clone")
         subprocess.run(["git", "clone", "-q", "-b", "develop", origin, clone], check=True)
         result = run(clone)
@@ -122,10 +127,7 @@ class ClonesAndIdentity(unittest.TestCase):
         self.assertIn("ask the person for the name and email", result.stdout)
 
 
-class FailedBranches(unittest.TestCase):
-    def setUp(self):
-        self.folder = tempfile.mkdtemp()
-        self.addCleanup(shutil.rmtree, self.folder)
+class FailedBranches(TempFolder):
 
     def lock(self, repo, branch):
         heads = os.path.join(repo, ".git", "refs", "heads")
@@ -140,13 +142,7 @@ class FailedBranches(unittest.TestCase):
         self.assertIn("develop", result.stdout)
 
     def test_a_branch_that_cannot_be_created_from_the_remote_fails_instead_of_using_main(self):
-        origin = os.path.join(self.folder, "origin")
-        os.mkdir(origin)
-        git(origin, "init", "-q", "-b", "main")
-        git(origin, "commit", "-q", "--allow-empty", "-m", "initial commit")
-        git(origin, "branch", "develop")
-        git(origin, "switch", "-q", "develop")
-        git(origin, "commit", "-q", "--allow-empty", "-m", "feat: add z")
+        origin = self.make_origin()
         clone = os.path.join(self.folder, "clone")
         subprocess.run(["git", "clone", "-q", "-b", "main", origin, clone], check=True)
         self.lock(clone, "develop")
@@ -170,13 +166,13 @@ class SetupPreparesTheRepositoryFirst(unittest.TestCase):
         self.assertIn("repository", report)
 
 
-
 class CommitExceptionInTheMethod(unittest.TestCase):
     def test_the_commit_rule_names_the_initial_commit_in_lowercase(self):
         with open(os.path.join(ROOT, "references", "context.md"), encoding="utf-8") as f:
             rule = next(line for line in f if line.startswith("- One line, with no body or footer"))
         self.assertIn("a repository's `initial commit`", rule)
         self.assertNotIn("Initial commit", rule)
+
 
 if __name__ == "__main__":
     unittest.main()
