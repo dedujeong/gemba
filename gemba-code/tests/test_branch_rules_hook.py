@@ -443,6 +443,18 @@ class WorktreesWithoutADashB(HookTestCase):
                 self.passes(command)
 
 
+class WorktreeOrphans(HookTestCase):
+    def test_an_orphan_worktree_is_checked_by_name_and_denied_as_not_from_develop(self):
+        self.assertIn("feature/x", self.denied("git worktree add --orphan -b feature/x ../w"))
+        reason = self.denied("git worktree add --orphan -b story/ABC-2-b ../w")
+        self.assertIn("orphan", reason)
+        self.assertIn("develop", reason)
+        self.assertIn("git worktree add -b story/ABC-2-b <path> develop", reason)
+
+    def test_an_orphan_worktree_with_the_option_after_the_path_is_denied_too(self):
+        self.assertIn("orphan", self.denied("git worktree add -b story/ABC-2-b ../w --orphan"))
+
+
 class ForcedUpdatesOfAnExistingBranch(HookTestCase):
     def test_a_forced_update_of_an_existing_branch_is_not_a_creation(self):
         git(self.repo, "branch", "feature/old")

@@ -2,7 +2,8 @@
 """PreToolUse hook: the branches of a project with setup follow the branch rules.
 
 Reads the hook event from stdin. When a Bash command creates, copies or renames a branch (`git switch -c`,
-`git checkout -b`, `git branch <name>`, `git branch -c|-m`, `git worktree add -b`, `--orphan`) and the
+`git checkout -b`, `git branch <name>`, `git branch -c|-m`, `git worktree add [-b]`, `--orphan`; not the forced
+update of a branch that exists, which the history hook governs) and the
 project's CLAUDE.md has a `## Gemba` section, it denies a name that is not `<type>/<KEY>-<slug>` with type
 story, task, bug or spike, a new branch whose base is not the local `develop` (the start point, or the branch
 checked out when the command runs, as the shared parser tracks it; an orphan branch has none), and the
@@ -60,13 +61,14 @@ def updates(command, cwd, name, forced):
 def dwim_worktree(command, cwd, flags):
     """`git worktree add <path>` with no -b, no commit-ish and no --detach creates a branch named after the last
     component of the path from the current branch, unless that name is already a branch (git checks it out)."""
-    if len(command.args) != 2 or flags & {"-d", "--detach"}:
+    orphan = "--orphan" in flags  # the unborn branch is named after the path too
+    if len(command.args) < 2 or (not orphan and len(command.args) != 2) or flags & {"-d", "--detach"}:
         return []
     name = os.path.basename(command.args[1].rstrip("/"))
     folder = command.folder or cwd
-    if not name or (folder and git_commands.is_branch(folder, name)):
+    if not name or (not orphan and folder and git_commands.is_branch(folder, name)):
         return []
-    return [Creation(name, None, "create")]
+    return [Creation(name, None, "orphan" if orphan else "create")]
 
 
 def creations(command, cwd=None):
@@ -90,6 +92,8 @@ def creations(command, cwd=None):
             return dwim_worktree(command, cwd, flags)
         if updates(command, cwd, name, "-B" in flags):
             return []
+        if "--orphan" in flags:
+            return [Creation(name, None, "orphan")]
         return [Creation(name, command.args[2] if len(command.args) > 2 else None, "create")]
     if command.subcommand == "branch" and command.args:
         old = command.args[0] if len(command.args) > 1 else None
@@ -129,7 +133,7 @@ def off_develop(creation, tracked):
 
 
 def how_to_start(creation, command, name):
-    form = "switch" if creation.kind == "orphan" else command.subcommand
+    form = command.subcommand if command.subcommand == "worktree" or creation.kind != "orphan" else "switch"
     return SUGGESTED[form].format(name=name)
 
 
