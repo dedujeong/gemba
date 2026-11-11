@@ -52,6 +52,29 @@ class SetupPushConfirmation(unittest.TestCase):
         self.assertIn("git push confirmation", report)
 
 
+class SetupPullRequestDeny(unittest.TestCase):
+    def section(self):
+        return skill().split("## 6. Ask for confirmation on every git push")[1].split("## 7. ")[0]
+
+    def test_in_pull_request_mode_it_denies_gh_pr_merge_in_the_project_settings(self):
+        text = self.section()
+        self.assertIn("`Integration` of the block is `pull request`", text)
+        self.assertIn('`permissions.deny` gets `Bash(gh pr merge *)`', text)
+
+    def test_the_deny_key_is_added_when_missing_never_twice_and_the_rest_is_kept(self):
+        text = self.section()
+        self.assertIn("add the `deny` list if it is missing", text)
+        self.assertIn("do not add it twice", text)
+        self.assertIn("Keep every other key", text)
+
+    def test_in_merge_mode_the_deny_rule_is_not_written(self):
+        self.assertIn("In `merge` mode write no deny rule", self.section())
+
+    def test_the_report_says_whether_the_gh_pr_merge_deny_was_set(self):
+        report = skill().split("## 11. Report")[1]
+        self.assertIn("gh pr merge deny", report)
+
+
 class SetupGitignore(unittest.TestCase):
     def test_setup_writes_the_base_gitignore_with_the_script(self):
         text = skill()

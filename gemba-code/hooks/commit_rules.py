@@ -27,9 +27,10 @@ CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
 ENDS_WITHOUT_A_COMMIT = {"--abort", "--quit"}
 EDITOR_FIXUPS = ("amend:", "reword:")
 # Any git command that creates a commit, as whole words: the cheap test that skips every other command.
-CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s)(?![\w-])" % "|".join(map(re.escape, CREATES_COMMITS)), re.DOTALL)
+CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s|merge\b.*--continue)(?![\w-])" % "|".join(map(re.escape, CREATES_COMMITS)), re.DOTALL)
 BROKEN = "Gemba rule (commits): the hook could not check this commit. Confirm the commit message follows the commit rules."
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
+HAS_ITS_OWN_MESSAGE = {"-m", "--message", "-F", "--file", "-C", "--reuse-message", "--fixup", "--squash"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
 
 
@@ -95,6 +96,18 @@ def branch_problem(commit, merging=None):
                         "Create a branch for the work item (`story/`, `task/`, `bug/` or `spike/`, then its key and a short name) and commit there")
 
 
+def conclusion_problem(commit, merging):
+    """A deny reason when a merge in progress is concluded with the message git prepared (`git commit` without
+    a message, `--no-edit`, `merge --continue`): without the strip cleanup its `# Conflicts:` lines stay in it."""
+    names = git_commands.option_names(commit)
+    if not merging or ("--cleanup", "strip") in commit.options or names & HAS_ITS_OWN_MESSAGE:
+        return None
+    if commit.subcommand == "merge" and "--continue" not in names:
+        return None
+    return rule("concluding a merge this way keeps the `# Conflicts:` lines in the commit message",
+                "Conclude it with `git commit --no-edit --cleanup=strip`")
+
+
 def message_decision(commit, project):
     """A (decision, reason) for the message of a `git commit` that breaks a rule or cannot be read, or None."""
     names = git_commands.option_names(commit)
@@ -125,7 +138,12 @@ def commit_problem(commit, folder, merging=None):
     None. A denial wins over a question."""
     if creates_no_commit(commit):
         return None
+    if merging is None and commit.folder:
+        merging = bool(git_commands.git(commit.folder, "rev-parse", "-q", "--verify", "MERGE_HEAD"))
     found = [branch_problem(commit, merging)]
+    problem = conclusion_problem(commit, merging)
+    if problem:
+        found.append(("deny", problem))
     if commit.subcommand == "commit":
         found.append(message_decision(commit, git_commands.gemba_field(folder, "Jira Project")))
     found = [item for item in found if item]
@@ -139,9 +157,10 @@ def decide(event):
     merging = {}  # repository -> True after a `git merge` earlier in this command, False after merge --abort/--quit
     for commit in git_commands.git_commands(command, cwd):
         key = git_commands.repository_key(commit.folder) if commit.folder else None
-        if commit.subcommand == "merge" and key:
-            merging[key] = not (ENDS_WITHOUT_A_COMMIT & git_commands.option_names(commit))
-        if commit.subcommand not in CREATES_COMMITS:
+        names = git_commands.option_names(commit)
+        if commit.subcommand == "merge" and key and "--continue" not in names:
+            merging[key] = not (ENDS_WITHOUT_A_COMMIT & names)
+        if commit.subcommand not in CREATES_COMMITS and not (commit.subcommand == "merge" and "--continue" in names):
             continue
         if git_commands.project_of(commit, cwd) == "no":
             continue

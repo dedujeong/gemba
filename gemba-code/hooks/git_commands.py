@@ -64,7 +64,8 @@ OPTIONS_WITH_A_VALUE = {
     "tag": {"-m", "--message", "-F", "--file", "-u", "--local-user", "--cleanup", "--sort", "--format",
             "--contains", "--no-contains", "--points-at", "--merged", "--no-merged"},
     "rebase": {"--onto", "-x", "--exec", "-s", "--strategy", "-X", "--strategy-option"},
-    "pull": {"-s", "--strategy", "-X", "--strategy-option"},
+    "pull": {"-s", "--strategy", "-X", "--strategy-option", "--depth", "--deepen", "--shallow-since",
+             "--shallow-exclude", "-j", "--jobs", "--upstream-pack", "-o", "--server-option"},
 }
 
 GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config", defaults=(None, ()))

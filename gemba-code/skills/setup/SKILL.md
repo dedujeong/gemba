@@ -46,7 +46,11 @@ Claude Code adds its own attribution lines to commits and pull requests, and the
 
 ## 6. Ask for confirmation on every git push
 
-Nothing may reach the remote without the maintainer seeing it. The plugin's `PreToolUse` hook already asks too in a project with this block: naming the branch and the remote for a `git push` it can read, and with a generic reason for any other command that contains one (a `bash -c` string, `sudo`, a shell keyword). The rule of this step is the floor under it: a permission rule is enforced by Claude Code itself, wins over any allow rule and does not depend on a script. In `.claude/settings.json`, set `"permissions": {"ask": ["Bash(git push *)"]}`. The file already exists after step 5. Add the `permissions` key if it is missing; if it exists, add the rule to its `ask` list and do not add it twice. Keep every other key and every other rule unchanged. If the rule is already there, change nothing. If you cannot write files, put the whole resulting file in the reply and say that nothing was written.
+Nothing may reach the remote without the maintainer seeing it. The plugin's `PreToolUse` hook already asks too in a project with this block: naming the branch and the remote for a `git push` it can read, and with a generic reason for any other command that contains one (a `bash -c` string, `sudo`, a shell keyword). The rule of this step is the floor under it: a permission rule is enforced by Claude Code itself, wins over any allow rule and does not depend on a script. In `.claude/settings.json`, set `"permissions": {"ask": ["Bash(git push *)"]}`. The file already exists after step 5. Add the `permissions` key if it is missing; if it exists, add the rule to its `ask` list and do not add it twice. Keep every other key and every other rule unchanged. If the rule is already there, change nothing.
+
+When the `Integration` of the block is `pull request`, the maintainer merges, never Claude: `permissions.deny` gets `Bash(gh pr merge *)` in the same file, the same way (add the `deny` list if it is missing, do not add it twice, keep every other key and every other rule). The plugin's hook denies `gh pr merge` too; this rule is the floor under it. In `merge` mode write no deny rule, and leave one that is already there as it is.
+
+If you cannot write files, put the whole resulting file in the reply and say that nothing was written.
 
 ## 7. Write the base .gitignore
 
@@ -99,7 +103,7 @@ Without a connection to Confluence, write nothing and say that the ADR could not
 
 ## 11. Report
 
-Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the git push confirmation, for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
+Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the merge message setting, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
 
 ## Style
 
