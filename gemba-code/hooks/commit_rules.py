@@ -12,10 +12,7 @@ import os
 import re
 import sys
 
-try:
-    import git_commands
-except ImportError:  # a crash here would not block, so main() asks for any command that mentions a commit
-    git_commands = None
+git_commands = None  # imported by main() once the command is known to mention a commit
 
 TYPES = ("build", "chore", "ci", "docs", "feat", "fix", "perf", "refactor", "revert", "style", "test")
 HEADER = re.compile(r"(\w+)(?:\(([^)]*)\))?!?: \S.*", re.DOTALL)
@@ -29,8 +26,9 @@ PROTECTED_BRANCHES = ("main", "develop")
 CREATES_COMMITS = ("commit", "revert", "cherry-pick", "am")
 ENDS_WITHOUT_A_COMMIT = {"--abort", "--quit"}
 EDITOR_FIXUPS = ("amend:", "reword:")
-# Any git command that creates a commit; a script that mentions one in a place the parser cannot read asks.
-CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:commit|revert|cherry-pick|am)(?![\w-])", re.DOTALL)
+# Any git command that creates a commit, as whole words: the cheap test that skips every other command.
+CREATING_WORDS = re.compile(r"\bgit\b.*(?<![\w-])(?:%s)(?![\w-])" % "|".join(map(re.escape, CREATES_COMMITS)), re.DOTALL)
+BROKEN = "Gemba rule (commits): the hook could not check this commit. Confirm the commit message follows the commit rules."
 REUSES_A_MESSAGE = {"--fixup", "--squash", "--no-edit", "-C", "--reuse-message"}
 MESSAGE_FROM_A_FILE = {"-F", "--file", "-t", "--template"}
 
@@ -99,7 +97,7 @@ def branch_problem(commit, merging=None):
 
 def message_decision(commit, project):
     """A (decision, reason) for the message of a `git commit` that breaks a rule or cannot be read, or None."""
-    names = {name for name, _ in commit.options}
+    names = git_commands.option_names(commit)
     if names & MESSAGE_FROM_A_FILE:
         return "ask", unreadable("it comes from a file")
     if any((value or "").startswith(EDITOR_FIXUPS) for name, value in commit.options if name == "--fixup"):
@@ -116,7 +114,7 @@ def message_decision(commit, project):
 
 
 def creates_no_commit(commit):
-    names = {name for name, _ in commit.options}
+    names = git_commands.option_names(commit)
     if commit.subcommand == "commit":
         return False
     return bool(ENDS_WITHOUT_A_COMMIT & names) or (commit.subcommand != "am" and bool({"-n", "--no-commit"} & names))
@@ -142,12 +140,12 @@ def decide(event):
     for commit in git_commands.git_commands(command, cwd):
         key = git_commands.repository_key(commit.folder) if commit.folder else None
         if commit.subcommand == "merge" and key:
-            merging[key] = not ({"--abort", "--quit"} & {name for name, _ in commit.options})
+            merging[key] = not (ENDS_WITHOUT_A_COMMIT & git_commands.option_names(commit))
         if commit.subcommand not in CREATES_COMMITS:
             continue
-        folder = commit.folder or cwd  # an unknown folder: the session's project decides whether the rules apply
-        if not git_commands.in_gemba_project(folder, cwd):
+        if git_commands.project_of(commit, cwd) == "no":
             continue
+        folder = commit.folder or cwd  # an unknown folder: the session's project holds the settings
         found = commit_problem(commit, folder, merging.get(key))
         if found and found[0] == "deny":
             return git_commands.emit(*found)
@@ -156,30 +154,28 @@ def decide(event):
         return git_commands.emit(*asking)
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the commit from it, so any such segment that mentions one asks with a generic reason.
-    if git_commands.unparsed_mentions(command, CREATING_WORDS) and git_commands.has_gemba(cwd):
+    if git_commands.unparsed_mentions(command, CREATES_COMMITS) and git_commands.has_gemba(cwd):
         git_commands.emit("ask", unreadable("it is wrapped (bash -c, sudo, a shell keyword or a quoted script)"))
 
 
 def main():
+    global git_commands
     try:
         event = json.load(sys.stdin)
     except ValueError:
         return
     if event.get("tool_name") != "Bash":
         return
-    command = event.get("tool_input", {}).get("command", "")
-    if git_commands is None:
-        if CREATING_WORDS.search(command):
-            print(json.dumps({"hookSpecificOutput": {
-                "hookEventName": "PreToolUse", "permissionDecision": "ask",
-                "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
-        return
+    if not CREATING_WORDS.search(event.get("tool_input", {}).get("command", "")):
+        return  # no commit, revert, cherry-pick or am anywhere: skip the import and the parsing
     try:
-        decide(event)
-    except Exception:
-        # A crash exits non-zero and does not block, so the commit would run unchecked: fail closed.
-        if CREATING_WORDS.search(command):
-            git_commands.emit("ask", "Gemba rule (commits): the hook could not check this commit. Confirm the commit message follows the commit rules.")
+        import git_commands
+    except ImportError:  # a crash here would not block: ask for any command that mentions a commit
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "ask",
+            "permissionDecisionReason": "Gemba rule (commits): the hook could not load its parser. Confirm the commit message follows the commit rules."}}))
+        return
+    git_commands.run_hook(decide, CREATES_COMMITS, BROKEN, event)
 
 
 if __name__ == "__main__":

@@ -11,10 +11,9 @@ import os
 import re
 import sys
 
-try:
-    import git_commands
-except ImportError:  # a crash here would not block, so main() asks for any command that mentions a push
-    git_commands = None
+git_commands = None  # imported by main() once the command is known to mention a push
+MENTIONS_A_PUSH = re.compile(r"\bgit\b.*\bpush\b", re.DOTALL)
+BROKEN = "git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote."
 
 WHOLE_PUSHES = (("--mirror", "every ref (mirror)"), ("--all", "all branches"), ("--tags", "all tags"))
 
@@ -48,11 +47,11 @@ def decide(event):
     cwd = event.get("cwd") or os.getcwd()
     command = event.get("tool_input", {}).get("command", "")
     for push in (found for found in git_commands.git_commands(command, cwd) if found.subcommand == "push"):
-        if push.folder is None:  # a cd the parser could not follow: the folder is unknown
-            if git_commands.has_gemba(cwd):
-                return git_commands.emit("ask", "git push: the hook could not tell which folder this push runs in."
-                                                " Confirm before anything reaches the remote.")
-        elif git_commands.in_gemba_project(push.folder, cwd):
+        project = git_commands.project_of(push, cwd)
+        if project == "unknown":  # a cd the parser could not follow
+            return git_commands.emit("ask", "git push: the hook could not tell which folder this push runs in."
+                                            " Confirm before anything reaches the remote.")
+        if project == "yes":
             return git_commands.emit("ask", reason(push))
     # The parser reads only a `git` at the start of a command. A wrapper (bash -c, sudo, a shell
     # keyword) hides the push from it, so any such segment that mentions one asks with a generic reason.
@@ -61,24 +60,23 @@ def decide(event):
 
 
 def main():
+    global git_commands
     try:
         event = json.load(sys.stdin)
     except ValueError:
         return
     if event.get("tool_name") != "Bash":
         return
-    if git_commands is None:
-        if re.search(r"\bgit\b.*\bpush\b", event.get("tool_input", {}).get("command", ""), re.DOTALL):
-            print(json.dumps({"hookSpecificOutput": {
-                "hookEventName": "PreToolUse", "permissionDecision": "ask",
-                "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
-        return
+    if not MENTIONS_A_PUSH.search(event.get("tool_input", {}).get("command", "")):
+        return  # not a push of any kind: skip the import and the parsing
     try:
-        decide(event)
-    except Exception:
-        # A crash exits non-zero and does not block, so the push would run unasked: fail closed.
-        if git_commands.mentions(event.get("tool_input", {}).get("command", ""), "push"):
-            git_commands.emit("ask", "git push: the confirmation hook could not read the branch and the remote. Confirm before anything reaches the remote.")
+        import git_commands
+    except ImportError:  # a crash here would not block: ask for any command that mentions a push
+        print(json.dumps({"hookSpecificOutput": {
+            "hookEventName": "PreToolUse", "permissionDecision": "ask",
+            "permissionDecisionReason": "git push: the confirmation hook could not load its parser. Confirm before anything reaches the remote."}}))
+        return
+    git_commands.run_hook(decide, ("push",), BROKEN, event)
 
 
 if __name__ == "__main__":

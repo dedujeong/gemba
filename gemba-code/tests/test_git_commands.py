@@ -479,5 +479,82 @@ class SecondReviewTest(unittest.TestCase):
         self.assertNotEqual(git_commands.repository_key(self.repo), git_commands.repository_key(other))
 
 
+class SimplifiedHelpersTest(unittest.TestCase):
+    def setUp(self):
+        self.repo = init_repo()
+        self.addCleanup(shutil.rmtree, self.repo)
+
+    def test_option_names(self):
+        self.assertEqual(git_commands.option_names(parse(["git", "commit", "-am", "x", "--amend"])), {"-a", "-m", "--amend"})
+
+    def test_is_branch(self):
+        self.assertTrue(git_commands.is_branch(self.repo, "main"))
+        self.assertFalse(git_commands.is_branch(self.repo, "nope"))
+
+    def test_word_pattern_matches_whole_words_only(self):
+        pattern = git_commands.word_pattern("commit", "am")
+        self.assertTrue(pattern.search("bash -c git am x"))
+        self.assertTrue(pattern.search("sudo git commit"))
+        self.assertFalse(pattern.search("git commit-graph"))
+        self.assertFalse(pattern.search("git log --grep ham"))
+
+    def test_unparsed_mentions_takes_a_tuple_of_words(self):
+        self.assertTrue(unparsed_mentions("bash -c 'git am x'", ("commit", "am")))
+        self.assertFalse(unparsed_mentions("git am x", ("commit", "am")))
+
+    def test_project_of(self):
+        with open(os.path.join(self.repo, "CLAUDE.md"), "w", encoding="utf-8") as f:
+            f.write("## Gemba\n")
+        outside = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, outside)
+        here = GitCommand(self.repo, "push", [], [])
+        self.assertEqual(git_commands.project_of(here, self.repo), "yes")
+        self.assertEqual(git_commands.project_of(GitCommand(outside, "push", [], []), outside), "no")
+        self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), self.repo), "unknown")
+        self.assertEqual(git_commands.project_of(GitCommand(None, "push", [], []), outside), "no")
+
+    def test_failures_of_the_repo_reads_are_cached_too(self):
+        outside = tempfile.mkdtemp()
+        self.addCleanup(shutil.rmtree, outside)
+        self.assertEqual(git_commands.toplevel(outside), outside)
+        self.assertEqual(git_commands.repository_key(outside), os.path.normpath(outside))
+        with mock.patch.object(git_commands, "git", side_effect=AssertionError("git ran")):
+            self.assertEqual(git_commands.toplevel(outside), outside)
+            self.assertEqual(git_commands.repository_key(outside), os.path.normpath(outside))
+
+    def test_a_command_is_tokenized_once(self):
+        command = "git switch x && bash -c 'git push' && git status #" + self.repo
+        git_commands._words.cache_clear()
+        with mock.patch.object(git_commands.shlex, "shlex", wraps=git_commands.shlex.shlex) as lexer:
+            commands_of(command, self.repo)
+            unparsed_mentions(command, "push")
+            list(segments(command))
+        self.assertEqual(lexer.call_count, 1)
+
+    def run_hook(self, event, decide):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            git_commands.run_hook(decide, ("commit", "am"), "broken", event)
+        return out.getvalue()
+
+    def test_run_hook_calls_decide_for_bash_only(self):
+        calls = []
+        bash = {"tool_name": "Bash", "tool_input": {"command": "git commit"}}
+        self.run_hook(bash, calls.append)
+        self.run_hook({"tool_name": "Edit", "tool_input": {}}, calls.append)
+        self.assertEqual(calls, [bash])
+
+    def test_run_hook_fails_closed_when_decide_crashes_and_the_command_mentions_a_word(self):
+        def crash(event):
+            raise RuntimeError("boom")
+        out = self.run_hook({"tool_name": "Bash", "tool_input": {"command": "git am x"}}, crash)
+        self.assertEqual(json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"], "broken")
+        self.assertEqual(self.run_hook({"tool_name": "Bash", "tool_input": {"command": "git commit-graph write"}}, crash), "")
+
+    def test_run_hook_reads_the_event_from_stdin_and_ignores_bad_input(self):
+        with mock.patch.object(sys, "stdin", io.StringIO("not json")):
+            git_commands.run_hook(lambda event: self.fail("called"), ("commit",), "broken")
+
+
 if __name__ == "__main__":
     unittest.main()
