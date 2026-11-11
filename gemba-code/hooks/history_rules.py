@@ -44,7 +44,7 @@ def rule(name, wrong, todo):
 
 def merge_problem(merge):
     """The reason a merge breaks the rules, or None."""
-    names = {name for name, _ in merge.options}
+    names = git_commands.option_names(merge)
     if names & MERGE_ENDS:
         return None
     target = merge.branch
@@ -75,7 +75,7 @@ def count(folder, *revisions):
 def rebase_problem(rebase):
     """The reason a rebase breaks the rules, or None. The only rebase allowed is `--autosquash`
     over commits the remote does not have."""
-    names = {name for name, _ in rebase.options}
+    names = git_commands.option_names(rebase)
     if names & REBASE_ENDS:
         return None
     todo = "Do not rebase: merge instead. The only rebase allowed is `git rebase -i --autosquash <upstream>` over commits that are not pushed"
@@ -138,7 +138,7 @@ def push_problem(push):
     if forced:
         return rule("history", "a force push rewrites the history of the remote",
                     "Push without --force, --force-with-lease, --mirror or a `+` refspec; if the remote moved, merge it first")
-    names = {name for name, _ in push.options}
+    names = git_commands.option_names(push)
     refspecs = push.args[1:]  # the first argument is the remote
     deleted = refspecs if names & {"--delete", "-d"} else [arg[1:] for arg in refspecs if arg.startswith(":")]
     lost = [name for name in deleted if name.removeprefix("refs/heads/") in PROTECTED]
@@ -151,7 +151,7 @@ def push_problem(push):
 def branch_problem(branch):
     """The reason a branch command breaks the rules, or None: only a Spike's branch is deleted by force, and
     no branch is forced, renamed or copied over an existing one (the commits it had are discarded)."""
-    names = {name for name, _ in branch.options}
+    names = git_commands.option_names(branch)
     forced = bool(names & {"-f", "--force"})
     if "-D" in names or (names & {"-d", "--delete"} and forced):
         kept = [name for name in branch.args if not name.startswith("spike/")]
@@ -181,7 +181,7 @@ TAG_NOT_CREATING = {"-l", "--list", "-v", "--verify", "-n", "--contains", "--no-
 def tag_problem(tag):
     """The reason a tag breaks the rules, or None: a tag is a version, `vX.Y.Z` or `<plugin>--vX.Y.Z`, a
     version tag is never deleted and an existing tag is never moved."""
-    names = {name for name, _ in tag.options}
+    names = git_commands.option_names(tag)
     if names & {"-d", "--delete"}:
         versions = [name for name in tag.args if VERSION_TAG.fullmatch(name)]
         if versions:
