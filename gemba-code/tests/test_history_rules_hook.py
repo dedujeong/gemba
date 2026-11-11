@@ -85,6 +85,24 @@ class Merges(HookCase):
         self.on("story/ABC-2-import")
         self.passes("git merge develop", "git merge --squash develop", "git merge -m x develop")
 
+    def test_the_target_is_the_branch_the_command_has_switched_to(self):
+        self.on("story/ABC-2-import")
+        self.denied("git switch develop && git merge story/ABC-1-export", "merges")
+        self.denied("git checkout develop && git merge story/ABC-1-export", "merges")
+        self.passes("git switch develop && git merge --no-ff --no-edit story/ABC-1-export")
+
+    def test_switching_away_from_develop_makes_the_merge_target_another_branch(self):
+        self.passes("git switch -c story/ABC-2-import && git merge develop")
+
+    def test_a_merge_after_a_switch_the_hook_cannot_follow_asks(self):
+        self.on("story/ABC-2-import")
+        self.assertIn("could not be told", self.asked("git switch - && git merge story/ABC-1-export"))
+
+    def test_the_last_of_ff_and_no_ff_wins(self):
+        self.denied("git merge --no-ff --ff story/ABC-1-export", "merges")
+        self.denied("git merge --no-ff --ff-only story/ABC-1-export", "merges")
+        self.passes("git merge --ff --no-ff story/ABC-1-export", "git merge --ff-only --no-ff story/ABC-1-export")
+
     def test_a_merge_that_is_aborted_continued_or_quit_passes(self):
         self.passes("git merge --abort", "git merge --continue", "git merge --quit")
 
@@ -122,6 +140,15 @@ class Merges(HookCase):
                         "if true; then git merge story/ABC-1-export; fi"):
             reason = self.asked(command)
             self.assertIn("could not read", reason, command)
+
+    def test_a_wrapped_operation_is_not_hidden_by_a_readable_git_command_in_the_line(self):
+        self.assertIn("could not read", self.asked("git status && bash -c 'git push --force origin develop'"))
+        self.assertIn("could not read", self.asked("git tag v0.1.0 && bash -c 'git push --force origin develop'"))
+        self.assertIn("could not read", self.asked("git fetch && sudo git merge story/ABC-1-export"))
+
+    def test_a_readable_git_command_that_only_mentions_an_operation_prints_nothing(self):
+        self.passes('git commit -m "fix the rebase check"', "git log --grep merge", 'git commit -m "fix the merge"',
+                    "git log --oneline --grep 'force push'")
 
     def test_a_merge_still_asks_when_the_hook_cannot_run_git(self):
         result = run_hook(self.repo, "git merge story/ABC-1-export", env={"PATH": ""})

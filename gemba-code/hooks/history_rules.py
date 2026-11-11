@@ -16,6 +16,7 @@ import sys
 git_commands = None  # imported by main() once the command is known to mention an operation
 
 PROTECTED = ("develop", "main")
+FAST_FORWARD_OPTIONS = ("--ff", "--no-ff", "--ff-only")
 MERGE_ENDS = {"--abort", "--continue", "--quit"}
 REBASE_ENDS = {"--abort", "--continue", "--skip", "--quit", "--edit-todo", "--show-current-patch"}
 OPERATIONS = ("merge", "rebase", "pull", "push", "branch", "tag")
@@ -55,7 +56,8 @@ def merge_problem(merge):
     updates_from_remote = all(arg in (f"origin/{target}", "@{u}", "@{upstream}") for arg in merge.args)
     if updates_from_remote:
         return None
-    if "--no-ff" not in names:
+    last = [name for name, _ in merge.options if name in FAST_FORWARD_OPTIONS]
+    if not last or last[-1] != "--no-ff":
         return rule("merges", f"a merge into {target} without --no-ff",
                     "Merge with `git merge --no-ff <branch>` so the branch stays in the history")
     if names & {"-m", "--message", "-F", "--file"}:
