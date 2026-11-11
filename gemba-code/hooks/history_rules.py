@@ -28,6 +28,7 @@ RAW_OPERATIONS = (
     r"\bgit\b.*\brebase\b",
     r"\bgit\b.*\bpull\b.*(--rebase|\s-\w*r)",
     r"\bgit\b.*\bpush\b.*(--force|\s-\w*f|\s\+)",
+    r"\bgit\b.*\bbranch\b.*(--force|\s-\w*[Df])",
 )
 
 
@@ -125,7 +126,20 @@ def push_problem(push):
     return None
 
 
-CHECKS = {"merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
+def branch_problem(branch):
+    """The reason a branch command breaks the rules, or None: only a Spike's branch is deleted by force."""
+    names = {name for name, _ in branch.options}
+    forced_delete = "-D" in names or (names & {"-d", "--delete"} and names & {"-f", "--force"})
+    if not forced_delete:
+        return None
+    kept = [name for name in branch.args if not name.startswith("spike/")]
+    if kept:
+        return rule("history", f"a forced delete of {', '.join(kept)}, which is not a Spike's branch, can lose commits",
+                    "Delete it with `git branch -d`, which refuses a branch that is not merged; only `spike/` branches are deleted with -D")
+    return None
+
+
+CHECKS = {"branch": branch_problem, "merge": merge_problem, "rebase": rebase_problem, "pull": pull_problem, "push": push_problem}
 
 
 def decide(event):

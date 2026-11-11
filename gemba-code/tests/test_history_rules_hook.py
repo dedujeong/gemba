@@ -232,6 +232,40 @@ class ForcePushes(HookCase):
         self.passes("git push --force origin develop", repo=repo)
 
 
+class BranchDeletion(HookCase):
+    def test_a_forced_delete_of_a_branch_that_is_not_a_spikes_is_denied_and_names_the_rule(self):
+        for command in ("git branch -D story/ABC-1-export", "git branch -D develop", "git branch --delete --force story/ABC-1-export",
+                        "git branch -d -f story/ABC-1-export", "git branch -df story/ABC-1-export", "git branch -fd story/ABC-1-export",
+                        "git branch --force --delete story/ABC-1-export", "git -C . branch -D story/ABC-1-export",
+                        "git checkout develop && git branch -D task/ABC-2-x"):
+            reason = self.denied(command, "history")
+            self.assertIn("spike/", reason, command)
+
+    def test_a_forced_delete_of_several_branches_is_denied_when_any_is_not_a_spikes(self):
+        self.denied("git branch -D spike/ABC-3-research story/ABC-1-export", "history")
+
+    def test_a_forced_delete_of_a_spikes_branch_passes(self):
+        self.passes("git branch -D spike/ABC-3-research", "git branch -D spike/ABC-3-a spike/ABC-4-b",
+                    "git branch --delete --force spike/ABC-3-research")
+
+    def test_a_plain_delete_or_another_branch_command_prints_nothing(self):
+        self.passes("git branch -d story/ABC-1-export", "git branch --delete story/ABC-1-export", "git branch",
+                    "git branch -a", "git branch story/ABC-5-new", "git branch -f story/ABC-1-export develop",
+                    "git branch -m old new", "git branch --list 'spike/*'")
+
+    def test_a_forced_delete_the_parser_cannot_read_asks_with_a_generic_reason(self):
+        for command in ("bash -c 'git branch -D story/ABC-1-export'", "sudo git branch -D story/ABC-1-export"):
+            self.assertIn("could not read", self.asked(command), command)
+
+    def test_a_delete_the_parser_cannot_read_that_is_not_forced_prints_nothing(self):
+        self.passes("bash -c 'git branch -d story/ABC-1-export'")
+
+    def test_a_forced_delete_in_a_project_without_the_gemba_section_prints_nothing(self):
+        repo = make_repo(None)
+        self.addCleanup(subprocess.run, ["rm", "-rf", repo])
+        self.passes("git branch -D story/ABC-1-export", repo=repo)
+
+
 class RegisteredInThePlugin(unittest.TestCase):
     def test_the_script_is_registered_as_its_own_bash_hook_before_the_tool_runs(self):
         with open(os.path.join(ROOT, "hooks", "hooks.json"), encoding="utf-8") as f:
