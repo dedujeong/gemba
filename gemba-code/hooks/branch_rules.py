@@ -170,13 +170,10 @@ def main():
                                                  "<type>/<KEY>-<slug> and starts from develop."}}))
         return
 
-    def guarded(event):
-        try:
-            decide(event)
-        except Exception:  # the same creation pattern as the ImportError fallback: a crash does not block
-            git_commands.emit("ask", BROKEN)
-    git_commands.run_hook(guarded, ("branch",), BROKEN, event)
-
+    try:
+        decide(event)
+    except Exception:  # a crash exits non-zero, which does not block: ask for a clear creation, one layer only
+        git_commands.emit("ask", BROKEN)
 
 if __name__ == "__main__":
     main()
