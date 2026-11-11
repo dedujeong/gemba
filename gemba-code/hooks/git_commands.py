@@ -3,7 +3,8 @@
 Public API (everything a hook needs; nothing here runs anything but `git`):
 
 - `git_commands(command, cwd=None)`: the `GitCommand` of every segment that is a git command, in order.
-  `GitCommand(folder, subcommand, options, args, branch)`: `options` are ordered `(name, value)` pairs
+  `GitCommand(folder, subcommand, options, args, branch, config)`: `config` are the `-c key=value` pairs of the
+  git global options, in order (`()` when none); `options` are ordered `(name, value)` pairs
   (`value` is None for a flag), `args` the positionals. With `cwd`, the walk follows the context of the
   compound command: `folder` is the folder the command runs in (`-C` on top of the `cd`s before it, on
   top of `cwd`) and `branch` the branch checked out there when the command runs (the real one, read once
@@ -66,7 +67,7 @@ OPTIONS_WITH_A_VALUE = {
     "pull": {"-s", "--strategy", "-X", "--strategy-option"},
 }
 
-GitCommand = namedtuple("GitCommand", "folder subcommand options args branch", defaults=(None,))
+GitCommand = namedtuple("GitCommand", "folder subcommand options args branch config", defaults=(None, ()))
 
 
 @functools.lru_cache(maxsize=32)
@@ -151,9 +152,13 @@ def parse(words):
         return None
     i += 1
     folder = None
+    config = []
     while i < len(words) and words[i].startswith("-"):
         option = words[i]
         if option in GLOBAL_OPTIONS_WITH_A_VALUE:
+            if option == "-c" and i + 1 < len(words):
+                key, _, value = words[i + 1].partition("=")
+                config.append((key, value))
             if option == "-C" and i + 1 < len(words):
                 # Git applies every -C on top of the one before, like successive cd.
                 folder = os.path.join(folder, words[i + 1]) if folder else words[i + 1]
@@ -163,7 +168,7 @@ def parse(words):
     if i >= len(words):
         return None
     options, args = parse_options_and_args(words[i], words[i + 1:])
-    return GitCommand(folder, words[i], options, args)
+    return GitCommand(folder, words[i], options, args, config=tuple(config))
 
 
 def option_names(command):
