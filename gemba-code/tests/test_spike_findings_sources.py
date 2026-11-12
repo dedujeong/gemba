@@ -29,5 +29,15 @@ class SpikeSourcesAreCards(unittest.TestCase):
                       spike_findings_rule())
 
 
+class SpikeSourcesNeverCiteTheBranch(unittest.TestCase):
+    RULE = "Sources never cites the Spike's branch or its worktree, which are deleted when the Spike closes"
+
+    def test_implement_keeps_the_branch_out_of_sources(self):
+        self.assertIn(self.RULE, finish_a_spike())
+
+    def test_the_method_says_the_same(self):
+        self.assertIn(self.RULE, spike_findings_rule())
+
+
 if __name__ == "__main__":
     unittest.main()
