@@ -18,7 +18,7 @@ Read the issue with Read an issue (`getJiraIssue`). Only an issue in Review is c
 1. Merge the branch into `develop`: `git switch develop`, then `git merge --no-ff <branch>` with Git's default message. Never squash and never rebase.
 2. Push `develop`: `git push origin develop`.
 3. Delete the branch: `git branch -d <branch>`.
-4. Log the real time worked in Review with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
+4. Log the real time worked in Review with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It takes the last stretch the issue spent in Review, the one still open or the one that just closed, which is the one not logged yet, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 5. Move the issue to Done with Move an issue (`transitionJiraIssue`, `transitionName`: `to Done`).
 
 ## 3. Close an Epic
