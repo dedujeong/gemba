@@ -12,7 +12,7 @@ These rules apply to every session in a project that uses Gemba Code. The projec
 
 ## Spike findings
 
-- A Spike's answer lives in a findings page in the product's Confluence space, under `Work` > `Spikes`, never in the issue or the repo. The page is created when the test ends, not when the Spike is declared or taken, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then Recommendation, Options, Impact on scope and Sources. Its status is Rough draft when created and Verified when the Spike closes. The issue links to it once. A Spike does not follow TDD: its test answers the question. Prevents: answers lost in a conversation or left as artifacts in the repo.
+- A Spike's answer lives in a findings page in the product's Confluence space, under `Work` > `Spikes`, never in the issue or the repo. The page is created when the test ends, not when the Spike is declared or taken, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then Recommendation, Options, Impact on scope and Sources. Sources lists, as block cards, every ADR and every link consulted while running the test. Its status is Rough draft when created and Verified when the Spike closes. The issue links to it once. A Spike does not follow TDD: its test answers the question. Prevents: answers lost in a conversation or left as artifacts in the repo.
 
 ## Work cycle
 
