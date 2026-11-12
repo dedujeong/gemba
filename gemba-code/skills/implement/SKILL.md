@@ -27,7 +27,7 @@ When it is not taken, no branch is created and the issue stays where it is. Then
 ## 3. Create the branch and move the issue
 
 1. From `develop`, create the branch `<type>/<KEY>-<slug>`: the work type in lowercase and the Summary as a slug of lowercase letters, digits and single hyphens (`story/ABC-12-export-invoices-as-csv`).
-2. Move the issue to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
+2. Move the issue to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`).
 
 The branch comes first, so the issue never reads Implement without a branch. Carry nothing else onto it: leave any uncommitted change of the working tree uncommitted.
 
@@ -37,7 +37,7 @@ A Spike is never worked on a branch of the main working tree, which stays on `de
 
 ## 5. Take an Epic
 
-1. Move the Epic to Implement. It has no branch.
+1. Move the Epic to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`). It has no branch.
 2. List its children in rank order with Search issues (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
 3. Take that child by its work type, as in section 2. Take one child only; the next one is taken when the person asks for it.
 

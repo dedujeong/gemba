@@ -19,11 +19,11 @@ Read the issue with Read an issue (`getJiraIssue`). Only an issue in Review is c
 2. Push `develop`: `git push origin develop`.
 3. Delete the branch: `git branch -d <branch>`.
 4. Log the real time worked in Review with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
-5. Move the issue to Done with `transitionJiraIssue`, using the transition that goes to Done.
+5. Move the issue to Done with Move an issue (`transitionJiraIssue`, `transitionName`: `to Done`).
 
 ## 3. Close an Epic
 
-An Epic has no branch: there is nothing to merge, push or delete. Only move it to Done with `transitionJiraIssue`, using the transition that goes to Done.
+An Epic has no branch: there is nothing to merge, push or delete. Only move it to Done with Move an issue (`transitionJiraIssue`, `transitionName`: `to Done`).
 
 ## 4. Close a Spike
 
@@ -33,7 +33,7 @@ A Spike is never merged: its work is not code for `develop`, its answer is the f
 2. Delete its branch, forced because it was never merged: `git branch -D spike/<KEY>-<slug>`.
 3. Set its findings page to Verified with `updateConfluenceContent`.
 4. Log the real time worked in Review, as in section 2.
-5. Move the Spike to Done with `transitionJiraIssue`, using the transition that goes to Done.
+5. Move the Spike to Done with Move an issue (`transitionJiraIssue`, `transitionName`: `to Done`).
 
 ## 5. Close in pull request mode
 
@@ -44,6 +44,6 @@ When `Integration` is `pull request`, the maintainer merges the pull request on 
   1. `git switch develop` and `git pull origin develop`, which bring in the merge commit the maintainer made.
   2. Delete the local branch: `git branch -d <branch>`. Delete the remote one with `git push origin --delete <branch>` only if it still exists (`git ls-remote --exit-code --heads origin <branch>`).
   3. Log the real time worked in Review, as in section 2 (`addOrEditJiraIssueWorklog`).
-  4. Move the issue to Done with `transitionJiraIssue`, using the transition that goes to Done.
+  4. Move the issue to Done with Move an issue (`transitionJiraIssue`, `transitionName`: `to Done`).
 
 Without the GitHub CLI or the remote, say that the state of the pull request could not be checked, and do not move the issue to Done.

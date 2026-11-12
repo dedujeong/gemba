@@ -90,5 +90,25 @@ class TheJiraSiteLivesInTheGembaBlock(unittest.TestCase):
                 self.assertNotIn("Get the cloudId once with `getAccessibleAtlassianResources`", text)
 
 
+class IssuesMoveByTheNameOfTheirTransition(unittest.TestCase):
+    def test_the_reference_names_every_transition_of_the_workflow(self):
+        move = calls()["Move an issue"]
+        self.assertIn("`executeWrite` → `transitionJiraIssue`", move)
+        self.assertIn("transitionName", move)
+        for row in ("| Backlog | Implement | `to Implement` |", "| Implement | Review | `to Review` |",
+                    "| Review | Done | `to Done` |", "| Review | Implement | `to Implement` |",
+                    "| Any | Cancelled | `Cancel` |"):
+            with self.subTest(row=row):
+                self.assertIn(row, move)
+
+    def test_no_skill_looks_for_the_transition_or_lists_them(self):
+        for name in ("implement", "review", "close"):
+            with self.subTest(skill=name):
+                text = skill(name)
+                self.assertNotIn("the transition that goes to", text)
+                self.assertNotIn("listJiraIssueTransitions", text)
+                self.assertIn("Move an issue", text)
+
+
 if __name__ == "__main__":
     unittest.main()

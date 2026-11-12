@@ -64,6 +64,24 @@ To find the earliest unreleased fix version, or the dates of one.
 - `inputs`: `{"projectIdOrKey": "<Jira Project>"}`
 - `responseFields`: `["values.name", "values.released", "values.startDate", "values.releaseDate"]`
 
+## Move an issue
+
+By the name of the transition, never by listing the transitions first.
+
+- `executeWrite` → `transitionJiraIssue`
+- `inputs`: `{"issueIdOrKey": "<KEY>", "transitionName": "<name>"}`
+- `responseFields`: `["statusName"]`
+
+| From | To | `transitionName` |
+|---|---|---|
+| Backlog | Implement | `to Implement` |
+| Implement | Review | `to Review` |
+| Review | Done | `to Done` |
+| Review | Implement | `to Implement` |
+| Any | Cancelled | `Cancel` |
+
+`statusName` is the state the issue landed in: if it is not the one expected, say so and stop.
+
 ## Log the time
 
 To log the real time worked in a state, with the `started` and `timeSpent` that `state_time.py` prints.
