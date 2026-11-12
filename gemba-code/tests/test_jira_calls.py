@@ -65,5 +65,30 @@ class SkillsUseTheReference(unittest.TestCase):
                 self.assertIn("../../references/jira-calls.md", skill(name))
 
 
+class TheJiraSiteLivesInTheGembaBlock(unittest.TestCase):
+    def test_the_block_has_the_jira_site(self):
+        block = read(os.path.join(ROOT, "skills", "setup", "assets", "gemba-block.md"))
+        self.assertIn("- Jira Site: <Jira site host>", block)
+        self.assertLess(block.index("- Jira Project:"), block.index("- Jira Site:"))
+
+    def test_setup_fills_the_jira_site_from_the_accessible_resources(self):
+        text = skill("setup")
+        self.assertIn("| Jira Site |", text)
+        self.assertIn("getAccessibleAtlassianResources", text)
+        self.assertIn("update its five fields", text)
+
+    def test_the_readme_lists_the_jira_site_among_the_block_fields(self):
+        self.assertIn("Jira project, Jira site, Confluence space", read(os.path.join(ROOT, "README.md")))
+
+    def test_the_other_skills_use_the_jira_site_as_cloud_id(self):
+        for name in SKILLS_THAT_CALL_JIRA:
+            if name == "setup":
+                continue
+            with self.subTest(skill=name):
+                text = skill(name)
+                self.assertIn("Use its `Jira Site` as the `cloudId` of every call", text)
+                self.assertNotIn("Get the cloudId once with `getAccessibleAtlassianResources`", text)
+
+
 if __name__ == "__main__":
     unittest.main()

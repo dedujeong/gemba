@@ -2,7 +2,7 @@
 
 Every call Gemba Code makes to Jira, so each skill asks only for the fields it uses and the session does not fill with avatars, type descriptions and whole issues. Use the call as written: the operation, its `inputs` and its `responseFields`. Never ask for the `view` presets of the direct tools; `responseFields` only works through `executeRead` and `executeWrite`, so every call goes through them.
 
-`cloudId` is a top-level argument of every call, a sibling of `name` and `inputs`, never inside `inputs`.
+`cloudId` is the `Jira Site` of the project's Gemba block, a top-level argument of every call, a sibling of `name` and `inputs`, never inside `inputs`.
 
 ## Read an issue
 

@@ -14,6 +14,7 @@ App de pedidos para restaurantes.
 ## Gemba
 
 - Jira Project: MESA
+- Jira Site: mesa.atlassian.net
 - Confluence Space: MESA
 - Integration: merge
 - Language: es-MX
