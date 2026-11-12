@@ -9,7 +9,7 @@ You pick up where the previous session stopped, without rebuilding its context. 
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Use its `Jira Site` as the `cloudId` of every call; only when the block has none, get it once with `getAccessibleAtlassianResources` and propose running `setup` to add it. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`. Talk with the person in `Language`.
 
 ## 2. Read the latest handoff
 
@@ -21,7 +21,7 @@ If there is no handoff, say so, propose nothing and stop: the person decides whe
 
 The handoff is a photo of a past moment. Before proposing anything, compare what it says with the present:
 
-- the issue of its Work in progress section, with `getJiraIssue`: its state now;
+- the issue of its Work in progress section, with Read the state of an issue (`getJiraIssue`): its state now;
 - the current branch and what the working tree has uncommitted, with `git branch --show-current` and `git status --short`.
 
 If something changed since the handoff (the issue is already in Review or Done, the branch is another, the pending changes are gone), say what changed before the proposal. Without a connection to Jira, say that the state of the issue could not be checked.

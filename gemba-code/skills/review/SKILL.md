@@ -9,13 +9,13 @@ You take one issue that is in Implement, move it to Review and review it. You ne
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Use its `Jira Site` as the `cloudId` of every call; only when the block has none, get it once with `getAccessibleAtlassianResources` and propose running `setup` to add it. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`. Talk with the person in `Language`.
 
 ## 2. Move the issue to Review
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests.
+Read the issue with Read an issue (`getJiraIssue`), which includes its links. Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests.
 
-- If every test passes, move the issue to Review with `transitionJiraIssue`, using the transition that goes to Review.
+- If every test passes, move the issue to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`).
 - If a test fails, the issue stays in Implement: say which test fails and stop.
 
 ## 3. Review the diff
@@ -47,9 +47,9 @@ Choose which code reviews to run by the size and the risk of the change, so qual
 
 If a criterion is not met, a new file is outside the layout or a test fails after the code reviews, the review ends here. What is not met is corrected in Implement, never inside Review:
 
-1. Move the issue back to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
+1. Move the issue back to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`).
 2. Name the criterion that is missing and say what is missing from it, the file that is outside the layout and where the layout says it should go, or the test that fails.
-3. Log the real time worked in Review on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`): read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger), save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
+3. Log the real time worked in Review on the issue with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
 
@@ -67,14 +67,14 @@ If every criterion is met, report the result of the review: the verdict of each 
 
 ## 7. Review an Epic
 
-An Epic has no branch, no tests and no diff: it is done through its children. List them (`parent = <KEY>`, `searchJiraIssuesUsingJql`).
+An Epic has no branch, no tests and no diff: it is done through its children. List them with Search issues (`searchJiraIssuesUsingJql`, `parent = <KEY>`).
 
-- If every child is Done or Cancelled, move the Epic to Review with `transitionJiraIssue` and report that its children are finished.
+- If every child is Done or Cancelled, move the Epic to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`) and report that its children are finished.
 - If any child is not, the Epic stays in Implement: name each child that is not finished and its state, and stop.
 
 ## 8. Review a Spike
 
-A Spike has no tests and no criteria to diff: it is reviewed on whether what it tested can be reproduced. Move it to Review with `transitionJiraIssue`, then:
+A Spike has no tests and no criteria to diff: it is reviewed on whether what it tested can be reproduced. Move it to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`), then:
 
 1. Run its test again in its worktree (`.claude/worktrees/<KEY>-<slug>`), with the steps its findings page documents.
 2. Compare the result with the answer of the findings page and say whether it is reproducible: the same answer comes out, or it does not.

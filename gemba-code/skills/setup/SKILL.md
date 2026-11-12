@@ -26,11 +26,12 @@ Read `CLAUDE.md` at the root of the repository, if it exists. A `## Gemba` secti
 
 ## 3. Gather the values
 
-Each value comes from what the person said, from the existing block, or from a read in Jira or Confluence. Get the cloudId once with `getAccessibleAtlassianResources`.
+Each value comes from what the person said, from the existing block, or from a read in Jira or Confluence. Get the site once with `getAccessibleAtlassianResources`: it is the `Jira Site` of the block and the `cloudId` of the other calls. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`.
 
 | Field | Where it comes from |
 |---|---|
-| Jira Project | The key the person names. Check that it exists with `executeRead` → `listJiraProjects` (`query`: the key); the search also matches names, so only a result with exactly that key counts. If they named none, list the visible projects and ask which one. |
+| Jira Project | The key the person names. Check that it exists with Find a project (`listJiraProjects`); the search also matches names, so only a result with exactly that key counts. If they named none, list the visible projects and ask which one. |
+| Jira Site | The host of the `url` that `getAccessibleAtlassianResources` returns, without `https://` (`acme.atlassian.net`). With more than one site, ask which one holds the Jira Project. Without a connection, the one the person gives. |
 | Confluence Space | The key the person names. Check that it exists with `executeRead` → `listConfluenceSpaces` (`keys`: the key). If they named none, list the spaces and ask which one. Each product has its own Jira project and its own Confluence space. |
 | Integration | Only the person knows it: `merge` or `pull request`, as the asset explains. |
 | Language | The language the Product Brief in that space is written in, read with `searchConfluence` and `getConfluenceContent`. If there is no brief, ask. |
@@ -45,7 +46,7 @@ Follow `assets/gemba-block.md`: same heading, same fields, same order.
 
 - No `CLAUDE.md`: create it with only the block.
 - A `CLAUDE.md` without a `## Gemba` section: add the block at the end. Keep everything that was there, unchanged.
-- A `CLAUDE.md` with a `## Gemba` section: update its four fields in place. Keep its other lines and the rest of the file, unchanged. The file ends with one `## Gemba` section and each field once.
+- A `CLAUDE.md` with a `## Gemba` section: update its five fields in place. Keep its other lines and the rest of the file, unchanged. The file ends with one `## Gemba` section and each field once.
 
 If you cannot write files, put the whole resulting `CLAUDE.md` in the reply and say that nothing was written.
 

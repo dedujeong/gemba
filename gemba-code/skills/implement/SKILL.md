@@ -9,11 +9,11 @@ You take one issue from Backlog and start its work: its branch exists and the is
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Use its `Jira Site` as the `cloudId` of every call; only when the block has none, get it once with `getAccessibleAtlassianResources` and propose running `setup` to add it. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`. Talk with the person in `Language`.
 
 ## 2. Take the issue
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Do not take it, and say why, when:
+Read the issue with Read an issue (`getJiraIssue`), which includes its links. Do not take it, and say why, when:
 
 - It is not in Backlog: say which state it is in.
 - An issue that blocks it is not Done or Cancelled: name the blocking issue and its state. Jira does not enforce this, so the check is yours.
@@ -27,7 +27,7 @@ When it is not taken, no branch is created and the issue stays where it is. Then
 ## 3. Create the branch and move the issue
 
 1. From `develop`, create the branch `<type>/<KEY>-<slug>`: the work type in lowercase and the Summary as a slug of lowercase letters, digits and single hyphens (`story/ABC-12-export-invoices-as-csv`).
-2. Move the issue to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
+2. Move the issue to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`).
 
 The branch comes first, so the issue never reads Implement without a branch. Carry nothing else onto it: leave any uncommitted change of the working tree uncommitted.
 
@@ -37,8 +37,8 @@ A Spike is never worked on a branch of the main working tree, which stays on `de
 
 ## 5. Take an Epic
 
-1. Move the Epic to Implement. It has no branch.
-2. List its children in rank order (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
+1. Move the Epic to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`). It has no branch.
+2. List its children in rank order with Search issues (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
 3. Take that child by its work type, as in section 2. Take one child only; the next one is taken when the person asks for it.
 
 ## 6. Walk the work
@@ -90,9 +90,9 @@ Never skip, weaken or delete a test to get green. If the test is wrong, say why 
 
 ## 9. Finish
 
-When every criterion is built and every test is green, log the real time worked in Implement on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`). The script computes the time, never you:
+When every criterion is built and every test is green, log the real time worked in Implement on the issue with Log the time (`addOrEditJiraIssueWorklog`). The script computes the time, never you:
 
-1. Read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger) and save it, with all its pages in one list, to a temporary file.
+1. Read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, and save it, with all its pages in one list, to a temporary file.
 2. Run `python3 scripts/state_time.py <file> Implement`. It adds up every stretch the issue spent in Implement, the one still open included, and prints `started` and `timeSpent`.
 3. Log those two values. Never copy the original estimate.
 
