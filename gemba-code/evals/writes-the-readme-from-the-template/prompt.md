@@ -1,6 +1,6 @@
 ---
 name: writes-the-readme-from-the-template
-description: A repository with no README gets one from the template, with the data of the Product Brief and the commands left as fields when the repository states none.
+description: A repository with no README and no stack gets one from the template with only the title, its description and What it is, from the Product Brief.
 allowed_tools: [Read, Glob, Grep, Skill]
 max_turns: 8
 ---

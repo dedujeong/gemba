@@ -158,7 +158,12 @@ class SetupReadme(unittest.TestCase):
         text = self.section()
         self.assertIn("Install, Run and Test", text)
         self.assertIn("only from what the repository states", text)
-        self.assertIn("stays as a field to fill", text)
+        self.assertIn("Install, Run and Test are written only when the repository states their commands", text)
+        self.assertIn("a section with no command is left out", text)
+        self.assertNotIn("When the repository states none, the field stays as a field to fill", text)
+
+    def test_a_project_with_no_stack_gets_only_the_title_and_what_it_is(self):
+        self.assertIn("only the title, its one-line description and What it is", self.section())
 
     def test_it_is_written_only_when_the_repository_has_no_readme(self):
         self.assertIn("no `README.md`", self.section())
@@ -209,6 +214,10 @@ class SetupExistingReadme(unittest.TestCase):
         text = self.section()
         self.assertIn("Propose only the sections it lacks", text)
         self.assertIn("do not write them", text)
+
+    def test_a_proposed_section_with_no_command_keeps_its_command_as_a_field(self):
+        self.assertIn("A proposed Install, Run or Test whose command the repository does not state is still proposed, "
+                      "with its command as a field to fill", self.section())
 
     def test_the_report_says_which_sections_were_proposed(self):
         report = skill().split("## 12. Report")[1]
