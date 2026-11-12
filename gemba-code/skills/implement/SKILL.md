@@ -103,7 +103,7 @@ Tell the person the time you logged, so they can correct it. Moving the issue to
 A Spike has no criteria to build and does not follow TDD: its test answers the question. When the test ends, and not before, publish its answer in a findings page in the product's Confluence space, never in the issue or the repo:
 
 1. Search for the `Work` > `Spikes` folders of the space; create a folder only if it does not exist.
-2. Create the page there with `createConfluenceContent`, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then the sections Recommendation, Options, Impact on scope and Sources. Answer the Spike's question in it, with what the test showed. Its status is Rough draft.
+2. Create the page there with `createConfluenceContent`, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then the sections Recommendation, Options, Impact on scope and Sources. Answer the Spike's question in it, with what the test showed. Sources lists, as block cards (`<a href="URL" data-card-appearance="block"></a>`, one per line), every ADR and every link consulted while running the test. Sources never cites the Spike's branch or its worktree, which are deleted when the Spike closes. Its status is Rough draft.
 3. Link the issue to the page once, in the issue's remote links.
 
 Then log the real time worked, as in section 9. Moving the Spike to Review is not part of this skill.
