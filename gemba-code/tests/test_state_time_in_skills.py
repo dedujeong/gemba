@@ -33,5 +33,14 @@ class WorklogTimeFromTheScript(unittest.TestCase):
                 self.assertNotIn("the time from then until now", text)
 
 
+class OnlyTheTimeNotLoggedYet(unittest.TestCase):
+    def test_the_skills_take_the_last_stretch_and_never_add_up_every_one(self):
+        for name in ("implement", "review", "close"):
+            with self.subTest(skill=name):
+                text = skill(name)
+                self.assertNotIn("adds up every stretch", text)
+                self.assertIn("which is the one not logged yet", text)
+
+
 if __name__ == "__main__":
     unittest.main()

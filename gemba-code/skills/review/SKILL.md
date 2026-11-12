@@ -49,7 +49,7 @@ If a criterion is not met, a new file is outside the layout or a test fails afte
 
 1. Move the issue back to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`).
 2. Name the criterion that is missing and say what is missing from it, the file that is outside the layout and where the layout says it should go, or the test that fails.
-3. Log the real time worked in Review on the issue with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It adds up every stretch in Review, the one still open included, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
+3. Log the real time worked in Review on the issue with Log the time (`addOrEditJiraIssueWorklog`): read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, save it, with all its pages in one list, to a temporary file and run `python3 ../implement/scripts/state_time.py <file> Review`. It takes the last stretch the issue spent in Review, the one still open or the one that just closed, which is the one not logged yet, and prints `started` and `timeSpent`: log those two values, never the estimate. Tell the person the time you logged, so they can correct it.
 
 ## 5. Open the pull request
 
