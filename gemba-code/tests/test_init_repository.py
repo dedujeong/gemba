@@ -162,7 +162,7 @@ class SetupPreparesTheRepositoryFirst(unittest.TestCase):
         self.assertLess(text.index("## 1. Prepare the repository"), text.index("## 2. Read what is there"))
 
     def test_the_report_says_what_was_done_with_the_repository(self):
-        report = skill().split("## 12. Report")[1]
+        report = skill().split("## 11. Report")[1]
         self.assertIn("repository", report)
 
 
