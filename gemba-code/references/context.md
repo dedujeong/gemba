@@ -65,4 +65,4 @@ In a project with setup, every `git push` asks the maintainer first, with the br
 
 ## Language
 
-- Talk with the person in the project's `Language`. Headings, labels and field names stay in English.
+- Everything the person reads — replies, plans, reports and questions — is in the project's `Language`, the plan file of plan mode included. Headings, labels, field names, code, commit messages, branch names and Jira Summaries stay in English. Prevents: a maintainer who has to read the method's output in a language the project did not choose.

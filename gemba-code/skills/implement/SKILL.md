@@ -64,6 +64,8 @@ When the walk is done and before any code or test changes, enter plan mode (`Ent
 - A criterion too big for one commit is split here, by behavior, into commits you would revert separately, each one a red, green, refactor cycle. If it cannot be split, say so in the plan and let the person decide: the issue is not edited outside Backlog.
 - Anything the walk found that the criteria do not cover. If a criterion looks wrong or incomplete, say so: the issue is not edited outside Backlog, so the person decides.
 
+Write the plan in the project's `Language`, the plan file included: its sentences, the purpose of each commit and what each test checks. Only headings, labels, commit messages, paths and code stay in English, even when the issue and the code are in English.
+
 Change nothing until the maintainer approves the plan (`ExitPlanMode`). Then build it, as in section 8.
 
 ## 8. Build each criterion
