@@ -9,7 +9,7 @@ You save where the session stands, so the next one continues without the convers
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`, and write the content of the handoff in it; its headings stay in English.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integration` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`. Talk with the person in `Language`, and write the content of the handoff in it; its headings stay in English.
 
 ## 2. Keep the handoffs out of git
 
@@ -21,9 +21,9 @@ Before writing a handoff, run `python3 scripts/ensure_ignored.py <main working t
 
 Read the facts now, never from memory:
 
-- the current branch and, when its name carries an issue key, the issue with `getJiraIssue`: key, summary and state;
+- the current branch and, when its name carries an issue key, the issue with Read the state of an issue (`getJiraIssue`): key, summary and state;
 - the commits of the branch that are not in `develop` (`git log develop..HEAD`) and what the working tree has uncommitted (`git status --short`);
-- the fix version of the issue with `executeRead` → `getJiraProjectVersions`: name, start date and release date.
+- the fix version of the issue with List the versions (`getJiraProjectVersions`): name, start date and release date.
 
 What only the conversation knows is yours to summarize: what was decided and why, what was left half done, what is still open and what comes next. Write only what happened in this session; never invent. Without a connection to Jira, say so in the Version section and write the rest from git.
 

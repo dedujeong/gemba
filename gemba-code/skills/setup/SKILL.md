@@ -26,11 +26,11 @@ Read `CLAUDE.md` at the root of the repository, if it exists. A `## Gemba` secti
 
 ## 3. Gather the values
 
-Each value comes from what the person said, from the existing block, or from a read in Jira or Confluence. Get the cloudId once with `getAccessibleAtlassianResources`.
+Each value comes from what the person said, from the existing block, or from a read in Jira or Confluence. Get the cloudId once with `getAccessibleAtlassianResources`. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`.
 
 | Field | Where it comes from |
 |---|---|
-| Jira Project | The key the person names. Check that it exists with `executeRead` → `listJiraProjects` (`query`: the key); the search also matches names, so only a result with exactly that key counts. If they named none, list the visible projects and ask which one. |
+| Jira Project | The key the person names. Check that it exists with Find a project (`listJiraProjects`); the search also matches names, so only a result with exactly that key counts. If they named none, list the visible projects and ask which one. |
 | Confluence Space | The key the person names. Check that it exists with `executeRead` → `listConfluenceSpaces` (`keys`: the key). If they named none, list the spaces and ask which one. Each product has its own Jira project and its own Confluence space. |
 | Integration | Only the person knows it: `merge` or `pull request`, as the asset explains. |
 | Language | The language the Product Brief in that space is written in, read with `searchConfluence` and `getConfluenceContent`. If there is no brief, ask. |
