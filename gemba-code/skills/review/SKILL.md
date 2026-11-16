@@ -13,9 +13,11 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integ
 
 ## 2. Move the issue to Review
 
-Read the issue with Read an issue (`getJiraIssue`), which includes its links. Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests.
+Read the issue with Read an issue (`getJiraIssue`), which includes its links. Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests, and then the layout validator.
 
-- If every test passes, move the issue to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`).
+- Read the `## Code layout` section of the project's `CLAUDE.md` and find its validator command. With the tests green, run it. If the validator fails, the issue stays in Implement, as with a failing test: say what the validator reports and stop.
+- A `CLAUDE.md` with no `## Code layout` section, or one that has no validator command: say that the project has no validator command, run nothing and go on with the review. It does not block the issue.
+- If every test and the validator pass, move the issue to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`).
 - If a test fails, the issue stays in Implement: say which test fails and stop.
 
 ## 3. Review the diff
@@ -30,7 +32,7 @@ Once the issue is in Review, review what was built against what was agreed. Read
 Every new file of the branch must follow the project's layout, so the repository does not get disordered issue after issue. List the files the branch adds or renames with `git diff --name-status --diff-filter=AR develop...<branch>`; for a renamed file the new path counts. Modified files are not reviewed against the layout. Read the `## Code layout` section of the project's `CLAUDE.md` and check each of those files against the lines of that section, such as its components with their type and path.
 
 - A file whose kind the layout covers but that is in the wrong place or has the wrong name is outside the layout: name the file and where the layout says it should go. The issue does not pass: it goes back to Implement, as in section 4.
-- A file whose kind the layout does not cover: name the file and ask whether the layout should cover it. A file the layout does not cover does not block the issue.
+- A file whose kind the layout does not cover: name the file and propose the line of `## Code layout` that would cover it, with the name, type (`domain` or `technical`) and path of its component, never by eye; do not write it, since the maintainer decides whether to add it. A file the layout does not cover does not block the issue.
 - A project with no `## Code layout` section in its `CLAUDE.md`: say so and check nothing. Never invent a layout, not even a common one for the stack. The missing layout does not block the issue.
 
 ### Code reviews of the change
@@ -56,7 +58,7 @@ If a criterion is not met, a new file is outside the layout or a test fails afte
 Only when `Integration` is `pull request` and every criterion is met, so the review comes out clean. In `merge` mode, go on to section 6. An unmet criterion went back to Implement in section 4 and nothing is pushed; an Epic or a Spike never opens a pull request.
 
 1. Push the branch: `git push -u origin <branch>`. If this branch already has an open pull request (`gh pr list --head <branch> --state open --json url`), the push updates it: do not open another, give its link in the report and skip the next two steps.
-2. Write the body in a temporary file outside the repository (`mktemp`) from `assets/pull-request.md`: under Criteria, the verdict and evidence of each criterion from section 3; under For the maintainer's decision, what the criteria do not cover, a new file the layout does not cover, the findings of the code reviews and what was done with each, and any commit of the comparison that is missing or extra; under Not verified, what no test shows. Remove a section that has nothing; Criteria always has content. Delete the file afterwards.
+2. Write the body in a temporary file outside the repository (`mktemp`) from `assets/pull-request.md`: under Criteria, the verdict and evidence of each criterion from section 3; under For the maintainer's decision, what the criteria do not cover, a new file the layout does not cover with the `## Code layout` line proposed for it, the findings of the code reviews and what was done with each, and any commit of the comparison that is missing or extra; under Not verified, what no test shows. Remove a section that has nothing; Criteria always has content. Delete the file afterwards.
 3. Open the pull request: `gh pr create --base develop --head <branch> --title "<KEY> <Summary>" --body-file <file>`. The title is the issue's key and its Summary exactly as in Jira.
 
 Without the GitHub CLI or the remote, write the commands and the body you would use and say that nothing was pushed.

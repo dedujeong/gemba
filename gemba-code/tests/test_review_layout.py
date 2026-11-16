@@ -17,6 +17,31 @@ def return_section():
     return skill().split("## 4. ")[1].split("## 5. ")[0]
 
 
+def move_section():
+    return skill().split("## 2. ")[1].split("## 3. ")[0]
+
+
+class ValidatorBeforeReview(unittest.TestCase):
+    def test_with_the_tests_green_it_runs_the_validator_command_of_the_code_layout(self):
+        text = move_section()
+        self.assertIn("`## Code layout`", text)
+        self.assertIn("validator command", text)
+        self.assertIn("run it", text)
+
+    def test_the_issue_moves_to_review_only_when_the_tests_and_the_validator_pass(self):
+        self.assertIn("every test and the validator pass", move_section())
+
+    def test_a_failing_validator_keeps_the_issue_in_implement_like_a_failing_test(self):
+        text = move_section()
+        self.assertIn("If the validator fails", text)
+        self.assertIn("stays in Implement", text)
+
+    def test_without_a_validator_command_it_says_so_and_goes_on_with_the_review(self):
+        text = move_section()
+        self.assertIn("has no validator command", text)
+        self.assertIn("go on with the review", text)
+
+
 class NewFileOutsideTheLayout(unittest.TestCase):
     def test_the_check_is_part_of_the_diff_review_and_comes_before_section_4(self):
         text = skill()
@@ -61,10 +86,16 @@ class ProjectWithoutALayout(unittest.TestCase):
 
 
 class FileTheLayoutDoesNotCover(unittest.TestCase):
-    def test_it_names_the_file_and_asks_whether_the_layout_should_cover_it(self):
+    def test_it_names_the_file_and_proposes_the_line_of_the_code_layout_instead_of_judging_it(self):
         text = layout_section()
         self.assertIn("does not cover", text)
-        self.assertIn("ask whether the layout should cover it", text)
+        self.assertIn("propose the line of `## Code layout`", text)
+        self.assertIn("name, type (`domain` or `technical`) and path", text)
+        self.assertIn("never by eye", text)
+
+    def test_the_proposed_line_is_the_maintainers_to_accept_and_is_not_written(self):
+        text = layout_section()
+        self.assertIn("do not write it", text)
 
     def test_it_does_not_block_the_issue(self):
         text = layout_section()
