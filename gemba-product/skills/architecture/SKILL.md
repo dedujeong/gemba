@@ -64,6 +64,7 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 - Write each technical name the decision mentions with code style, every time it appears in the body: paths, files, folders, columns, domains and commands (`db/migrations`, `due_date`, `ledger.example.com`, `<tool> migrate`). The title of the page is plain text.
 - Write the name of a product, a provider or a tool as plain text, never with code style (the hosting provider, the database engine, the code host). The command that runs a tool is code (`<tool> migrate`); the tool's own name is not.
 - The ADR of the code layout records, in its Decision, one flat list of components and the validator, as `assets/adr-template.md` defines: each component with its name, its type (`domain` or `technical`) and its path, never nested under another, and the command of the validator that checks the two rules of `references/layout-principles.md`.
+- When the derived layout matches a layout that has a name (vertical slice architecture, a modular monolith, feature folders), the ADR of the layout cites that name in its Decision. If it matches none, say nothing about it: never force a name.
 - Set the page status as `../pitch/SKILL.md` section 6 describes, from the state of the decision:
 
 | ADR state | Page status | Panel |
