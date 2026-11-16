@@ -1,6 +1,6 @@
 ---
-name: proposes-the-code-layout-with-the-decisions
-description: With the MVP closed and the round answered, one of the architecture decisions Claude proposes is the layout of the code, with its folders, tests, file names and migrations.
+name: derives-the-layout-from-the-release
+description: With the MVP closed and the round answered, Claude derives the code layout from the stories and the data model of the release, with the domains that get a folder, the direction of the dependencies and the entry file of each domain.
 allowed_tools: [Read, Glob, Grep, Skill]
 max_turns: 6
 ---
@@ -19,5 +19,7 @@ El release actual del Story Map, con el MVP cerrado, tiene estas historias:
 2. Apartar un lugar en una clase.
 3. Cancelar mi lugar.
 4. Ver, como dueña, quién está anotado en cada clase.
+
+Su modelo de datos: Clase (nombre, horario, cupo), Alumno (nombre, teléfono) y Reserva (alumno, clase, estado), donde una Reserva une a un Alumno con una Clase.
 
 Ahora toca proponer las decisiones de arquitectura. No hay conexión a Confluence en esta sesión: escribe tu propuesta en la respuesta.
