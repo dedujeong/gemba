@@ -28,6 +28,11 @@ class NewFileOutsideTheLayout(unittest.TestCase):
         self.assertIn("`## Code layout`", text)
         self.assertIn("`CLAUDE.md`", text)
 
+    def test_the_files_are_checked_against_the_lines_of_the_section_whatever_its_shape(self):
+        text = layout_section()
+        self.assertIn("against the lines of that section", text)
+        self.assertNotIn("four lines", text)
+
     def test_a_file_outside_the_layout_is_named_with_the_place_the_layout_gives_it(self):
         text = layout_section()
         self.assertIn("name the file", text)

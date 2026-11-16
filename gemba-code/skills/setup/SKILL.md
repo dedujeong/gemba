@@ -101,13 +101,13 @@ When the repository already has a `README.md`, never replace or rewrite it, and 
 
 `architecture` decides where each file goes and records it as an ADR, so every session can know it without asking. Search the `Decisions` folder of the Confluence Space for the ADR of the code layout, and read it with `getConfluenceContent`. Use only an ADR whose page status is Verified (accepted) and that no later ADR replaces. A Rough draft or a replaced ADR is not used.
 
-- With that ADR, write a `## Code layout` section in `CLAUDE.md`, right after `## Gemba`, with exactly four lines, each with a bold label in English, copied from the Decision of the ADR and written in the project's `Language`:
-  - **Folders:** the folders by domain and the routes.
-  - **Tests:** where the tests go.
-  - **File names:** how the files are named.
-  - **Migrations:** where the migrations go; `not applicable` when the ADR says it does not apply.
-- Every path, folder and file the line names is written as code. Anything else the ADR says stays in the ADR: the section has no other line, and no source line.
-- A `CLAUDE.md` that already has a `## Code layout` section: it is updated in place, keeping the rest of the file unchanged. If it already says the same, change nothing.
+- With that ADR, write a `## Code layout` section in `CLAUDE.md`, right after `## Gemba`, taken from the Decision of the ADR and written in the project's `Language`. It holds, in this order:
+  - The named layout the ADR cites, in one sentence; leave it out when the ADR cites none.
+  - Write one line per component of the ADR's list, with its name, its type (`domain` or `technical`) and its path. The components are the ones the ADR lists, never nested: there is no fixed list of folders, so nothing is added that the ADR does not name.
+  - The two rules, each in one sentence: what changes together stays together, and a domain depends on another only through its public entry, in one direction.
+  - The validator: the command the ADR gives to check the two rules.
+- Every path, folder, file and command the section names is written as code. Anything else the ADR says stays in the ADR: the section has no other line, and no source line.
+- A `CLAUDE.md` that already has a `## Code layout` section: do not change it. Compare it with the ADR and propose the differences with the ADR, and do not change the section without the maintainer's OK, keeping the rest of the file unchanged. If it already says the same, change nothing.
 - Without that ADR, write nothing: invent no layout, not even a common one for the stack. Say that `architecture` has not decided it yet.
 
 Without a connection to Confluence, write nothing and say that the ADR could not be read. If you cannot write files, put the section in the reply and say that nothing was written.

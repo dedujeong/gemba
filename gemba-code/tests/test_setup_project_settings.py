@@ -252,22 +252,34 @@ class SetupCodeLayout(unittest.TestCase):
         self.assertIn("Verified", text)
         self.assertIn("no later ADR replaces", text)
 
-    def test_it_writes_a_code_layout_section_with_the_four_parts(self):
+    def test_it_writes_one_line_per_component_with_its_name_type_and_path(self):
         text = self.section()
         self.assertIn("`## Code layout`", text)
-        for part in ("Folders", "Tests", "File names", "Migrations"):
+        self.assertIn("one line per component", text)
+        for part in ("name", "`domain`", "`technical`", "path"):
             self.assertIn(part, text)
 
-    def test_migrations_say_not_applicable_when_the_adr_says_so(self):
-        self.assertIn("not applicable", self.section())
+    def test_it_writes_the_named_layout_the_adr_cites_the_two_rules_and_the_validator_command(self):
+        text = self.section()
+        self.assertIn("named layout", text)
+        self.assertIn("what changes together stays together", text)
+        self.assertIn("one direction", text)
+        self.assertIn("validator", text)
+
+    def test_it_copies_no_fixed_list_of_folders(self):
+        text = self.section()
+        self.assertIn("no fixed list of folders", text)
+        self.assertNotIn("**Folders:**", text)
+
+    def test_an_existing_section_is_proposed_changes_and_not_rewritten_without_the_ok(self):
+        text = self.section()
+        self.assertIn("differences with the ADR", text)
+        self.assertIn("without the maintainer's OK", text)
 
     def test_without_an_adr_it_invents_no_layout_and_says_architecture_has_not_decided_it(self):
         text = self.section()
         self.assertIn("invent no layout", text)
         self.assertIn("`architecture` has not decided it yet", text)
-
-    def test_an_existing_section_is_updated_in_place(self):
-        self.assertIn("updated in place", self.section())
 
     def test_the_report_says_whether_the_layout_was_written(self):
         report = skill().split("## 12. Report")[1]
