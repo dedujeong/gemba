@@ -112,9 +112,21 @@ When the repository already has a `README.md`, never replace or rewrite it, and 
 
 Without a connection to Confluence, write nothing and say that the ADR could not be read. If you cannot write files, put the section in the reply and say that nothing was written.
 
-## 11. Report
+## 11. Delete the remote branch on merge
 
-Say first what was done with the repository (created with `main` and `develop`, `develop` created, nothing changed, or `main` missing and asked). Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for a README written the sections left out because the repository states no command for them, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
+So the remote does not pile up branches that are already merged, GitHub deletes the branch when its pull request is merged. Only when `origin` is a GitHub repository; with no `origin`, or another host, do nothing and say so.
+
+1. Read the repository with `gh repo view --json nameWithOwner --jq .nameWithOwner`.
+2. Turn the setting on with `gh api --method PATCH repos/<owner>/<repo> -F delete_branch_on_merge=true`.
+3. Confirm it by reading the setting back with `gh api repos/<owner>/<repo> --jq .delete_branch_on_merge`: it must print `true`. If the setting is already `true` before step 2, change nothing.
+
+When `gh` lacks permission to change the setting (the PATCH fails with 403 or 404, or the read-back does not print `true`), do not retry and do not report it as set. Tell the maintainer what to enable and where: "Automatically delete head branches", in Settings > General > Pull Requests of the repository on GitHub, which needs admin permission. The report counts it as not written.
+
+If you cannot run commands, put the commands in the reply and say that they were not run.
+
+## 12. Report
+
+Say first what was done with the repository (created with `main` and `develop`, `develop` created, nothing changed, or `main` missing and asked). Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README, for the code layout and for delete branch on merge, whether it was set, already there or not written, for a README written the sections left out because the repository states no command for them, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
 
 ## Style
 
