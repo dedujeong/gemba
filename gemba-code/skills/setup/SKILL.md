@@ -112,7 +112,7 @@ When the repository already has a `README.md`, never replace or rewrite it, and 
 
 Without a connection to Confluence, write nothing and say that the ADR could not be read. If you cannot write files, put the section in the reply and say that nothing was written.
 
-## 11. Report
+## 12. Report
 
 Say first what was done with the repository (created with `main` and `develop`, `develop` created, nothing changed, or `main` missing and asked). Show the block as it was written, and say which values were read from Jira or Confluence and which the person gave. Add, for the attribution, for the git push confirmation, for the gh pr merge deny (only in pull request mode), for the `.gitignore`, for the license, for the README and for the code layout, whether it was set, already there or not written, for a README written the sections left out because the repository states no command for them, for an existing README the sections that were proposed, and for the code layout, when it was not written, that `architecture` has not decided it yet. Nothing else.
 

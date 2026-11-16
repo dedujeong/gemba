@@ -61,7 +61,7 @@ class SetupPushConfirmation(unittest.TestCase):
         self.assertIn("do not add it twice", text)
 
     def test_the_report_says_whether_the_push_confirmation_was_set(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("git push confirmation", report)
 
 
@@ -84,7 +84,7 @@ class SetupPullRequestDeny(unittest.TestCase):
         self.assertIn("In `merge` mode write no deny rule", self.section())
 
     def test_the_report_says_whether_the_gh_pr_merge_deny_was_set(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("gh pr merge deny", report)
 
 
@@ -98,10 +98,10 @@ class SetupGitignore(unittest.TestCase):
     def test_the_gitignore_comes_after_the_attribution_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("Turn off the Claude attribution"), text.index("scripts/write_gitignore.py"))
-        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 11. Report"))
+        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 12. Report"))
 
     def test_the_report_says_whether_the_gitignore_was_written(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn(".gitignore", report)
 
 
@@ -145,7 +145,7 @@ class SetupLicense(unittest.TestCase):
         self.assertIn("what is missing", text)
 
     def test_the_report_says_what_happened_with_the_license(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("license", report)
 
 
@@ -156,7 +156,7 @@ class SetupReadme(unittest.TestCase):
     def test_the_readme_comes_after_the_gitignore_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("## 7. Write the base .gitignore"), text.index("## 9. Write the project README"))
-        self.assertLess(text.index("## 9. Write the project README"), text.index("## 11. Report"))
+        self.assertLess(text.index("## 9. Write the project README"), text.index("## 12. Report"))
 
     def test_it_is_written_from_the_template_of_the_assets(self):
         self.assertIn("assets/readme.md", self.section())
@@ -204,7 +204,7 @@ class SetupReadme(unittest.TestCase):
         self.assertIn("remove the whole License section and say so", self.section())
 
     def test_the_report_says_whether_the_readme_was_written(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("README", report)
 
 
@@ -233,18 +233,18 @@ class SetupExistingReadme(unittest.TestCase):
                       "with its command as a field to fill", self.section())
 
     def test_the_report_says_which_sections_were_proposed(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("proposed", report)
 
 
 class SetupCodeLayout(unittest.TestCase):
     def section(self):
-        return skill().split("## 10. Write the code layout")[1].split("## 11. Report")[0]
+        return skill().split("## 10. Write the code layout")[1].split("## 12. Report")[0]
 
     def test_the_code_layout_comes_after_the_readme_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("## 9. Write the project README"), text.index("## 10. Write the code layout"))
-        self.assertLess(text.index("## 10. Write the code layout"), text.index("## 11. Report"))
+        self.assertLess(text.index("## 10. Write the code layout"), text.index("## 12. Report"))
 
     def test_it_reads_the_accepted_layout_adr_from_the_decisions_folder(self):
         text = self.section()
@@ -270,7 +270,7 @@ class SetupCodeLayout(unittest.TestCase):
         self.assertIn("updated in place", self.section())
 
     def test_the_report_says_whether_the_layout_was_written(self):
-        report = skill().split("## 11. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("code layout", report)
 
 
