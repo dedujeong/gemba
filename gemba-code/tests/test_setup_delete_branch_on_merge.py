@@ -48,6 +48,16 @@ class SetupDeletesTheRemoteBranchOnMerge(unittest.TestCase):
     def test_without_commands_it_puts_them_in_the_reply(self):
         self.assertIn("If you cannot run commands", self.section())
 
+    def test_without_permission_it_does_not_retry_nor_assume_it_worked(self):
+        text = self.section()
+        self.assertIn("lacks permission", text)
+        self.assertIn("do not retry", text)
+
+    def test_without_permission_it_tells_the_maintainer_what_to_enable_and_where(self):
+        text = self.section()
+        self.assertIn("Automatically delete head branches", text)
+        self.assertIn("Settings > General > Pull Requests", text)
+
     def test_the_report_says_what_happened_with_the_setting(self):
         report = skill().split("## 12. Report")[1]
         self.assertIn("delete branch on merge", report)
