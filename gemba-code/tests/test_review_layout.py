@@ -86,10 +86,16 @@ class ProjectWithoutALayout(unittest.TestCase):
 
 
 class FileTheLayoutDoesNotCover(unittest.TestCase):
-    def test_it_names_the_file_and_asks_whether_the_layout_should_cover_it(self):
+    def test_it_names_the_file_and_proposes_the_line_of_the_code_layout_instead_of_judging_it(self):
         text = layout_section()
         self.assertIn("does not cover", text)
-        self.assertIn("ask whether the layout should cover it", text)
+        self.assertIn("propose the line of `## Code layout`", text)
+        self.assertIn("name, type (`domain` or `technical`) and path", text)
+        self.assertIn("never by eye", text)
+
+    def test_the_proposed_line_is_the_maintainers_to_accept_and_is_not_written(self):
+        text = layout_section()
+        self.assertIn("do not write it", text)
 
     def test_it_does_not_block_the_issue(self):
         text = layout_section()
