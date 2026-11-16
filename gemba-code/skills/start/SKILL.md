@@ -72,6 +72,12 @@ When a rule depends on two or more conditions, build its decision table inside, 
 
 An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows only the resulting criteria, rules and Out of scope: it never mentions the heuristics, the decision table or the questions.
 
+### Name the artboards of an interface Story
+
+Only for an interface Story, the one a user does through a screen. Read the `Prototype` section of the `Design` page of the product's space and write in the Story a `### Artboards` section, after the acceptance criteria, with one bullet per artboard that belongs to it, each name in code exactly as the page gives it. A Story with no screen has no `### Artboards`: leave the section out.
+
+Never invent an artboard. When the page does not exist, or does not say which artboards the Story uses, ask which they are in the single round of questions of the Story, and do not create the Story while that question has no answer. The Story shows only the artboards, never how they were chosen.
+
 ### Check the edge cases of a whole version
 
 When Gemba Product's `version-start` hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. While any question of the round has no answer, create no issue of the version, not even those of the Stories already answered or the release Task: say that nothing was created and name the questions still missing. When every question is answered, or the round had none, create the whole version without asking for another confirmation.

@@ -50,6 +50,7 @@ Before changing anything, go and see where the work happens, without modifying a
 - Look at the recent history: `git log` of those files.
 - Run the existing tests and note which pass.
 - For a Bug, reproduce it by hand and note what you saw.
+- For an interface Story, read its `### Artboards` section and then, from the `Prototype` section of the `Design` page, only those artboards, never the whole prototype. If the Story has no `### Artboards`, stop and ask which artboards it uses before reading the design. A Story with no screen reads no design.
 
 What you find feeds the plan, in section 7; it is not a separate deliverable.
 
