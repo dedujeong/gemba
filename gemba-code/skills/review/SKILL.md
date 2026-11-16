@@ -13,9 +13,11 @@ Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Integ
 
 ## 2. Move the issue to Review
 
-Read the issue with Read an issue (`getJiraIssue`), which includes its links. Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests.
+Read the issue with Read an issue (`getJiraIssue`), which includes its links. Only an issue in Implement is reviewed: if it is in any other state, do not move it, say which state it is in and stop. Then, if it is an Epic, review it as in section 7; if it is a Spike, as in section 8; otherwise run the project's tests, and then the layout validator.
 
-- If every test passes, move the issue to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`).
+- Read the `## Code layout` section of the project's `CLAUDE.md` and find its validator command. With the tests green, run it. If the validator fails, the issue stays in Implement, as with a failing test: say what the validator reports and stop.
+- A `CLAUDE.md` with no `## Code layout` section, or one that has no validator command: say that the project has no validator command, run nothing and go on with the review. It does not block the issue.
+- If every test and the validator pass, move the issue to Review with Move an issue (`transitionJiraIssue`, `transitionName`: `to Review`).
 - If a test fails, the issue stays in Implement: say which test fails and stop.
 
 ## 3. Review the diff
