@@ -38,6 +38,14 @@ What the decision commits the product to: cost, operation, what gets harder.
 
 A block card (a link with `data-card-appearance="block"`, directly under the heading and with no empty paragraph between them) to the page or source the decision rests on: the Product Brief, the Story Map or the provider page cited for a plan limit (`references/plan-limits.md`).
 
+## Layout ADR
+
+The ADR of the code layout keeps the five sections. Its Decision adds, after the sentence that states the layout:
+
+- One flat list of components, one line each: name, type (`domain` or `technical`) and path (`bookings`, `domain`, `src/bookings/`). The list is never nested; the type replaces a hierarchy.
+- The named layout it matches, when there is one, cited by its name in one sentence.
+- The validator: the command that checks the two rules of `references/layout-principles.md` (`<tool> check-layout`).
+
 ```html
 <h2>Context</h2>
 <p>...</p>
