@@ -1,6 +1,6 @@
 ---
 type: regex
-pattern: '^(?:(?![^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50)[^\n]*\n?)*[^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50[^\n]*\n(?:(?![^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50)[^\n]*\n?)*$'
+pattern: '^(?:(?![^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50)[^\n]*\n)*[^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50[^\n]*(?:\n(?![^\n]*(?:enlace|link|vincul)[^\n]*TALLER-50)[^\n]*)*$'
 flags: i
 target: last_message
 ---
