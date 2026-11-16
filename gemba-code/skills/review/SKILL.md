@@ -63,7 +63,7 @@ Without the GitHub CLI or the remote, write the commands and the body you would 
 
 ## 6. Report and stop
 
-If every criterion is met, report the result of the review: the verdict of each criterion and the commit comparison, and in `pull request` mode the link of the pull request. Integrate nothing: do not merge and do not move the issue to Done; the only push is the branch of the pull request in section 5. The issue stays in Review until the maintainer says to close it.
+If every criterion is met, report the result of the review: the verdict of each criterion and the commit comparison, and in `pull request` mode the link of the pull request and, for the maintainer to run, the merge command `gh pr merge <number> --merge --body ""`, which leaves in the history only the title line GitHub proposes, with no body. Never run it. Integrate nothing: do not merge and do not move the issue to Done; the only push is the branch of the pull request in section 5. The issue stays in Review until the maintainer says to close it.
 
 ## 7. Review an Epic
 
