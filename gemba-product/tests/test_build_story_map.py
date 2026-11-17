@@ -160,6 +160,23 @@ class StoryRectangles(unittest.TestCase):
         self.assertEqual(shapes(self.svg, "sticky"), [])
 
 
+class WhiteboardReference(unittest.TestCase):
+    def elements(self):
+        with open(os.path.join(ROOT, "skills", "story-map", "references", "whiteboard.md"), encoding="utf-8") as f:
+            return f.read().split("## Elements")[1].split("\n## ")[0]
+
+    def test_it_says_the_whole_board_is_drawn_as_rectangles_of_the_jira_card_size(self):
+        line = next(l for l in self.elements().splitlines() if l.startswith("- **Card rectangle"))
+        for kind in ("persona", "activities", "tasks", "stories"):
+            self.assertIn(kind, line)
+        self.assertIn('width="345" height="136.91"', line)
+
+    def test_it_says_the_stickies_are_the_ones_of_boards_drawn_before(self):
+        line = next(l for l in self.elements().splitlines() if l.startswith("- **Sticky"))
+        self.assertIn("boards drawn before", line)
+        self.assertNotIn("(persona, activities, tasks, and the stories", line)
+
+
 class Spacing(unittest.TestCase):
     """Columns and rows are spaced for rectangles of the Jira card size: nothing on the board overlaps."""
 
