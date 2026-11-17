@@ -17,10 +17,13 @@ El CLAUDE.md del proyecto tiene este bloque:
 ## Gemba
 
 - Jira Project: TALLER
+- Jira Site: taller.atlassian.net
 - Confluence Space: TALLER
 - Integration: merge
 - Language: es-MX
 ```
+
+La sección `Prototype` de la página `Design` del espacio da el artboard `clientes-a-avisar-hoy` para esta historia.
 
 La fix version abierta es `Taller v0.1.0`. Los components del proyecto en Jira son `web`, `notifications` y `platform`.
 

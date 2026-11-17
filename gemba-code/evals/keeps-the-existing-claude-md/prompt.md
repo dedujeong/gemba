@@ -4,7 +4,7 @@ description: A project with its own CLAUDE.md keeps all of it when setup adds th
 allowed_tools: [Read, Glob, Grep, Skill]
 max_turns: 8
 ---
-Quiero dejar listo este repositorio para trabajar con Gemba Code. El proyecto de Jira es CLINICA, el espacio de Confluence es CLINICA, cerramos con pull request porque somos tres y todo va en español de México. El repositorio ya tiene este CLAUDE.md:
+Quiero dejar listo este repositorio para trabajar con Gemba Code. El proyecto de Jira es CLINICA, su sitio es clinica.atlassian.net, el espacio de Confluence es CLINICA, cerramos con pull request porque somos tres y todo va en español de México. El repositorio ya tiene este CLAUDE.md:
 
 <claude-md>
 # Clínica dental
