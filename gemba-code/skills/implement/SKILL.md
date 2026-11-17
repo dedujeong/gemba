@@ -81,7 +81,7 @@ Once the plan is approved, build the criteria in the planned order, each one in 
    `<type>(<scope>): <description>`
 
    - `<type>` is one of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
-   - `<scope>` is the Jira component of the issue, in lowercase.
+   - `<scope>` is the name, in lowercase, of the `## Code layout` area the change touches, whether it is `domain` or `technical`, never the component of the issue by default. When no area fits, or the change touches two or more, the commit has no scope: leave out the parentheses.
    - `<description>` starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
    - The issue key does not go in the message; only the branch carries it.
 
