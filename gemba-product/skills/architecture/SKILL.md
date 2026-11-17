@@ -87,6 +87,7 @@ Before any ADR of a set is marked as accepted, review each ADR and the whole set
 - Look for contradictions also against the ADRs already accepted in the `Decisions` folder of the space, not only inside the set: read them before the review and compare each ADR and the whole set with them. A contradiction with an accepted ADR never edits the accepted one: if the decision changes, it is a new ADR that replaces it, as section 5 says, and the person decides.
 - A finding is never settled by inventing a decision: a gap that no story and no constraint decides is a question to the person, as `references/adr-heuristics.md` says.
 - Ask all the questions of the review in one single round, in one message and in the person's language, never one by one and never across turns. Each question starts with the ADR and the heuristic it comes from: «ADR: <the ADR or the set>. Heurística: <the heuristic that found it>. ¿...?». A question that cannot name its ADR and its heuristic is not asked.
+- While a question of the round has no answer, accept no ADR of the set, not even the ones that raise no open question, however the person asks for it: name the question that is missing and say that the set stays as it is until it is answered.
 - Without a Confluence connection the review works over the ADRs written in the conversation, and says so.
 
 ## 7. Propose the work for the version

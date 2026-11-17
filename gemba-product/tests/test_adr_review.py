@@ -51,6 +51,12 @@ class ReviewBeforeAccepting(unittest.TestCase):
         self.assertIn("all the questions", text)
         self.assertIn("«ADR: <the ADR or the set>. Heurística: <the heuristic that found it>. ¿...?»", text)
 
+    def test_no_adr_of_the_set_is_accepted_while_a_question_of_the_review_has_no_answer(self):
+        text = self.review()
+        self.assertIn("a question of the round has no answer", text)
+        self.assertIn("accept no ADR of the set", text)
+        self.assertIn("name the question that is missing", text)
+
     def test_the_review_comes_before_the_work_for_the_version(self):
         body = read(SKILL)
         self.assertLess(body.index("## 6. Review the ADRs before accepting them"), body.index("## 7. Propose the work for the version"))
