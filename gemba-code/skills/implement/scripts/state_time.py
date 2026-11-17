@@ -3,12 +3,13 @@
 Usage: python3 state_time.py <changelog.json> <State> [--now <ISO datetime>]
 
 The file is what listJiraIssueChangelogs returned (its `data`, or just its `values`). The time
-runs from each status change that moved the issue into the state to the one that moved it out;
-an issue that entered the state twice adds up both spans. A span still open, because the issue
-has not left the state, runs until --now (the current time when it is not given). A state the
-issue never entered prints an error and exits 1.
+is the last span the issue spent in the state: from the status change that last moved it in to
+the one that moved it out, or until --now (the current time when it is not given) when the issue
+has not left the state yet. Earlier spans are not counted: the method logs each span when the
+issue leaves the state, so they are logged already. A state the issue never entered prints an
+error and exits 1.
 It prints a JSON object with `seconds`, `timeSpent` in the form Jira takes for a worklog
-(`1h 5m`) and `started`, when the issue entered the state.
+(`1h 5m`) and `started`, when that last span began.
 """
 import json
 import sys
@@ -34,20 +35,18 @@ def status_changes(entries):
 
 
 def time_in_state(entries, state, now):
-    first = entered = None
-    seconds = 0
+    """The last span in the state, the one not logged yet: still open, or the one that just closed."""
+    started = left = None
     for created, source, target in status_changes(entries):
-        if target == state and entered is None:
-            entered = created
-            first = first or created
-        elif source == state and entered is not None:
-            seconds += int((datetime.fromisoformat(created) - datetime.fromisoformat(entered)).total_seconds())
-            entered = None
-    if entered is not None:
-        seconds += int((now - datetime.fromisoformat(entered)).total_seconds())
-    if first is None:
+        if target == state:
+            started, left = created, None
+        elif source == state and started is not None:
+            left = created
+    if started is None:
         raise ValueError(f"the issue never entered {state}")
-    return {"seconds": seconds, "timeSpent": time_spent(seconds), "started": first}
+    end = datetime.fromisoformat(left) if left else now
+    seconds = int((end - datetime.fromisoformat(started)).total_seconds())
+    return {"seconds": seconds, "timeSpent": time_spent(seconds), "started": started}
 
 
 def time_spent(seconds):

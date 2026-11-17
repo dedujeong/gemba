@@ -12,7 +12,7 @@ These rules apply to every session in a project that uses Gemba Code. The projec
 
 ## Spike findings
 
-- A Spike's answer lives in a findings page in the product's Confluence space, under `Work` > `Spikes`, never in the issue or the repo. The page is created when the test ends, not when the Spike is declared or taken, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then Recommendation, Options, Impact on scope and Sources. Its status is Rough draft when created and Verified when the Spike closes. The issue links to it once. A Spike does not follow TDD: its test answers the question. Prevents: answers lost in a conversation or left as artifacts in the repo.
+- A Spike's answer lives in a findings page in the product's Confluence space, under `Work` > `Spikes`, never in the issue or the repo. The page is created when the test ends, not when the Spike is declared or taken, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then Recommendation, Options, Impact on scope and Sources. Sources lists, as block cards, every ADR and every link consulted while running the test. Sources never cites the Spike's branch or its worktree, which are deleted when the Spike closes. Its status is Rough draft when created and Verified when the Spike closes. The issue links to it once. A Spike does not follow TDD: its test answers the question. Prevents: answers lost in a conversation or left as artifacts in the repo.
 
 ## Work cycle
 
@@ -36,13 +36,15 @@ Prevents: a board that does not say where each item really is, and estimates tha
 How a branch reaches `develop` depends on `Integration` in the Gemba section:
 
 - `merge`: merge the branch locally into `develop` with `git merge --no-ff` and Git's default message (`Merge branch '<branch>' into develop`), push `develop` and delete the branch. Work branches are not pushed.
-- `pull request`: when `review` finds every criterion met, it pushes the branch and opens a pull request into `develop`, titled `<KEY> <Summary>` exactly as in Jira. The maintainer reviews it and decides the merge, always as a merge commit with GitHub's default message. `close` merges nothing: it waits for that merge, brings `develop` up to date and deletes the branch. Publishing a version opens a pull request from `develop` into `main` the same way. No skill merges into `develop` or `main` in this mode; blocking `main` for real is a branch protection of GitHub, outside the plugin.
+- `pull request`: when `review` finds every criterion met, it pushes the branch and opens a pull request into `develop`, titled `<KEY> <Summary>` exactly as in Jira. The maintainer reviews it and decides the merge, always as a merge commit with GitHub's default message and no body: `gh pr merge --merge --body ""`, so the commit keeps only the title line. `close` merges nothing: it waits for that merge, brings `develop` up to date and deletes the branch. Publishing a version opens a pull request from `develop` into `main` the same way. No skill merges into `develop` or `main` in this mode; blocking `main` for real is a branch protection of GitHub, outside the plugin.
 
 In both: never squash, and never rebase a branch onto `develop` or `main`; to bring in new work from `develop`, merge it into the branch. Prevents: lost history and rewritten commits that someone else already has.
 
+In a project with setup, every `git push` asks the maintainer first, with the branch and the remote. If the maintainer declines, nothing is pushed: do not retry it with another command, another remote or another tool (`gh`, the GitHub API or an MCP server), and say what was left unpushed. Prevents: work reaching the remote without the maintainer seeing it.
+
 ## Commits
 
-- One line, with no body or footer: `<type>(<scope>): <description>`. Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`. The scope is optional and is one of the project's Jira components, in lowercase. A breaking change adds `!` before the colon and its description says what breaks. The only exceptions are the merge commit and a repository's `Initial commit`. Prevents: a history nobody can read or filter.
+- One line, with no body or footer: `<type>(<scope>): <description>`. Types: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`. The scope is optional and is the name, in lowercase, of the `## Code layout` area the change touches; with no area that fits, or two or more, the commit has no scope. A breaking change adds `!` before the colon and its description says what breaks. The only exceptions are the merge commit and a repository's `initial commit`. Prevents: a history nobody can read or filter.
 - The description starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
 - A commit is one coherent change you would revert as a whole, and it leaves the branch working. Its tests and docs go in the same commit. Prevents: reverts that break something else.
 - A correction to a commit not yet pushed is folded into it (`git commit --fixup`, then `git rebase --autosquash`). This is the only rebase allowed.
@@ -63,4 +65,4 @@ In both: never squash, and never rebase a branch onto `develop` or `main`; to br
 
 ## Language
 
-- Talk with the person in the project's `Language`. Headings, labels and field names stay in English.
+- Everything the person reads — replies, plans, reports and questions — is in the project's `Language`, the plan file of plan mode included. Headings, labels, field names, code, commit messages, branch names and Jira Summaries stay in English. Prevents: a maintainer who has to read the method's output in a language the project did not choose.

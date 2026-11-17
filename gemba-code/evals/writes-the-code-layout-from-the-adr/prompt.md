@@ -11,12 +11,13 @@ Quiero dejar listo este repositorio para trabajar con Gemba Code. Todavía no ti
 
 ## Decision
 
-Organizar el código por dominio. Gana porque cada historia toca sobre todo una carpeta, y lo compartido queda aparte.
+Organizar el código por dominio, como en un layout por funcionalidad (feature-sliced). Gana porque cada historia toca sobre todo una carpeta, y lo compartido queda aparte.
 
-- `src/lib/business`, `src/lib/menu` y `src/lib/order`, cada una con `components`, `services`, `types.ts` e `index.ts`; `src/lib/shared` con `ui`, `supabase` y `r2`.
-- Rutas: `(public)/[business]`, `(auth)/login` y `(admin)/dashboard`.
-- Las pruebas unitarias con Vitest van junto al archivo, con su mismo nombre (`business.server.test.ts`); `tests/e2e` con Playwright y `supabase/migrations` van en la raíz del repositorio.
-- Archivos en kebab-case y componentes de Svelte en PascalCase.
+- `business`, tipo `domain`, ruta `src/lib/business/`.
+- `menu`, tipo `domain`, ruta `src/lib/menu/`.
+- `order`, tipo `domain`, ruta `src/lib/order/`.
+- `shared`, tipo `technical`, ruta `src/lib/shared/`.
+- Validador: `pnpm check-layout`, que comprueba las dos reglas: lo que cambia junto queda junto, y cada dominio depende de otro solo por su archivo de entrada, en una sola dirección.
 </adr>
 
 En esta sesión no hay conexión a Jira ni a Confluence y no puedes escribir archivos: escribe en tu respuesta el contenido completo del CLAUDE.md tal como quedaría.

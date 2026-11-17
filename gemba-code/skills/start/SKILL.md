@@ -9,7 +9,7 @@ You declare one unit of work in Jira so it can be built: the right work type, a 
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Confluence Space` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project`, `Confluence Space` and `Language`. If it is missing, propose running `setup` first and stop. Use its `Jira Site` as the `cloudId` of every call; only when the block has none, get it once with `getAccessibleAtlassianResources` and propose running `setup` to add it. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`.
 
 Read the Product Brief in the Confluence space for its actors and business rules. The issue content is written in `Language`.
 
@@ -31,11 +31,11 @@ Declare one issue per request. The exceptions are the whole release that Gemba P
 | --- | --- |
 | Summary | English, understandable on its own, no parentheses. The branch comes from the key and the summary |
 | Priority | Highest, High, Medium or Low, by how much other work waits on it |
-| Component | The part of the repository the change touches, in lowercase; it is also the commit scope. Read the existing ones with `executeRead` → `listJiraProjectComponents` and reuse one when it fits. When none fits, propose a new one and say that it is new; naming it in the create call creates it. In a project with no components yet, take the part from the structure and stack that the Product Brief and the `CLAUDE.md` describe, or from what the issue itself names (`api`, `web`, `db`, `ci`). Prefer few broad components to one per issue. An Epic has no component |
-| Fix version | The one named by the person or by Gemba Product's `version-start`. Otherwise the earliest unreleased version (`executeRead` → `getJiraProjectVersions`). If there is none, stop and say that Gemba Product's `version-start` has to create it. Never create a version here |
+| Component | The part of the repository the change touches, in lowercase. An issue has one component per issue, of type `domain`; only a cross-cutting Task carries one of type `technical`. Read the existing ones with List the components (`listJiraProjectComponents`) and reuse one when it fits. When none fits, propose a new one and say that it is new, and also propose its line of `## Code layout` (name, type and path) without writing it to the `CLAUDE.md`; naming it in the create call creates it. In a project with no components yet, take the part from the structure and stack that the Product Brief and the `CLAUDE.md` describe, or from what the issue itself names (`api`, `web`, `db`, `ci`). Prefer few broad components to one per issue. An Epic has no component |
+| Fix version | The one named by the person or by Gemba Product's `version-start`. Otherwise the earliest unreleased version, with List the versions (`getJiraProjectVersions`). If there is none, stop and say that Gemba Product's `version-start` has to create it. Never create a version here |
 | Original estimate | Story, Task and Bug: the expected hours of one person working with Claude. Spike: its timebox in hours. Epic: none. Follow `references/estimation.md` |
 | Due date | Epic only, set by the maintainer. Ask for it if they did not give it |
-| Blocks / is blocked by | Ask what must exist first. Search the version's open issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find, only the direct ones: if A blocks B and B blocks C, C is blocked by B and never by A, because Jira already shows the chain. When the person names both, create the link only to the direct one and say that the other is covered through it; never create the link of the second. The release Task has none: it waits for the other issues of the version to be Done or Cancelled |
+| Blocks / is blocked by | Ask what must exist first. Search the version's open issues with Search issues (`fixVersion = "<version>" AND statusCategory != Done`) and propose the blockers you find, only the direct ones: if A blocks B and B blocks C, C is blocked by B and never by A, because Jira already shows the chain. When the person names both, create the link only to the direct one and say that the other is covered through it; never create the link of the second. The release Task has none: it waits for the other issues of the version to be Done or Cancelled |
 
 Ask for anything above you cannot read or infer from what the person said, in one message.
 
@@ -72,6 +72,12 @@ When a rule depends on two or more conditions, build its decision table inside, 
 
 An Epic, a Task, a Bug and a Spike skip this check. The declared Story shows only the resulting criteria, rules and Out of scope: it never mentions the heuristics, the decision table or the questions.
 
+### Name the artboards of an interface Story
+
+Only for an interface Story, the one a user does through a screen. Read the `Prototype` section of the `Design` page of the product's space and write in the Story a `### Artboards` section, after the acceptance criteria, with one bullet per artboard that belongs to it, each name in code exactly as the page gives it. A Story with no screen has no `### Artboards`: leave the section out.
+
+Never invent an artboard. When the page does not exist, or does not say which artboards the Story uses, ask which they are in the single round of questions of the Story, and do not create the Story while that question has no answer. The Story shows only the artboards, never how they were chosen.
+
 ### Check the edge cases of a whole version
 
 When Gemba Product's `version-start` hands over the whole release in one request, pass the Stories of every card through the heuristics as above, the Stories of an Epic too, before creating any issue. Ask one single round for the entire version, in the project's `Language`, grouped by Story, each question in the format above. A Story that raises no question does not appear in the round. While any question of the round has no answer, create no issue of the version, not even those of the Stories already answered or the release Task: say that nothing was created and name the questions still missing. When every question is answered, or the round had none, create the whole version without asking for another confirmation.
@@ -82,9 +88,9 @@ Show the declaration in one compact block: work type, summary, priority, compone
 
 Then:
 
-1. Create the issue with `createJiraIssue`: `contentFormat: "html"`, the description, `priority`, and in `additional_fields` `fixVersions` (`[{"name": "<version>"}]`), `components` (`[{"name": "<component>"}]`, never for an Epic), `timetracking` (`{"originalEstimate": "<n>h"}`, never for an Epic) and `duedate` for an Epic. New issues land in Backlog.
+1. Create the issue with Create an issue (`createJiraIssue`): `contentFormat: "html"`, the description, `priority`, and in `additional_fields` `fixVersions` (`[{"name": "<version>"}]`), `components` (`[{"name": "<component>"}]`, never for an Epic), `timetracking` (`{"originalEstimate": "<n>h"}`, never for an Epic) and `duedate` for an Epic. New issues land in Backlog.
 2. For an Epic, create it first, with the Story Map as a block card in its Source, and then each of its Stories with `parent` set to the Epic's key. Show the Epic with all its Stories in the block before creating. Never add a Story to an Epic that is already declared.
-3. Create each blocking link with `executeWrite` → `createJiraIssueLink`: `linkType: "Blocks"`, `inwardIssue` the blocker, `outwardIssue` the blocked issue.
+3. Create each blocking link with Link two issues (`createJiraIssueLink`): `linkType: "Blocks"`, `inwardIssue` the blocker, `outwardIssue` the blocked issue.
 
 Declaring a Spike creates only the issue; its findings page is created when the test ends.
 
@@ -92,7 +98,7 @@ Without a connection to Jira, write in the reply the exact create call and links
 
 ## 6. Edit only in Backlog
 
-When someone asks to change an issue, read its status first. In Backlog, edit it with `editJiraIssue` (`contentFormat: "html"`), following the same template. In Implement, Review or Done, do not edit it: say that an issue is edited only while it is in Backlog, and stop there. Do not move it back to Backlog and do not propose another path.
+When someone asks to change an issue, read its status first. In Backlog, edit it with Edit an issue (`editJiraIssue`, `contentFormat: "html"`), following the same template. In Implement, Review or Done, do not edit it: say that an issue is edited only while it is in Backlog, and stop there. Do not move it back to Backlog and do not propose another path.
 
 ## 7. Report
 

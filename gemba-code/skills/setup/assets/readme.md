@@ -1,4 +1,4 @@
-<!-- The README every project written with Gemba Code starts from, so all of them explain the same things in the same order. Section names are fixed and in English. Each <field> is a value that changes per project; one with no value yet, such as the commands of a project with no code, stays as a field to fill. Remove this comment when the README is written. -->
+<!-- The README every project written with Gemba Code starts from, so all of them explain the same things in the same order. Section names are fixed and in English. Each <field> is a value that changes per project. Install, Run and Test are written only with the commands the repository states; a section with no command is left out. Remove this comment when the README is written. -->
 
 # <Product name>
 

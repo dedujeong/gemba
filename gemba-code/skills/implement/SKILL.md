@@ -9,11 +9,11 @@ You take one issue from Backlog and start its work: its branch exists and the is
 
 ## 1. Find the project
 
-Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Get the cloudId once with `getAccessibleAtlassianResources`. Talk with the person in `Language`.
+Read the `## Gemba` section of the project's `CLAUDE.md`: `Jira Project` and `Language`. If it is missing, propose running `setup` first and stop. Use its `Jira Site` as the `cloudId` of every call; only when the block has none, get it once with `getAccessibleAtlassianResources` and propose running `setup` to add it. Every call to Jira is the one written in `../../references/jira-calls.md`, with its `fields` and `responseFields`. Talk with the person in `Language`.
 
 ## 2. Take the issue
 
-Read the issue with `getJiraIssue` (view `evidence`, which includes its links). Do not take it, and say why, when:
+Read the issue with Read an issue (`getJiraIssue`), which includes its links. Do not take it, and say why, when:
 
 - It is not in Backlog: say which state it is in.
 - An issue that blocks it is not Done or Cancelled: name the blocking issue and its state. Jira does not enforce this, so the check is yours.
@@ -27,7 +27,7 @@ When it is not taken, no branch is created and the issue stays where it is. Then
 ## 3. Create the branch and move the issue
 
 1. From `develop`, create the branch `<type>/<KEY>-<slug>`: the work type in lowercase and the Summary as a slug of lowercase letters, digits and single hyphens (`story/ABC-12-export-invoices-as-csv`).
-2. Move the issue to Implement with `transitionJiraIssue`, using the transition that goes to Implement.
+2. Move the issue to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`).
 
 The branch comes first, so the issue never reads Implement without a branch. Carry nothing else onto it: leave any uncommitted change of the working tree uncommitted.
 
@@ -37,8 +37,8 @@ A Spike is never worked on a branch of the main working tree, which stays on `de
 
 ## 5. Take an Epic
 
-1. Move the Epic to Implement. It has no branch.
-2. List its children in rank order (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
+1. Move the Epic to Implement with Move an issue (`transitionJiraIssue`, `transitionName`: `to Implement`). It has no branch.
+2. List its children in rank order with Search issues (`parent = <KEY> ORDER BY Rank`). The first child is the first one that is in Backlog and has no open issue blocking it, read from its links.
 3. Take that child by its work type, as in section 2. Take one child only; the next one is taken when the person asks for it.
 
 ## 6. Walk the work
@@ -50,6 +50,7 @@ Before changing anything, go and see where the work happens, without modifying a
 - Look at the recent history: `git log` of those files.
 - Run the existing tests and note which pass.
 - For a Bug, reproduce it by hand and note what you saw.
+- For an interface Story, read its `### Artboards` section and then, from the `Prototype` section of the `Design` page, only those artboards, never the whole prototype. If the Story has no `### Artboards`, stop and ask which artboards it uses before reading the design. A Story with no screen reads no design.
 
 What you find feeds the plan, in section 7; it is not a separate deliverable.
 
@@ -63,6 +64,8 @@ When the walk is done and before any code or test changes, enter plan mode (`Ent
 - For each criterion, the test that will show it and why it fails now.
 - A criterion too big for one commit is split here, by behavior, into commits you would revert separately, each one a red, green, refactor cycle. If it cannot be split, say so in the plan and let the person decide: the issue is not edited outside Backlog.
 - Anything the walk found that the criteria do not cover. If a criterion looks wrong or incomplete, say so: the issue is not edited outside Backlog, so the person decides.
+
+Write the plan in the project's `Language`, the plan file included: its sentences, the purpose of each commit and what each test checks. Only headings, labels, commit messages, paths and code stay in English, even when the issue and the code are in English.
 
 Change nothing until the maintainer approves the plan (`ExitPlanMode`). Then build it, as in section 8.
 
@@ -78,7 +81,7 @@ Once the plan is approved, build the criteria in the planned order, each one in 
    `<type>(<scope>): <description>`
 
    - `<type>` is one of `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`.
-   - `<scope>` is the Jira component of the issue, in lowercase.
+   - `<scope>` is the name, in lowercase, of the `## Code layout` area the change touches, whether it is `domain` or `technical`, never the component of the issue by default. When no area fits, or the change touches two or more, the commit has no scope: leave out the parentheses.
    - `<description>` starts with a verb in the imperative mood, has no final period and keeps proper names in their canonical form (Jira, GitHub, API).
    - The issue key does not go in the message; only the branch carries it.
 
@@ -88,10 +91,10 @@ Never skip, weaken or delete a test to get green. If the test is wrong, say why 
 
 ## 9. Finish
 
-When every criterion is built and every test is green, log the real time worked in Implement on the issue with `addOrEditJiraIssueWorklog` (`executeWrite`). The script computes the time, never you:
+When every criterion is built and every test is green, log the real time worked in Implement on the issue with Log the time (`addOrEditJiraIssueWorklog`). The script computes the time, never you:
 
-1. Read the issue's changelog with `executeRead` → `listJiraIssueChangelogs` (`maxResults`: 50, and the next pages with `startAt` while `total` is larger) and save it, with all its pages in one list, to a temporary file.
-2. Run `python3 scripts/state_time.py <file> Implement`. It adds up every stretch the issue spent in Implement, the one still open included, and prints `started` and `timeSpent`.
+1. Read the issue's changelog with Read the changelog (`listJiraIssueChangelogs`), every page, and save it, with all its pages in one list, to a temporary file.
+2. Run `python3 scripts/state_time.py <file> Implement`. It takes the last stretch the issue spent in Implement, the one still open or the one that just closed, which is the one not logged yet, and prints `started` and `timeSpent`.
 3. Log those two values. Never copy the original estimate.
 
 Tell the person the time you logged, so they can correct it. Moving the issue to Review is not part of this skill.
@@ -101,7 +104,7 @@ Tell the person the time you logged, so they can correct it. Moving the issue to
 A Spike has no criteria to build and does not follow TDD: its test answers the question. When the test ends, and not before, publish its answer in a findings page in the product's Confluence space, never in the issue or the repo:
 
 1. Search for the `Work` > `Spikes` folders of the space; create a folder only if it does not exist.
-2. Create the page there with `createConfluenceContent`, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then the sections Recommendation, Options, Impact on scope and Sources. Answer the Spike's question in it, with what the test showed. Its status is Rough draft.
+2. Create the page there with `createConfluenceContent`, titled `<KEY> <Summary>` exactly as in Jira, with the issue as a block card at the top and then the sections Recommendation, Options, Impact on scope and Sources. Answer the Spike's question in it, with what the test showed. Sources lists, as block cards (`<a href="URL" data-card-appearance="block"></a>`, one per line), every ADR and every link consulted while running the test. Sources never cites the Spike's branch or its worktree, which are deleted when the Spike closes. Its status is Rough draft.
 3. Link the issue to the page once, in the issue's remote links.
 
 Then log the real time worked, as in section 9. Moving the Spike to Review is not part of this skill.

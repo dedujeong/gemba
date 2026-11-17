@@ -70,6 +70,12 @@ class ReviewOpensThePullRequest(unittest.TestCase):
         self.assertIn("Epic", text)
         self.assertIn("Spike", text)
 
+    def test_the_report_gives_the_maintainer_the_merge_command_with_an_empty_body(self):
+        text = section(self.skill(), "6. Report and stop")
+        self.assertIn('gh pr merge <number> --merge --body ""', text)
+        self.assertIn("title line", text)
+        self.assertIn("Never run it", text)
+
     def test_in_merge_mode_review_still_integrates_nothing(self):
         self.assertIn("Integrate nothing", section(self.skill(), "6. Report and stop"))
 
@@ -145,6 +151,11 @@ class MethodRulesDescribePullRequestMode(unittest.TestCase):
         text = section(self.rules(), "Merges")
         self.assertIn("GitHub's default message", text)
         self.assertIn("`close` merges nothing", text)
+
+    def test_the_maintainer_merges_with_an_empty_body_so_only_the_title_line_remains(self):
+        text = section(self.rules(), "Merges")
+        self.assertIn('`gh pr merge --merge --body ""`', text)
+        self.assertIn("title line", text)
 
     def test_no_skill_merges_into_develop_or_main_in_pull_request_mode(self):
         text = section(self.rules(), "Merges")

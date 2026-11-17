@@ -10,12 +10,25 @@ def skill():
         return f.read()
 
 
-class SetupMergeMessage(unittest.TestCase):
-    def test_setup_leaves_the_merge_message_with_into_main(self):
-        self.assertIn('git config merge.suppressDest ""', skill())
-
+class SetupScope(unittest.TestCase):
     def test_setup_no_longer_claims_to_write_only_the_claude_md(self):
         self.assertNotIn("You write nothing else to the repository", skill())
+
+
+class SetupLeavesTheMergeMessageAlone(unittest.TestCase):
+    """The merge into main keeps Git's default message, so setup sets nothing for it."""
+
+    def test_setup_has_no_step_for_the_merge_message(self):
+        text = skill()
+        self.assertNotIn("suppressDest", text)
+        self.assertNotIn("merge message", text)
+
+    def test_the_eval_of_the_merge_message_is_gone(self):
+        self.assertFalse(os.path.exists(os.path.join(ROOT, "evals", "sets-the-merge-message-with-into-main")))
+
+    def test_the_readme_does_not_mention_it(self):
+        with open(os.path.join(ROOT, "README.md"), encoding="utf-8") as f:
+            self.assertNotIn("write `into main`", f.read())
 
 
 class SetupAttribution(unittest.TestCase):
@@ -28,6 +41,53 @@ class SetupAttribution(unittest.TestCase):
         self.assertIn("Keep every other key", skill())
 
 
+class SetupPushConfirmation(unittest.TestCase):
+    def section(self):
+        return skill().split("## 6. Ask for confirmation on every git push")[1].split("## 7. ")[0]
+
+    def test_the_step_comes_after_the_attribution_and_before_the_gitignore(self):
+        text = skill()
+        self.assertLess(text.index("## 5. Turn off the Claude attribution"), text.index("## 6. Ask for confirmation on every git push"))
+        self.assertLess(text.index("## 6. Ask for confirmation on every git push"), text.index("## 7. Write the base .gitignore"))
+
+    def test_it_sets_the_ask_rule_for_git_push_in_the_project_settings(self):
+        text = self.section()
+        self.assertIn(".claude/settings.json", text)
+        self.assertIn('"permissions": {"ask": ["Bash(git push *)"]}', text)
+
+    def test_it_keeps_every_other_key_and_does_not_add_the_rule_twice(self):
+        text = self.section()
+        self.assertIn("Keep every other key", text)
+        self.assertIn("do not add it twice", text)
+
+    def test_the_report_says_whether_the_push_confirmation_was_set(self):
+        report = skill().split("## 12. Report")[1]
+        self.assertIn("git push confirmation", report)
+
+
+class SetupPullRequestDeny(unittest.TestCase):
+    def section(self):
+        return skill().split("## 6. Ask for confirmation on every git push")[1].split("## 7. ")[0]
+
+    def test_in_pull_request_mode_it_denies_gh_pr_merge_in_the_project_settings(self):
+        text = self.section()
+        self.assertIn("`Integration` of the block is `pull request`", text)
+        self.assertIn('`permissions.deny` gets `Bash(gh pr merge *)`', text)
+
+    def test_the_deny_key_is_added_when_missing_never_twice_and_the_rest_is_kept(self):
+        text = self.section()
+        self.assertIn("add the `deny` list if it is missing", text)
+        self.assertIn("do not add it twice", text)
+        self.assertIn("Keep every other key", text)
+
+    def test_in_merge_mode_the_deny_rule_is_not_written(self):
+        self.assertIn("In `merge` mode write no deny rule", self.section())
+
+    def test_the_report_says_whether_the_gh_pr_merge_deny_was_set(self):
+        report = skill().split("## 12. Report")[1]
+        self.assertIn("gh pr merge deny", report)
+
+
 class SetupGitignore(unittest.TestCase):
     def test_setup_writes_the_base_gitignore_with_the_script(self):
         text = skill()
@@ -38,21 +98,21 @@ class SetupGitignore(unittest.TestCase):
     def test_the_gitignore_comes_after_the_attribution_and_before_the_report(self):
         text = skill()
         self.assertLess(text.index("Turn off the Claude attribution"), text.index("scripts/write_gitignore.py"))
-        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 10. Report"))
+        self.assertLess(text.index("scripts/write_gitignore.py"), text.index("## 12. Report"))
 
     def test_the_report_says_whether_the_gitignore_was_written(self):
-        report = skill().split("## 10. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn(".gitignore", report)
 
 
 class SetupLicense(unittest.TestCase):
     def section(self):
-        return skill().split("## 7. Write the license")[1].split("## 8. Write the project README")[0]
+        return skill().split("## 8. Write the license")[1].split("## 9. Write the project README")[0]
 
     def test_the_license_comes_after_the_gitignore_and_before_the_readme(self):
         text = skill()
-        self.assertLess(text.index("## 6. Write the base .gitignore"), text.index("## 7. Write the license"))
-        self.assertLess(text.index("## 7. Write the license"), text.index("## 8. Write the project README"))
+        self.assertLess(text.index("## 7. Write the base .gitignore"), text.index("## 8. Write the license"))
+        self.assertLess(text.index("## 8. Write the license"), text.index("## 9. Write the project README"))
 
     def test_it_asks_which_license_among_apache_mit_or_none_when_there_is_no_license(self):
         text = self.section()
@@ -85,18 +145,18 @@ class SetupLicense(unittest.TestCase):
         self.assertIn("what is missing", text)
 
     def test_the_report_says_what_happened_with_the_license(self):
-        report = skill().split("## 10. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("license", report)
 
 
 class SetupReadme(unittest.TestCase):
     def section(self):
-        return skill().split("## 8. Write the project README")[1].split("## 9. Write the code layout")[0]
+        return skill().split("## 9. Write the project README")[1].split("## 10. Write the code layout")[0]
 
     def test_the_readme_comes_after_the_gitignore_and_before_the_report(self):
         text = skill()
-        self.assertLess(text.index("## 6. Write the base .gitignore"), text.index("## 8. Write the project README"))
-        self.assertLess(text.index("## 8. Write the project README"), text.index("## 10. Report"))
+        self.assertLess(text.index("## 7. Write the base .gitignore"), text.index("## 9. Write the project README"))
+        self.assertLess(text.index("## 9. Write the project README"), text.index("## 12. Report"))
 
     def test_it_is_written_from_the_template_of_the_assets(self):
         self.assertIn("assets/readme.md", self.section())
@@ -111,7 +171,12 @@ class SetupReadme(unittest.TestCase):
         text = self.section()
         self.assertIn("Install, Run and Test", text)
         self.assertIn("only from what the repository states", text)
-        self.assertIn("stays as a field to fill", text)
+        self.assertIn("Install, Run and Test are written only when the repository states their commands", text)
+        self.assertIn("a section with no command is left out", text)
+        self.assertNotIn("When the repository states none, the field stays as a field to fill", text)
+
+    def test_a_project_with_no_stack_gets_only_the_title_and_what_it_is(self):
+        self.assertIn("only the title, its one-line description and What it is", self.section())
 
     def test_it_is_written_only_when_the_repository_has_no_readme(self):
         self.assertIn("no `README.md`", self.section())
@@ -139,13 +204,13 @@ class SetupReadme(unittest.TestCase):
         self.assertIn("remove the whole License section and say so", self.section())
 
     def test_the_report_says_whether_the_readme_was_written(self):
-        report = skill().split("## 10. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("README", report)
 
 
 class SetupExistingReadme(unittest.TestCase):
     def section(self):
-        return skill().split("## 8. Write the project README")[1].split("## 9. Write the code layout")[0]
+        return skill().split("## 9. Write the project README")[1].split("## 10. Write the code layout")[0]
 
     def test_an_existing_readme_is_never_replaced_or_rewritten(self):
         text = self.section()
@@ -163,19 +228,23 @@ class SetupExistingReadme(unittest.TestCase):
         self.assertIn("Propose only the sections it lacks", text)
         self.assertIn("do not write them", text)
 
+    def test_a_proposed_section_with_no_command_keeps_its_command_as_a_field(self):
+        self.assertIn("A proposed Install, Run or Test whose command the repository does not state is still proposed, "
+                      "with its command as a field to fill", self.section())
+
     def test_the_report_says_which_sections_were_proposed(self):
-        report = skill().split("## 10. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("proposed", report)
 
 
 class SetupCodeLayout(unittest.TestCase):
     def section(self):
-        return skill().split("## 9. Write the code layout")[1].split("## 10. Report")[0]
+        return skill().split("## 10. Write the code layout")[1].split("## 12. Report")[0]
 
     def test_the_code_layout_comes_after_the_readme_and_before_the_report(self):
         text = skill()
-        self.assertLess(text.index("## 8. Write the project README"), text.index("## 9. Write the code layout"))
-        self.assertLess(text.index("## 9. Write the code layout"), text.index("## 10. Report"))
+        self.assertLess(text.index("## 9. Write the project README"), text.index("## 10. Write the code layout"))
+        self.assertLess(text.index("## 10. Write the code layout"), text.index("## 12. Report"))
 
     def test_it_reads_the_accepted_layout_adr_from_the_decisions_folder(self):
         text = self.section()
@@ -183,25 +252,37 @@ class SetupCodeLayout(unittest.TestCase):
         self.assertIn("Verified", text)
         self.assertIn("no later ADR replaces", text)
 
-    def test_it_writes_a_code_layout_section_with_the_four_parts(self):
+    def test_it_writes_one_line_per_component_with_its_name_type_and_path(self):
         text = self.section()
         self.assertIn("`## Code layout`", text)
-        for part in ("Folders", "Tests", "File names", "Migrations"):
+        self.assertIn("one line per component", text)
+        for part in ("name", "`domain`", "`technical`", "path"):
             self.assertIn(part, text)
 
-    def test_migrations_say_not_applicable_when_the_adr_says_so(self):
-        self.assertIn("not applicable", self.section())
+    def test_it_writes_the_named_layout_the_adr_cites_the_two_rules_and_the_validator_command(self):
+        text = self.section()
+        self.assertIn("named layout", text)
+        self.assertIn("what changes together stays together", text)
+        self.assertIn("one direction", text)
+        self.assertIn("validator", text)
+
+    def test_it_copies_no_fixed_list_of_folders(self):
+        text = self.section()
+        self.assertIn("no fixed list of folders", text)
+        self.assertNotIn("**Folders:**", text)
+
+    def test_an_existing_section_is_proposed_changes_and_not_rewritten_without_the_ok(self):
+        text = self.section()
+        self.assertIn("differences with the ADR", text)
+        self.assertIn("without the maintainer's OK", text)
 
     def test_without_an_adr_it_invents_no_layout_and_says_architecture_has_not_decided_it(self):
         text = self.section()
         self.assertIn("invent no layout", text)
         self.assertIn("`architecture` has not decided it yet", text)
 
-    def test_an_existing_section_is_updated_in_place(self):
-        self.assertIn("updated in place", self.section())
-
     def test_the_report_says_whether_the_layout_was_written(self):
-        report = skill().split("## 10. Report")[1]
+        report = skill().split("## 12. Report")[1]
         self.assertIn("code layout", report)
 
 

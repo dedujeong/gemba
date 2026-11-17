@@ -9,6 +9,26 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/bash_rules.py\""
+          }
+        ]
+      },
+      {
+        "matcher": "mcp__.*__(createJiraIssue|executeWrite)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/jira_issue_rules.py\""
+          }
+        ]
+      }
     ]
   }
 }
