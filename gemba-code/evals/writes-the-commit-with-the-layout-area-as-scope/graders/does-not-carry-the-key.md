@@ -1,6 +1,6 @@
 ---
 type: regex
-pattern: '\(notifications\):[^\n|]*TALLER-24'
+pattern: '\(shared\):[^\n|]*TALLER-24'
 match: not_contains
 target: last_message
 ---
