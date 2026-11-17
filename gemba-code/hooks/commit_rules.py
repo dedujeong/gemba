@@ -66,9 +66,9 @@ def message_problem(message, project=None):
     if project and re.search(rf"\b(?i:{re.escape(project)})-\d+\b", message):
         return rule("the message has a Jira key", "Remove it: the branch and the work item link the commit, not the message")
     if scope == "":
-        return rule("the scope is empty", "Name the scope, one of the project's Jira components, or remove the parentheses")
+        return rule("the scope is empty", "Name the scope, the name of the Code layout area the change touches, or remove the parentheses")
     if scope is not None and not re.fullmatch(r"[a-z0-9-]+", scope):
-        return rule(f"the scope `{scope}` is not in lowercase", "Write the scope in lowercase, one of the project's Jira components")
+        return rule(f"the scope `{scope}` is not in lowercase", "Write the scope in lowercase, the name of the Code layout area the change touches")
     if message.endswith("."):
         return rule("the description ends with a period", "Remove the final period")
     return None
