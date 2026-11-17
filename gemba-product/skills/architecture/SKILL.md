@@ -84,6 +84,7 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 
 Before any ADR of a set is marked as accepted, review each ADR and the whole set with the four heuristics of `references/adr-heuristics.md`: the browser and server boundary, the gaps between ADRs, the limited resource and the contradictions. Pass every ADR through every heuristic, then the whole set once more, and name the heuristic that finds each thing. A finding rests on what the brief, the Story Map or the ADRs say, never on what a product like this usually needs. When the review finds nothing, say so in one line and go on with the acceptance the person asked for. If this conversation already holds the review of the set with no open question, do not run it again.
 
+- Look for contradictions also against the ADRs already accepted in the `Decisions` folder of the space, not only inside the set: read them before the review and compare each ADR and the whole set with them. A contradiction with an accepted ADR never edits the accepted one: if the decision changes, it is a new ADR that replaces it, as section 5 says, and the person decides.
 - A finding is never settled by inventing a decision: a gap that no story and no constraint decides is a question to the person, as `references/adr-heuristics.md` says.
 - Without a Confluence connection the review works over the ADRs written in the conversation, and says so.
 

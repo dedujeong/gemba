@@ -39,6 +39,12 @@ class ReviewBeforeAccepting(unittest.TestCase):
         self.assertIn("A finding rests on what the brief, the Story Map or the ADRs say, never on what a product like this usually needs", text)
         self.assertIn("If this conversation already holds the review of the set with no open question, do not run it again", text)
 
+    def test_the_contradictions_are_also_looked_for_among_the_accepted_adrs_of_the_space(self):
+        text = self.review()
+        self.assertIn("ADRs already accepted in the `Decisions` folder", text)
+        self.assertIn("never edits the accepted one", text)
+        self.assertIn("a new ADR that replaces it", text)
+
     def test_the_review_comes_before_the_work_for_the_version(self):
         body = read(SKILL)
         self.assertLess(body.index("## 6. Review the ADRs before accepting them"), body.index("## 7. Propose the work for the version"))

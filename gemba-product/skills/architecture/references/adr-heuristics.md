@@ -7,7 +7,7 @@ A fixed list of questions to review a set of ADRs before accepting them. Pass ev
 | Browser and server boundary | What runs in the browser and what runs on the server, and where do the data and the secrets live? Does any decision put a secret, a private rule or a private datum where the person who uses the product can read it? | No decision of the set splits work between a client and a server |
 | Gaps between ADRs | Does a story of the current release or a constraint of the brief need something that no ADR of the set decides, including what ties two decisions together (who calls whom, what runs on a schedule, who signs in)? | Every story and every constraint already has the decision it needs |
 | Limited resource | Does a decision depend on a quota or a limit (storage, requests, messages, a free plan), and does the volume of the brief fit inside it with its source cited? | No decision depends on a quota or a limit |
-| Contradictions | Does an ADR of the set say something that another ADR of the set denies, or assume what another one rules out? | The set has a single ADR |
+| Contradictions | Does an ADR say something that another ADR of the set, or an ADR already accepted in the space, denies, or assume what another one rules out? | The set has a single ADR and the space has no accepted ADR |
 
 ## Where each finding lands
 
