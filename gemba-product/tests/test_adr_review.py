@@ -45,6 +45,12 @@ class ReviewBeforeAccepting(unittest.TestCase):
         self.assertIn("never edits the accepted one", text)
         self.assertIn("a new ADR that replaces it", text)
 
+    def test_the_questions_of_the_review_are_asked_in_one_single_round_naming_adr_and_heuristic(self):
+        text = self.review()
+        self.assertIn("one single round", text)
+        self.assertIn("all the questions", text)
+        self.assertIn("«ADR: <the ADR or the set>. Heurística: <the heuristic that found it>. ¿...?»", text)
+
     def test_the_review_comes_before_the_work_for_the_version(self):
         body = read(SKILL)
         self.assertLess(body.index("## 6. Review the ADRs before accepting them"), body.index("## 7. Propose the work for the version"))
