@@ -46,7 +46,7 @@ Each step rests on a method, named here so you know what it is based on before y
 
 - An issue is edited only while it is in Backlog.
 - One branch per Story, Task, Bug or Spike, named `<type>/<KEY>-<slug>` and created from `develop`. An Epic has no branch.
-- Commits are one line, `<type>(<scope>): <description>`, with no body or footer. The scope is the Jira component of the issue, the description starts with a verb in the imperative mood, and the issue key goes only in the branch.
+- Commits are one line, `<type>(<scope>): <description>`, with no body or footer. The scope is the name of the `## Code layout` area the change touches (none when no area fits or it touches two or more), the description starts with a verb in the imperative mood, and the issue key goes only in the branch.
 - Merges into `develop` use `git merge --no-ff` with Git's default message; never squash and never rebase a branch onto `develop`.
 - The time logged on an issue is the real time worked in each state, never the estimate.
 - Session handoffs live in `.gemba/sessions`, which git ignores.
