@@ -133,5 +133,27 @@ class AnIssueWithoutTime(unittest.TestCase):
         self.assertEqual(total["withoutEstimate"], [])
 
 
+class RatioOfTheTotal(unittest.TestCase):
+    issues = [
+        issue("GEMBA-1", estimate=2 * HOUR, spent=3 * HOUR),
+        issue("GEMBA-2", estimate=4 * HOUR),
+        issue("GEMBA-8", spent=HOUR),
+    ]
+
+    def test_it_is_calculated_only_with_the_issues_that_have_estimate_and_time(self):
+        total = result_of(self, self.issues)["total"]
+        self.assertEqual(total["ratio"], 1.5)
+        self.assertEqual((total["estimateSeconds"], total["timeSeconds"]), (6 * HOUR, 4 * HOUR))
+
+    def test_the_total_shows_the_sums_the_ratio_comes_from(self):
+        basis = result_of(self, self.issues)["total"]["ratioBasis"]
+        self.assertEqual((basis["estimateSeconds"], basis["timeSeconds"]), (2 * HOUR, 3 * HOUR))
+
+    def test_with_no_issue_with_both_there_is_no_ratio(self):
+        total = result_of(self, [issue("GEMBA-2", estimate=HOUR), issue("GEMBA-8", spent=HOUR)])["total"]
+        self.assertEqual((total["ratio"], total["ratioBasis"]["estimateSeconds"], total["ratioBasis"]["timeSeconds"]),
+                         (None, 0, 0))
+
+
 if __name__ == "__main__":
     unittest.main()

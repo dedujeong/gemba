@@ -5,7 +5,8 @@ Usage: python3 time_totals.py <issues.json>
 The file is what searchJiraIssuesUsingJql returned for the issues of a fix version (its `data`, or
 just its `issues`), with each issue's `timetracking`. Only the delivered issues count: those in Done.
 It prints a JSON object with `issues`, one entry per issue with `estimateSeconds`, `timeSeconds` and
-`ratio` (the time over the estimate), and `total`, the same three added up.
+`ratio` (the time over the estimate), and `total`, the same three added up. The total ratio is
+calculated only over the issues that have both, and `total.ratioBasis` shows their two sums.
 An issue with no recorded time has `timeSeconds` and `ratio` null: it is without time, not zero, and
 `total.withoutTime` lists it and its estimate enters the total of estimate. One with no estimate, or a zero one, is listed in `total.withoutEstimate`
 and its time enters the total of time.
@@ -43,6 +44,7 @@ def totals(issues):
     time = sum(row["timeSeconds"] for row in rows if row["timeSeconds"] is not None)
     return {"issues": rows, "total": {"estimateSeconds": estimate, "timeSeconds": time,
                                       "ratio": ratio(counted_time, counted_estimate),
+                                      "ratioBasis": {"estimateSeconds": counted_estimate, "timeSeconds": counted_time},
                                       "withoutEstimate": [row["key"] for row in rows if not row["estimateSeconds"]],
                                       "withoutTime": [row["key"] for row in rows if row["timeSeconds"] is None]}}
 
