@@ -10,7 +10,7 @@ The file holds what the skill read from Confluence and Jira:
 }
 `state` is one of the ADR states of SKILL.md. `spike` is the key of the Spike the ADR names, and
 `architecture` the state the Architecture page shows for each ADR.
-It prints one line per discordance and exits 1 when there is any.
+It prints one line per discordance and exits 1 when there is any; with none it says so and exits 0.
 """
 import json
 import sys
@@ -46,5 +46,5 @@ def discordances(space):
 
 if __name__ == "__main__":
     lines = discordances(read_space(sys.argv[1]))
-    print("\n".join(lines), end="\n" if lines else "")
+    print("\n".join(lines) if lines else "No discordances.")
     sys.exit(1 if lines else 0)
