@@ -62,5 +62,20 @@ class ReviewBeforeAccepting(unittest.TestCase):
         self.assertLess(body.index("## 6. Review the ADRs before accepting them"), body.index("## 7. Propose the work for the version"))
 
 
+class ArchitecturePage(unittest.TestCase):
+    def page(self):
+        return section(read(SKILL), "8. Draw the Architecture page")
+
+    def test_the_page_lists_each_adr_with_its_state_so_the_check_can_compare_them(self):
+        text = self.page()
+        self.assertIn("lists each ADR of the `Decisions` folder with its state", text)
+        self.assertIn("the table of section 5", text)
+
+    def test_the_page_points_to_the_section_that_proposes_the_spikes_and_the_tasks(self):
+        text = self.page()
+        self.assertIn("the Spikes and the Tasks of section 7", text)
+        self.assertNotIn("the Spikes and the Tasks of section 6", text)
+
+
 if __name__ == "__main__":
     unittest.main()

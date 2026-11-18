@@ -113,7 +113,7 @@ When the ADRs are written, create the `Architecture` page of the product's space
    - `states`: one item for each entity that changes state in a story, with its states, the event that creates it (`initial`) and each event that moves it (`transitions`). An entity that never changes state gets none, and a state or an event no story states is not added.
 2. Build the board with `python3 scripts/build_architecture.py spec.json board.svg`. It rejects an arrow to an element that is not in the diagram and an arrow with no label, so read the error and fix the spec, never the script.
 3. Create the whiteboard with `createConfluenceContent` (`contentType: whiteboard`, the SVG as the body), titled `Diagrams`, in the product's space.
-4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 6, so the version finds them in one place. Its status follows `../pitch/SKILL.md` section 6.
+4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 7, so the version finds them in one place, and lists each ADR of the `Decisions` folder with its state from the table of section 5, so that it can be compared with the ADR itself. Its status follows `../pitch/SKILL.md` section 6.
 5. Read the board again after writing it, because the answer of a patch is stale.
 
 - Content in the person's language; the diagram headings stay in English.
