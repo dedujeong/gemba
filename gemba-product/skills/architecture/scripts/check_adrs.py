@@ -32,6 +32,12 @@ def discordances(space):
                 found.append(f'{adr["id"]}: Accepted but its Spike {spike} is not in the space, so it cannot be confirmed Done')
             elif status != "Done":
                 found.append(f'{adr["id"]}: Accepted but its Spike {spike} is {status}, not Done')
+        if adr["state"] == "Superseded":
+            replacement = adr.get("superseded_by")
+            if not replacement:
+                found.append(f'{adr["id"]}: Superseded but it names no replacement')
+            elif replacement not in {other["id"] for other in space["adrs"]}:
+                found.append(f'{adr["id"]}: Superseded by {replacement}, which is not in the space, so the replacement does not exist')
         shown = space["architecture"].get(adr["id"])
         if shown is not None and shown != adr["state"]:
             found.append(f'{adr["id"]}: its state is {adr["state"]} but the Architecture page shows {shown}')

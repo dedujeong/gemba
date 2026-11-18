@@ -68,5 +68,22 @@ class StateOnTheArchitecturePage(unittest.TestCase):
         self.assertIn("ADR-0002", out)
 
 
+class SupersededAdr(unittest.TestCase):
+    def test_a_superseded_adr_with_no_replacement_is_a_discordance(self):
+        code, out, _ = check([adr("ADR-0001", state="Superseded")])
+        self.assertEqual(code, 1)
+        self.assertIn("ADR-0001", out)
+        self.assertIn("replacement", out)
+
+    def test_a_superseded_adr_whose_replacement_is_not_in_the_space_is_a_discordance(self):
+        code, out, _ = check([adr("ADR-0001", state="Superseded", superseded_by="ADR-0007")])
+        self.assertEqual(code, 1)
+        self.assertIn("ADR-0007", out)
+
+    def test_a_superseded_adr_whose_replacement_exists_is_not(self):
+        code, out, _ = check([adr("ADR-0001", state="Superseded", superseded_by="ADR-0002"), adr("ADR-0002")])
+        self.assertEqual((code, out), (0, ""))
+
+
 if __name__ == "__main__":
     unittest.main()
