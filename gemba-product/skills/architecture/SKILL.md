@@ -75,12 +75,22 @@ When the person agrees to record a decision, write one ADR for it, as `assets/ad
 | Accepted | Verified | success |
 | Superseded | stays Verified | warning, links the new ADR |
 
-- When the person accepts an ADR, mark it as accepted: move the page status to Verified and add a `success` panel. Only the status and the panel change; the five sections stay as they are.
+- When the person accepts an ADR, review it first as section 6 says, and only then mark it as accepted: move the page status to Verified and add a `success` panel. Only the status and the panel change; the five sections stay as they are.
 - An accepted ADR is never edited. When its decision changes, create a new ADR with the next number that says in its Context which ADR it replaces (`Reemplaza a ADR-000N`), and leave the old one as it is. The only thing added to the old ADR is a `warning` panel that links the new one; its status stays Verified and its five sections do not change. Do not touch the ADRs of other decisions.
 - Content states are per space: in a space that does not have the state yet, `setConfluenceContentStatus` needs the name and the color (`#ffc400` for Rough draft). A state id taken from another space returns 404.
 - If there is no Confluence connection, write each ADR in the reply, with its title and the folder it goes to, and say that nothing was published.
 
-## 6. Propose the work for the version
+## 6. Review the ADRs before accepting them
+
+Before any ADR of a set is marked as accepted, review each ADR and the whole set with the four heuristics of `references/adr-heuristics.md`: the browser and server boundary, the gaps between ADRs, the limited resource and the contradictions. Pass every ADR through every heuristic, then the whole set once more, and name the heuristic that finds each thing. A finding rests on what the brief, the Story Map or the ADRs say, never on what a product like this usually needs. When the review finds nothing, say so in one line and go on with the acceptance the person asked for. If this conversation already holds the review of the set with no open question, do not run it again.
+
+- Look for contradictions also against the ADRs already accepted in the `Decisions` folder of the space, not only inside the set: read them before the review and compare each ADR and the whole set with them. A contradiction with an accepted ADR never edits the accepted one: if the decision changes, it is a new ADR that replaces it, as section 5 says, and the person decides.
+- A finding is never settled by inventing a decision: a gap that no story and no constraint decides is a question to the person, as `references/adr-heuristics.md` says.
+- Ask all the questions of the review in one single round, in one message and in the person's language, never one by one and never across turns. Each question starts with the ADR and the heuristic it comes from: «ADR: <the ADR or the set>. Heurística: <the heuristic that found it>. ¿...?». A question that cannot name its ADR and its heuristic is not asked.
+- While a question of the round has no answer, accept no ADR of the set, not even the ones that raise no open question, however the person asks for it: name the question that is missing and say that the set stays as it is until it is answered.
+- Without a Confluence connection the review works over the ADRs written in the conversation, and says so.
+
+## 7. Propose the work for the version
 
 The step hands work to the version, and proposes it without declaring anything in Jira: the Spikes and the Tasks are listed in the reply and the version declares them when it opens.
 
@@ -88,7 +98,7 @@ The step hands work to the version, and proposes it without declaring anything i
 - A decision that waits on a business answer, not on a test, goes to Open decisions of the Product Brief and is not proposed as a Spike.
 - When the step ends, propose as Tasks the cross-cutting work that the decisions imply and no story of the current release covers: for example the walking skeleton, roles and permissions, or the deploy. Each Task has a summary and names the ADR or decision that implies it. Work that a story already asks for is not a Task, and neither is work no decision implies: nothing is proposed just in case, the same cut as section 4.
 
-## 7. Draw the Architecture page
+## 8. Draw the Architecture page
 
 When the ADRs are written, create the `Architecture` page of the product's space with the diagrams of the system, so the person sees at a glance who uses it and which systems it talks to. `references/diagrams.md` says which levels to draw and what each shape means.
 
