@@ -51,5 +51,22 @@ class NextVersion(unittest.TestCase):
         self.assertEqual(run("Taller", [version("Taller v1.2.0")]).stdout.strip(), "Taller v1.3.0")
 
 
+class LastReleasedVersion(unittest.TestCase):
+    def test_it_prints_the_published_version_with_the_highest_number(self):
+        versions = [version("Taller v0.9.0"), version("Taller v0.10.0"), version("Taller v0.2.0")]
+        result = run("Taller", versions, "--last")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), "Taller v0.10.0")
+
+    def test_other_products_and_unpublished_or_archived_versions_do_not_count(self):
+        versions = [version("Gemba Product v0.9.0"), version("Taller v0.3.0"),
+                    version("Taller v0.4.0", released=False), version("Taller v0.5.0", archived=True)]
+        self.assertEqual(run("Taller", versions, "--last").stdout.strip(), "Taller v0.3.0")
+
+    def test_a_product_without_published_versions_prints_nothing_and_exits_clean(self):
+        result = run("Taller", [version("Taller v0.1.0", released=False), version("Gemba Code v0.3.0")], "--last")
+        self.assertEqual((result.returncode, result.stdout), (0, ""))
+
+
 if __name__ == "__main__":
     unittest.main()

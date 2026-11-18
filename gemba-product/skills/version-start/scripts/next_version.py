@@ -1,6 +1,6 @@
 """Propose the name of the next fix version of a product.
 
-Usage: python3 next_version.py "<Product>" versions.json [--fix]
+Usage: python3 next_version.py "<Product>" versions.json [--fix | --last]
 
 versions.json is what getJiraProjectVersions returns: the versions as a list, or an object
 with the list under "values". Only published, not archived versions named exactly
@@ -10,6 +10,7 @@ By default it proposes the next release, which raises the minor number: X.(Y+1).
 With --fix it proposes a bug fix on the published version, which raises the third: X.Y.(Z+1).
 The major number never changes on its own: it stays the base's until the maintainer says so.
 A product with no published version starts at v0.1.0.
+With --last it prints the name of the last published version instead, and nothing when the product has none.
 """
 import json
 import re
@@ -37,6 +38,11 @@ def next_name(product, versions, fix=False):
     return "%s v%d.%d.0" % (product, major, minor + 1)
 
 
+def last_name(product, versions):
+    found = published(product, versions)
+    return "%s v%d.%d.%d" % ((product,) + max(found)) if found else ""
+
+
 if __name__ == "__main__":
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
     if len(args) != 2:
@@ -44,4 +50,9 @@ if __name__ == "__main__":
     with open(args[1], encoding="utf-8") as f:
         data = json.load(f)
     versions = data["values"] if isinstance(data, dict) else data
-    print(next_name(args[0], versions, fix="--fix" in sys.argv))
+    if "--last" in sys.argv:
+        name = last_name(args[0], versions)
+        if name:
+            print(name)
+    else:
+        print(next_name(args[0], versions, fix="--fix" in sys.argv))
