@@ -73,6 +73,11 @@ class VersionStartCalibratesTheDeliveryDate(unittest.TestCase):
     def test_it_finds_the_last_released_version_with_the_script_and_never_by_eye(self):
         self.assertIn('python3 scripts/next_version.py "<Product>" <file> --last', step_5())
 
+    def test_the_calibration_does_not_reuse_the_file_the_number_step_already_deleted(self):
+        text = step_5()
+        self.assertNotIn("to the same temporary file", text)
+        self.assertIn("Save the versions again to a temporary file outside the repository (`mktemp`)", text)
+
     def test_it_gets_the_ratio_of_that_version_from_the_totals_script(self):
         text = step_5()
         self.assertIn("python3 ../version-close/scripts/time_totals.py <file>", text)
@@ -93,6 +98,19 @@ class VersionStartCalibratesTheDeliveryDate(unittest.TestCase):
         text = step_5()
         self.assertIn("next to the one the maintainer gave", text)
         self.assertIn("If it falls after the date the maintainer gave, say so and change nothing", text)
+
+
+class VersionStartCountsOnlyTheDeliveredIssues(unittest.TestCase):
+    def test_it_searches_only_the_issues_in_done_of_the_last_version(self):
+        self.assertIn('`fixVersion = "<last version>" AND status = Done`', step_5())
+
+    def test_it_leaves_out_the_release_task_and_the_cancelled_issues(self):
+        text = step_5()
+        self.assertIn("Leave out the release Task of that version (`Release <last version>`)", text)
+        self.assertIn("only the issues in Done count, never the Cancelled ones", text)
+
+    def test_it_adds_with_the_script_and_not_with_the_search_alone(self):
+        self.assertIn("The script adds them", step_5())
 
 
 class VersionStartUnifiesTheComponents(unittest.TestCase):
