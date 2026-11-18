@@ -63,6 +63,38 @@ class VersionStartProposesTheNumber(unittest.TestCase):
         self.assertNotIn("Ask for the number", text)
 
 
+def step_5():
+    """The body of step 5, up to step 6."""
+    text = skill()
+    return text.split("## 5. Confirm the release")[1].split("## 6. ")[0]
+
+
+class VersionStartCalibratesTheDeliveryDate(unittest.TestCase):
+    def test_it_finds_the_last_released_version_with_the_script_and_never_by_eye(self):
+        self.assertIn('python3 scripts/next_version.py "<Product>" <file> --last', step_5())
+
+    def test_it_gets_the_ratio_of_that_version_from_the_totals_script(self):
+        text = step_5()
+        self.assertIn("python3 ../version-close/scripts/time_totals.py <file>", text)
+        self.assertIn("`total.ratio`", text)
+        self.assertIn("Never add or divide them from memory", text)
+
+    def test_it_shows_the_two_totals_the_ratio_comes_from_and_the_ratio(self):
+        text = step_5()
+        self.assertIn("`total.ratioBasis`", text)
+        self.assertIn("the estimate and the real time of that version", text)
+
+    def test_it_applies_the_ratio_to_the_total_estimate_of_the_new_version(self):
+        text = step_5()
+        self.assertIn("the calibrated hours are the total estimate of the new version times the ratio", text)
+        self.assertIn("calibrated delivery date", text)
+
+    def test_it_keeps_the_date_the_maintainer_gave_and_says_when_the_calibrated_one_falls_after_it(self):
+        text = step_5()
+        self.assertIn("next to the one the maintainer gave", text)
+        self.assertIn("If it falls after the date the maintainer gave, say so and change nothing", text)
+
+
 class VersionStartUnifiesTheComponents(unittest.TestCase):
     def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
         text = skill()
