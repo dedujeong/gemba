@@ -12,6 +12,7 @@ El CLAUDE.md del proyecto tiene este contenido:
 ## Gemba
 
 - Jira Project: TALLER
+- Jira Site: taller.atlassian.net
 - Confluence Space: TALLER
 - Integration: merge
 - Language: es-MX

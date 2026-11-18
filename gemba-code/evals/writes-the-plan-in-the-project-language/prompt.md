@@ -12,6 +12,7 @@ The project's CLAUDE.md has this block:
 ## Gemba
 
 - Jira Project: TALLER
+- Jira Site: taller.atlassian.net
 - Confluence Space: TALLER
 - Integration: merge
 - Language: es-MX
