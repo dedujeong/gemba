@@ -80,10 +80,10 @@ class AnIssueWithoutWorklog(unittest.TestCase):
         self.assertEqual((without["key"], without["timeSeconds"], without["ratio"]), ("GEMBA-2", None, None))
         self.assertEqual((zero["key"], zero["timeSeconds"], zero["ratio"]), ("GEMBA-3", 0, 0.0))
 
-    def test_it_does_not_enter_the_totals_and_the_total_names_it(self):
+    def test_the_total_names_it_and_the_ratio_leaves_it_out(self):
         total = self.run_script()["total"]
         self.assertEqual((total["estimateSeconds"], total["timeSeconds"], total["ratio"]),
-                         (3 * HOUR, 3 * HOUR, 1.0))
+                         (7 * HOUR, 3 * HOUR, 1.0))
         self.assertEqual(total["withoutTime"], ["GEMBA-2"])
 
     def test_a_null_time_tracking_or_a_zero_estimate_is_without_data_and_does_not_crash(self):
@@ -116,6 +116,21 @@ class AnIssueWithoutEstimate(unittest.TestCase):
     def test_a_zero_estimate_is_without_estimate_too(self):
         total = result_of(self, [issue("GEMBA-9", estimate=0, spent=HOUR)])["total"]
         self.assertEqual((total["timeSeconds"], total["withoutEstimate"]), (HOUR, ["GEMBA-9"]))
+
+
+class AnIssueWithoutTime(unittest.TestCase):
+    issues = [
+        issue("GEMBA-1", estimate=2 * HOUR, spent=3 * HOUR),
+        issue("GEMBA-2", estimate=4 * HOUR),
+    ]
+
+    def test_its_estimate_enters_the_total_of_estimate(self):
+        self.assertEqual(result_of(self, self.issues)["total"]["estimateSeconds"], 6 * HOUR)
+
+    def test_the_total_names_it_as_without_time_and_not_as_without_estimate(self):
+        total = result_of(self, self.issues)["total"]
+        self.assertEqual(total["withoutTime"], ["GEMBA-2"])
+        self.assertEqual(total["withoutEstimate"], [])
 
 
 if __name__ == "__main__":
