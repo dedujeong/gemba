@@ -14,7 +14,7 @@ import build_story_map  # noqa: E402
 import move_story_map  # noqa: E402
 import read_story_map  # noqa: E402
 from test_build_story_map import SPEC  # noqa: E402
-from test_read_story_map import arranged_by_hand, as_read  # noqa: E402
+from test_read_story_map import arranged_by_hand, as_read, with_backbone_stickies  # noqa: E402
 
 ROW_STEP, GAP = build_story_map.ROW_STEP, build_story_map.RELEASE_GAP
 
@@ -101,6 +101,15 @@ class Placement(unittest.TestCase):
         story, below = sticky(svg, "Save a date per customer"), sticky(svg, "Import dates from the notebook")
         got = moves(move_story_map.move_patch(svg, [story["id"]], "Release 2"))[story["id"]]
         self.assertEqual(got, (below["x"], round(below["y"] + ROW_STEP, 2)))
+
+
+class BackboneStickies(unittest.TestCase):
+    def test_a_board_with_a_backbone_of_stickies_moves_a_story_like_one_of_rectangles(self):
+        svg, old = board(), with_backbone_stickies(board())
+        self.assertIn('data-type="sticky"', old)
+        story = lambda b: sticky(b, "Send a WhatsApp reminder")["id"]
+        patch = lambda b: move_story_map.move_patch(b, [story(b)], "Release 2")
+        self.assertEqual(moves(patch(old)), moves(patch(svg)))
 
 
 class RowsBelow(unittest.TestCase):

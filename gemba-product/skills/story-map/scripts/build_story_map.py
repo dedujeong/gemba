@@ -22,8 +22,9 @@ activities purple, tasks blue. Releases have two colors: the first one not deliv
 (usually the MVP) is the current release, green, and every other release is gray, the
 next ones, the Later row and the delivered ones. "released": true marks a delivered
 release, so the one after it is the current one. "open": true makes a red rectangle for an
-unresolved question. A story is a rectangle of 345 x 136.91, the size of its Jira card;
-persona, activities and tasks are stickies.
+unresolved question. Every card of the board is a rectangle of 345 x 136.91, the size of the Jira
+card of a story: the persona, the activities, the tasks and the stories, so the board reads as one grid.
+Boards drawn before with stickies for the persona, the activities and the tasks are still read.
 
 Every story of the current release (the first one not delivered) must say where it comes from in the brief:
 "traces" names the problem, the primary job or the Quality bar condition it
@@ -103,17 +104,8 @@ def label_svg(lid, top, title, description, width=344.12, scale=1, chars=LABEL_C
     )
 
 
-def sticky_svg(sid, x, y, fill, text):
-    """A sticky: its rect and the text that belongs to it, centered on the card."""
-    return [
-        f'<rect width="{CARD_W}" height="{CARD_H}" id="{sid}" data-type="sticky" fill="{fill}" x="{x}" y="{y}"/>',
-        f'<text x="{round(x + CARD_W / 2, 2)}" y="{round(y + CARD_H / 2, 2)}" width="216" text-anchor="middle" '
-        f'font-size="{FS}" fill="#172b4d" id="{sid}-text" belongs-to="{sid}"><tspan font-size="{FS}">{escape(text)}</tspan></text>',
-    ]
-
-
 def rectangle_svg(rid, x, y, fill, text):
-    """A story: a rectangle the size of its Jira card and the text that belongs to it, centered on it."""
+    """A card of the board: a rectangle the size of a Jira card and the text that belongs to it, centered on it."""
     return [
         f'<rect width="{STORY_W}" height="{STORY_H}" id="{rid}" data-type="rectangle" fill="{fill}" x="{x}" y="{y}"/>',
         f'<text x="{round(x + STORY_MID_X, 2)}" y="{round(y + STORY_MID_Y, 2)}" width="276" text-anchor="middle" '
@@ -125,10 +117,6 @@ class Board:
     def __init__(self):
         self.out = []
         self.n = 0
-
-    def sticky(self, x, y, fill, text):
-        self.n += 1
-        self.out += sticky_svg(f"s{self.n}", x, y, fill, text)
 
     def story(self, x, y, fill, text):
         self.n += 1
@@ -191,11 +179,11 @@ def build(spec):
     b.row_label("label-tasks", y_task + LABEL_TOP["tasks"], "Tasks", labels.get("tasks", ""))
 
     for i, p in enumerate(spec["personas"]):
-        b.sticky(col_x(i), Y_PERSONA, PERSONA, p)
+        b.story(col_x(i), Y_PERSONA, PERSONA, p)
     for a in spec["activities"]:
-        b.sticky(col_x(a["column"]), y_act, ACTIVITY, a["text"])
+        b.story(col_x(a["column"]), y_act, ACTIVITY, a["text"])
     for i, t in enumerate(tasks):
-        b.sticky(col_x(i), y_task, TASK, t)
+        b.story(col_x(i), y_task, TASK, t)
 
     y = y_task + RELEASE_GAP
     fills = release_fills(spec["releases"])

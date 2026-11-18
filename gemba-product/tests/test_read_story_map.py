@@ -42,6 +42,19 @@ def with_story_rectangles(svg, only=None):
     return re.sub(r"<rect\b[^>]*>", swap, svg)
 
 
+def with_backbone_stickies(svg):
+    """The same board as drawn before: the persona, the activities and the tasks as stickies of 240.05 x 144.03."""
+    backbone = {build_story_map.PERSONA, build_story_map.ACTIVITY, build_story_map.TASK}
+
+    def swap(m):
+        tag = m.group(0)
+        if 'data-type="rectangle"' not in tag or re.search(r' fill="([^"]*)"', tag).group(1) not in backbone:
+            return tag
+        tag = tag.replace('data-type="rectangle"', 'data-type="sticky"')
+        return re.sub(r'width="[\d.]+" height="[\d.]+"', 'width="240.05" height="144.03"', tag)
+    return re.sub(r"<rect\b[^>]*>", swap, svg)
+
+
 URL = "https://deducoder.atlassian.net/browse/"
 
 
@@ -206,6 +219,15 @@ class StoryRectangles(unittest.TestCase):
         self.assertEqual((mvp["count"], mvp["open"]), (2, 1))
         light = read_story_map.parse(with_story_rectangles(board().replace("#ffd5d2", "#ffeceb")))["releases"][0]
         self.assertEqual((light["count"], light["open"]), (2, 1))
+
+
+class BackboneStickies(unittest.TestCase):
+    """A board drawn before, with the persona, the activities and the tasks as stickies, reads as it always did."""
+
+    def test_a_board_with_a_backbone_of_stickies_reads_like_one_of_rectangles(self):
+        old = with_backbone_stickies(board())
+        self.assertIn('data-type="sticky"', old)
+        self.assertEqual(read_story_map.parse(old), read_story_map.parse(board()))
 
 
 class Counts(unittest.TestCase):

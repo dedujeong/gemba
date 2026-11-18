@@ -126,10 +126,12 @@ class StoryRectangles(unittest.TestCase):
         self.svg = build_story_map.build(SPEC)
         self.stories = {"Save a date per customer", "Send a WhatsApp reminder",
                         "Who sends it when the owner is away?", "Import dates from the notebook"}
+        self.backbone = {"Shop owner (primary)", "Customer", "Record a service", "Remind",
+                         "Save the next service date", "Send the reminder"}
 
-    def test_each_story_is_a_rectangle_of_the_jira_card_size(self):
+    def test_each_story_and_each_backbone_card_is_a_rectangle_of_the_jira_card_size(self):
         rects = dict(shapes(self.svg, "rectangle"))
-        self.assertEqual(set(rects), self.stories)
+        self.assertEqual(set(rects), self.stories | self.backbone)
         for text, rect in rects.items():
             self.assertEqual((rect.get("width"), rect.get("height")), ("345", "136.91"), text)
 
@@ -148,12 +150,31 @@ class StoryRectangles(unittest.TestCase):
                 self.assertEqual(float(el.get("y")), round(float(rect.get("y")) + 68.45, 2))
                 self.assertEqual(el.get("width"), "276")
 
-    def test_persona_activities_and_tasks_stay_stickies(self):
-        stickies_ = dict(shapes(self.svg, "sticky"))
-        self.assertEqual(set(stickies_), {"Shop owner (primary)", "Customer", "Record a service", "Remind",
-                                          "Save the next service date", "Send the reminder"})
-        for rect in stickies_.values():
-            self.assertEqual((rect.get("width"), rect.get("height")), ("240.05", "144.03"))
+    def test_persona_activities_and_tasks_keep_their_colors(self):
+        rects = dict(shapes(self.svg, "rectangle"))
+        self.assertEqual([rects[t].get("fill") for t in ("Shop owner (primary)", "Customer")], [PERSONA, PERSONA])
+        self.assertEqual([rects[t].get("fill") for t in ("Record a service", "Remind")], [ACTIVITY, ACTIVITY])
+        self.assertEqual([rects[t].get("fill") for t in ("Save the next service date", "Send the reminder")], [TASK, TASK])
+
+    def test_the_board_draws_no_sticky(self):
+        self.assertEqual(shapes(self.svg, "sticky"), [])
+
+
+class WhiteboardReference(unittest.TestCase):
+    def elements(self):
+        with open(os.path.join(ROOT, "skills", "story-map", "references", "whiteboard.md"), encoding="utf-8") as f:
+            return f.read().split("## Elements")[1].split("\n## ")[0]
+
+    def test_it_says_the_whole_board_is_drawn_as_rectangles_of_the_jira_card_size(self):
+        line = next(l for l in self.elements().splitlines() if l.startswith("- **Card rectangle"))
+        for kind in ("persona", "activities", "tasks", "stories"):
+            self.assertIn(kind, line)
+        self.assertIn('width="345" height="136.91"', line)
+
+    def test_it_says_the_stickies_are_the_ones_of_boards_drawn_before(self):
+        line = next(l for l in self.elements().splitlines() if l.startswith("- **Sticky"))
+        self.assertIn("boards drawn before", line)
+        self.assertNotIn("(persona, activities, tasks, and the stories", line)
 
 
 class Spacing(unittest.TestCase):
@@ -182,7 +203,8 @@ class Spacing(unittest.TestCase):
         self.assertEqual([round(b - a, 2) for a, b in zip(xs, xs[1:])], [408.28])
 
     def test_stories_stacked_in_a_cell_are_a_card_and_a_gap_apart(self):
-        column = [b for b in self.boxes(SPEC) if b[2] == 345 and b[0] == round(build_story_map.col_x(1), 2) and b[1] < 1400]
+        y_task = build_story_map.Y_PERSONA + 2 * build_story_map.BACKBONE_STEP
+        column = [b for b in self.boxes(SPEC) if b[2] == 345 and b[0] == round(build_story_map.col_x(1), 2) and y_task < b[1] < 1400]
         ys = sorted(b[1] for b in column)
         self.assertEqual(len(ys), 2)
         self.assertEqual(round(ys[1] - ys[0], 2), 176.91)

@@ -42,6 +42,11 @@ class VersionCloseHandsLearnTheRealTime(unittest.TestCase):
     def step(self):
         return section(skill(), "3. Hand the facts to learn")
 
+    def test_the_totals_come_from_the_script_with_the_issues_saved_to_a_file(self):
+        text = self.step()
+        self.assertIn("python3 scripts/time_totals.py <file>", text)
+        self.assertNotIn("with a tool (Bash)", text)
+
     def test_it_reads_the_issues_with_their_estimate_and_time_spent(self):
         text = self.step()
         self.assertIn('project = <Jira Project> AND fixVersion = "<version>"', text)
@@ -62,10 +67,17 @@ class VersionCloseHandsLearnTheRealTime(unittest.TestCase):
         self.assertIn("each with its original estimate and the time recorded in its worklogs", text)
         self.assertIn("`none`", text)
 
-    def test_the_totals_are_added_with_a_tool_and_never_from_memory(self):
+    def test_the_totals_are_never_added_from_memory_and_give_both_totals(self):
         text = self.step()
-        self.assertIn("with a tool (Bash), never from memory", text)
+        self.assertIn("Never add them from memory", text)
         self.assertIn("give both totals", text)
+
+    def test_it_says_which_issues_each_total_leaves_out_and_what_the_ratio_is_over(self):
+        text = self.step()
+        self.assertIn("lists apart the issues without estimate and the ones without time", text)
+        self.assertIn("the time of the first and the estimate of the second still enter their totals", text)
+        self.assertIn("the ratio is calculated only over the issues that have both", text)
+        self.assertNotIn("leaves it out of the totals", text)
 
     def test_it_tells_the_maintainer_that_story_map_takes_it_from_there(self):
         self.assertIn("`story-map` skill takes it from here", self.step())

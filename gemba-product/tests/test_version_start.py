@@ -63,6 +63,78 @@ class VersionStartProposesTheNumber(unittest.TestCase):
         self.assertNotIn("Ask for the number", text)
 
 
+def step_5():
+    """The body of step 5, up to step 6."""
+    text = skill()
+    return text.split("## 5. Confirm the release")[1].split("## 6. ")[0]
+
+
+class VersionStartCalibratesTheDeliveryDate(unittest.TestCase):
+    def test_it_finds_the_last_released_version_with_the_script_and_never_by_eye(self):
+        self.assertIn('python3 scripts/next_version.py "<Product>" <file> --last', step_5())
+
+    def test_the_calibration_does_not_reuse_the_file_the_number_step_already_deleted(self):
+        text = step_5()
+        self.assertNotIn("to the same temporary file", text)
+        self.assertIn("Save the versions again to a temporary file outside the repository (`mktemp`)", text)
+
+    def test_it_gets_the_ratio_of_that_version_from_the_totals_script(self):
+        text = step_5()
+        self.assertIn("python3 ../version-close/scripts/time_totals.py <file>", text)
+        self.assertIn("`total.ratio`", text)
+        self.assertIn("Never add or divide them from memory", text)
+
+    def test_it_shows_the_two_totals_the_ratio_comes_from_and_the_ratio(self):
+        text = step_5()
+        self.assertIn("`total.ratioBasis`", text)
+        self.assertIn("the estimate and the real time of that version", text)
+
+    def test_it_applies_the_ratio_to_the_total_estimate_of_the_new_version(self):
+        text = step_5()
+        self.assertIn("the calibrated hours are the total estimate of the new version times the ratio", text)
+        self.assertIn("calibrated delivery date", text)
+
+    def test_it_keeps_the_date_the_maintainer_gave_and_says_when_the_calibrated_one_falls_after_it(self):
+        text = step_5()
+        self.assertIn("next to the one the maintainer gave", text)
+        self.assertIn("If it falls after the date the maintainer gave, say so and change nothing", text)
+
+
+class VersionStartCountsOnlyTheDeliveredIssues(unittest.TestCase):
+    def test_it_searches_only_the_issues_in_done_of_the_last_version(self):
+        self.assertIn('`fixVersion = "<last version>" AND status = Done`', step_5())
+
+    def test_it_leaves_out_the_release_task_and_the_cancelled_issues(self):
+        text = step_5()
+        self.assertIn("Leave out the release Task of that version (`Release <last version>`)", text)
+        self.assertIn("only the issues in Done count, never the Cancelled ones", text)
+
+    def test_it_adds_with_the_script_and_not_with_the_search_alone(self):
+        self.assertIn("The script adds them", step_5())
+
+
+class VersionStartSaysWhenItDoesNotCalibrate(unittest.TestCase):
+    def test_it_does_not_calibrate_without_a_released_version_or_without_recorded_time(self):
+        text = step_5()
+        self.assertIn("When `--last` prints nothing, or `total.ratio` is null because that version has no recorded time", text)
+        self.assertIn("propose the delivery date from the estimates alone", text)
+
+    def test_it_says_that_it_is_not_calibrated_and_why_and_applies_no_ratio(self):
+        text = step_5()
+        self.assertIn("say that it is not calibrated and why", text)
+        self.assertIn("apply no ratio and invent none", text)
+
+
+class VersionStartKeepsNoRatio(unittest.TestCase):
+    def test_the_ratio_is_never_written_to_a_field_or_a_file(self):
+        text = step_5()
+        self.assertIn("The ratio is never written to the `CLAUDE.md`, to a field of Jira or to any file", text)
+        self.assertIn("it is calculated again each time a version opens", text)
+
+    def test_the_temporary_files_of_the_calibration_are_deleted(self):
+        self.assertIn("Delete the two temporary files of the calibration", step_5())
+
+
 class VersionStartUnifiesTheComponents(unittest.TestCase):
     def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
         text = skill()
