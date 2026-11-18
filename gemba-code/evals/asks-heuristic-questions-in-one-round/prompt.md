@@ -12,6 +12,7 @@ El CLAUDE.md del proyecto tiene este bloque:
 ## Gemba
 
 - Jira Project: TIENDA
+- Jira Site: tienda.atlassian.net
 - Confluence Space: TIENDA
 - Integration: merge
 - Language: es-MX
