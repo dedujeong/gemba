@@ -57,6 +57,12 @@ class ReviewBeforeAccepting(unittest.TestCase):
         self.assertIn("accept no ADR of the set", text)
         self.assertIn("name the question that is missing", text)
 
+    def test_the_adr_check_runs_before_accepting_and_a_discordance_stops_the_acceptance(self):
+        text = self.review()
+        self.assertIn("python3 scripts/check_adrs.py <file>", text)
+        self.assertIn("before accepting a set", text)
+        self.assertIn("If it reports a discordance, accept nothing", text)
+
     def test_the_review_comes_before_the_work_for_the_version(self):
         body = read(SKILL)
         self.assertLess(body.index("## 6. Review the ADRs before accepting them"), body.index("## 7. Propose the work for the version"))
