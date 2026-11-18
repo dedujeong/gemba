@@ -50,6 +50,8 @@ Calibrate the delivery date with the real time of the last released version of t
 
 When `--last` prints nothing, or `total.ratio` is null because that version has no recorded time, propose the delivery date from the estimates alone, say that it is not calibrated and why (the product has no released version, or the last one has no worklogs), and apply no ratio and invent none.
 
+The ratio is never written to the `CLAUDE.md`, to a field of Jira or to any file, as the hours per day are not: it is calculated again each time a version opens. Delete the two temporary files of the calibration (the versions and the search result) once the proposal is shown.
+
 After the cards, show the release Task `Release <Product> vX.Y.Z` that step 8 declares, with the number proposed above, its component, High priority and a 1h estimate. The component is one the project already has (`executeRead` → `listJiraProjectComponents`): the one where the version is bumped or, if none is, the component of the last card. In a project with no components yet, it is the component proposed for those same cards. A component the maintainer names for the Task is the one used. Never ask for it and never name one apart from these: it only labels the Task, and the maintainer can change it when they confirm.
 
 Then ask the maintainer to confirm the release. They can change any estimate, priority, component, blocker or due date before confirming; keep their value as it is. Only an explicit confirmation counts: until they confirm, nothing is created in Jira, not even when they ask to skip the review.

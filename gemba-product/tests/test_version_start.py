@@ -125,6 +125,16 @@ class VersionStartSaysWhenItDoesNotCalibrate(unittest.TestCase):
         self.assertIn("apply no ratio and invent none", text)
 
 
+class VersionStartKeepsNoRatio(unittest.TestCase):
+    def test_the_ratio_is_never_written_to_a_field_or_a_file(self):
+        text = step_5()
+        self.assertIn("The ratio is never written to the `CLAUDE.md`, to a field of Jira or to any file", text)
+        self.assertIn("it is calculated again each time a version opens", text)
+
+    def test_the_temporary_files_of_the_calibration_are_deleted(self):
+        self.assertIn("Delete the two temporary files of the calibration", step_5())
+
+
 class VersionStartUnifiesTheComponents(unittest.TestCase):
     def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
         text = skill()
