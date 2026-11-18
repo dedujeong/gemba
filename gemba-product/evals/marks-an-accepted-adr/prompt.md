@@ -13,4 +13,4 @@ Alternatives: Vercel Hobby, descartado porque no permite uso comercial (Vercel F
 Consequences: El despliegue depende de Cloudflare; el plan gratuito cubre el MVP.
 Source: Product Brief.
 
-La revisé con calma y la acepto tal como está. No hay conexión a Confluence en esta sesión: dime en la respuesta cómo queda la página y qué cambia en ella.
+La revisé con calma, ya pasó la revisión de ADR con las cuatro heurísticas sin ninguna pregunta abierta, y la acepto tal como está. No hay conexión a Confluence en esta sesión: dime en la respuesta cómo queda la página y qué cambia en ella.
