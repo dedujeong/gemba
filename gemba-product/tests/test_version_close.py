@@ -72,6 +72,13 @@ class VersionCloseHandsLearnTheRealTime(unittest.TestCase):
         self.assertIn("Never add them from memory", text)
         self.assertIn("give both totals", text)
 
+    def test_it_says_which_issues_each_total_leaves_out_and_what_the_ratio_is_over(self):
+        text = self.step()
+        self.assertIn("lists apart the issues without estimate and the ones without time", text)
+        self.assertIn("the time of the first and the estimate of the second still enter their totals", text)
+        self.assertIn("the ratio is calculated only over the issues that have both", text)
+        self.assertNotIn("leaves it out of the totals", text)
+
     def test_it_tells_the_maintainer_that_story_map_takes_it_from_there(self):
         self.assertIn("`story-map` skill takes it from here", self.step())
 
