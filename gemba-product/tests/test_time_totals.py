@@ -92,7 +92,30 @@ class AnIssueWithoutWorklog(unittest.TestCase):
         result = result_of(self, [null, issue("GEMBA-5", estimate=0, spent=HOUR),
                                   issue("GEMBA-6", estimate=2 * HOUR, spent=HOUR)])
         self.assertEqual([row["ratio"] for row in result["issues"]], [None, None, 0.5])
-        self.assertEqual(result["total"]["withoutTime"], ["GEMBA-4", "GEMBA-5"])
+        self.assertEqual(result["total"]["withoutTime"], ["GEMBA-4"])
+        self.assertEqual(result["total"]["withoutEstimate"], ["GEMBA-4", "GEMBA-5"])
+
+
+class AnIssueWithoutEstimate(unittest.TestCase):
+    issues = [
+        issue("GEMBA-1", estimate=2 * HOUR, spent=3 * HOUR),
+        issue("GEMBA-8", spent=HOUR),
+    ]
+
+    def run_script(self):
+        return result_of(self, self.issues)
+
+    def test_its_time_enters_the_total_of_time(self):
+        self.assertEqual(self.run_script()["total"]["timeSeconds"], 4 * HOUR)
+
+    def test_the_total_names_it_as_without_estimate_and_not_as_without_time(self):
+        total = self.run_script()["total"]
+        self.assertEqual(total["withoutEstimate"], ["GEMBA-8"])
+        self.assertEqual(total["withoutTime"], [])
+
+    def test_a_zero_estimate_is_without_estimate_too(self):
+        total = result_of(self, [issue("GEMBA-9", estimate=0, spent=HOUR)])["total"]
+        self.assertEqual((total["timeSeconds"], total["withoutEstimate"]), (HOUR, ["GEMBA-9"]))
 
 
 if __name__ == "__main__":
