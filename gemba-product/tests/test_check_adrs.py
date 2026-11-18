@@ -48,5 +48,25 @@ class AcceptedAdrWithAnOpenSpike(unittest.TestCase):
         self.assertEqual((code, out), (0, ""))
 
 
+class StateOnTheArchitecturePage(unittest.TestCase):
+    def test_an_adr_shown_with_another_state_on_the_page_is_a_discordance(self):
+        code, out, _ = check([adr("ADR-0001")], architecture={"ADR-0001": "Ready to decide"})
+        self.assertEqual(code, 1)
+        self.assertIn("ADR-0001", out)
+        self.assertIn("Ready to decide", out)
+        self.assertIn("Accepted", out)
+
+    def test_an_adr_shown_with_its_own_state_is_not(self):
+        code, out, _ = check([adr("ADR-0001", state="Ready to decide")], architecture={"ADR-0001": "Ready to decide"})
+        self.assertEqual((code, out), (0, ""))
+
+    def test_each_adr_is_compared_with_its_own_line_of_the_page(self):
+        code, out, _ = check([adr("ADR-0001"), adr("ADR-0002", state="Proposed")],
+                             architecture={"ADR-0001": "Accepted", "ADR-0002": "Accepted"})
+        self.assertEqual(code, 1)
+        self.assertEqual(out.count("\n"), 1)
+        self.assertIn("ADR-0002", out)
+
+
 if __name__ == "__main__":
     unittest.main()

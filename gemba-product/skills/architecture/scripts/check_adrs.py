@@ -32,6 +32,9 @@ def discordances(space):
                 found.append(f'{adr["id"]}: Accepted but its Spike {spike} is not in the space, so it cannot be confirmed Done')
             elif status != "Done":
                 found.append(f'{adr["id"]}: Accepted but its Spike {spike} is {status}, not Done')
+        shown = space["architecture"].get(adr["id"])
+        if shown is not None and shown != adr["state"]:
+            found.append(f'{adr["id"]}: its state is {adr["state"]} but the Architecture page shows {shown}')
     return found
 
 
