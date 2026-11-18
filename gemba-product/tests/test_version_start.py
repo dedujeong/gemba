@@ -113,6 +113,18 @@ class VersionStartCountsOnlyTheDeliveredIssues(unittest.TestCase):
         self.assertIn("The script adds them", step_5())
 
 
+class VersionStartSaysWhenItDoesNotCalibrate(unittest.TestCase):
+    def test_it_does_not_calibrate_without_a_released_version_or_without_recorded_time(self):
+        text = step_5()
+        self.assertIn("When `--last` prints nothing, or `total.ratio` is null because that version has no recorded time", text)
+        self.assertIn("propose the delivery date from the estimates alone", text)
+
+    def test_it_says_that_it_is_not_calibrated_and_why_and_applies_no_ratio(self):
+        text = step_5()
+        self.assertIn("say that it is not calibrated and why", text)
+        self.assertIn("apply no ratio and invent none", text)
+
+
 class VersionStartUnifiesTheComponents(unittest.TestCase):
     def test_the_same_part_of_the_product_carries_the_same_component_in_the_release(self):
         text = skill()
