@@ -88,7 +88,8 @@ Before any ADR of a set is marked as accepted, review each ADR and the whole set
 - A finding is never settled by inventing a decision: a gap that no story and no constraint decides is a question to the person, as `references/adr-heuristics.md` says.
 - Ask all the questions of the review in one single round, in one message and in the person's language, never one by one and never across turns. Each question starts with the ADR and the heuristic it comes from: «ADR: <the ADR or the set>. Heurística: <the heuristic that found it>. ¿...?». A question that cannot name its ADR and its heuristic is not asked.
 - While a question of the round has no answer, accept no ADR of the set, not even the ones that raise no open question, however the person asks for it: name the question that is missing and say that the set stays as it is until it is answered.
-- Without a Confluence connection the review works over the ADRs written in the conversation, and says so.
+- Run the check of the space before accepting a set, even when the review of the heuristics already ran: read the state of each ADR of the `Decisions` folder, the state the `Architecture` page shows for each one and the status of every Spike an ADR names, write them as `scripts/check_adrs.py` documents and run `python3 scripts/check_adrs.py <file>`. If it reports a discordance, accept nothing: name each one it prints and say that the set stays as it is until the ADR, the page or the Spike is corrected. If it says there is none, go on with the acceptance. Never fill the file from memory: what you could not read is left out, and the script reports it.
+- Without a Confluence connection the review works over the ADRs written in the conversation, and says so; the check runs over the states the person gave.
 
 ## 7. Propose the work for the version
 
@@ -113,7 +114,7 @@ When the ADRs are written, create the `Architecture` page of the product's space
    - `states`: one item for each entity that changes state in a story, with its states, the event that creates it (`initial`) and each event that moves it (`transitions`). An entity that never changes state gets none, and a state or an event no story states is not added.
 2. Build the board with `python3 scripts/build_architecture.py spec.json board.svg`. It rejects an arrow to an element that is not in the diagram and an arrow with no label, so read the error and fix the spec, never the script.
 3. Create the whiteboard with `createConfluenceContent` (`contentType: whiteboard`, the SVG as the body), titled `Diagrams`, in the product's space.
-4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 6, so the version finds them in one place. Its status follows `../pitch/SKILL.md` section 6.
+4. Create the `Architecture` live doc there and embed the board in it with `<a data-card-appearance="embed">`. The page also carries the Spikes and the Tasks of section 7, so the version finds them in one place, and lists each ADR of the `Decisions` folder with its state from the table of section 5, so that it can be compared with the ADR itself. Its status follows `../pitch/SKILL.md` section 6.
 5. Read the board again after writing it, because the answer of a patch is stale.
 
 - Content in the person's language; the diagram headings stay in English.
